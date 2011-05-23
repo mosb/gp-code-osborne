@@ -31,9 +31,9 @@ end
 x(x == -inf) = -2^1023;
 x(x == inf) = 2^1023;
 
-Kmat = diag([1;inv_sqd_input_scales]);
+diag_Kmat = [1;inv_sqd_input_scales];
 % scale by taking mean = f(x); we only want to find the location after all
-full_alphas = (Kmat\[zeros(1,num_pts);grad'])';
+full_alphas = ([zeros(1,num_pts);grad']./diag_Kmat)';
 alpha0 = full_alphas(:,1);
 alphas = full_alphas(:,2:end);
 
@@ -73,6 +73,7 @@ mu_right = sum([K, DK].*full_alphas,2);
 
 if strcmpi(min_max_local_optimum_flag,'minimise')
     x = x_right;
+    y = mu_right;
     
     left_inds = mu_left < mu_right;
     
@@ -80,8 +81,9 @@ if strcmpi(min_max_local_optimum_flag,'minimise')
     y(left_inds, :) = mu_left(left_inds, :);
 elseif strcmpi(min_max_local_optimum_flag,'maximise')
     x = x_right;
+    y = mu_right;
     
-    left_inds = mu_left < mu_right;
+    left_inds = mu_left > mu_right;
     
     x(left_inds, :) = x_left(left_inds, :); 
     y(left_inds, :) = mu_left(left_inds, :);

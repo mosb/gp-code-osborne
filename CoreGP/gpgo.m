@@ -21,8 +21,8 @@ function [minimum, minimum_location, X_data, y_data, gp, quad_gp] = ...
 %                        'plots', false, ...
 %                        'save_str', false);
   
-% matlabpool close force
-% matlabpool open
+matlabpool close force
+matlabpool open
 
 if size(X_0,1)~=1 && size(X_0,2)==1
     X_0 = X_0';
@@ -51,9 +51,10 @@ default_opt = struct('function_evaluations', 100 * num_dims, ...
                        'mean_fn', 'constant', ...
                        'num_hypersamples', 10 * num_dims, ...
                        'retrain_period', 10 * num_dims, ...
-                       'train_evals', 10 * num_dims, ...
+                       'train_evals', 100 * num_dims, ...
                        'plots', false, ...
-                       'save_str', false);
+                       'save_str', false, ...
+                        'verbose', false);
                    
 if isfield(opt,'total_time')
     % we probably want to use total_time rather than function_evaluations
@@ -122,7 +123,6 @@ evaluation = 0;
 while evaluation < opt.function_evaluations && ...
         (cputime - start_time) < opt.total_time
     evaluation = evaluation+1;
-    fprintf('.');
     
     if opt.derivative_observations
         try
@@ -169,6 +169,12 @@ while evaluation < opt.function_evaluations && ...
         [min_so_far, min_ind] = min(y_data_so_far);
         
     end
+    
+    %if opt.verbose
+        fprintf('Minimum:\t%g\n',min_so_far);
+    %else
+%         fprintf('.');
+%     end
 
     
     if rem(evaluation,opt.retrain_period) ~= 0
@@ -221,19 +227,26 @@ while evaluation < opt.function_evaluations && ...
     if opt.plots && num_dims == 1
         clf
         
+        [max_weights,max_weighted_ind] = max(hs_weights);
+        
         X_star = linspace(lower_bound,upper_bound,100)';
         for i = 1:100
-            [m(i), vars(i)] = posterior_gp(X_star(i), gp, maX_logL_ind,...
+            [m(i), vars(i)] = posterior_gp(X_star(i), gp, max_weighted_ind,...
             {'var_not_cov','jitter_corrected'});
         end
-        gp_plot(X_star, m, sqrt(vars), X_data_so_far, y_data_so_far);
+        params.width = 25;
+        params.height = 35;
+        gp_plot(X_star, m, sqrt(vars), X_data_so_far, y_data_so_far,...
+            [],[],params);
         
-        keyboard
+        
     end
     if opt.save_str
         save(opt.save_str);
     end
 end
+
+% end of optimisation
 
 X_data = X_data_so_far;
 y_data = y_data_so_far;
@@ -287,9 +300,12 @@ function X_min = fast_exp_loss_min(exp_loss, ...
 % find the position at which fn exp_loss is minimised.
 
 X_data = gp.X_data;
+
 if opt.derivative_observations
-    X_data = X_data(:,1:end-1);
+    plain_obs = find(X_data(:,end) == 0);
+    X_data = X_data(plain_obs,1:end-1);
     exp_loss = @(x) exp_loss([x,0]);
+    y_min_ind = find(plain_obs==y_min_ind);
 end
 
 num_data = size(X_data,1);
@@ -308,17 +324,14 @@ best_loss = nan(num_start_pts,1);
 if opt.plots
     switch num_dims
         case 1
-            x = linspace(lower_bound,upper_bound, 1000);
+            x = linspace(lower_bound,upper_bound, 100);
             f = x;
-            for i = length(x)
+            for i = 1:length(x)
                 f(i) = exp_loss(x(i));
             end
 
             plot(x,f,'r');
             hold on
-            plot(X_min,min_best_loss,'r+')
-            plot(X_data,gp.y_data,'k.','MarkerSize',7)
-            keyboard
         case 2
 
             num = 30;
@@ -348,11 +361,11 @@ if opt.plots
 end
 
 
-% assume the input scales for the expected loss surface are proportional to
-% those of the objective fn.
-[unused_max_logL, best_ind] = max([gp.hypersamples(:).logL]);
-input_scales = exp(...
-    gp.hypersamples(best_ind).hyperparameters(gp.input_scale_inds));
+% % assume the input scales for the expected loss surface are proportional to
+% % those of the objective fn.
+% [unused_max_logL, best_ind] = max([gp.hypersamples(:).logL]);
+% input_scales = exp(...
+%     gp.hypersamples(best_ind).hyperparameters(gp.input_scale_inds));
 
 
 
@@ -365,6 +378,9 @@ parfor start_pt_ind = 1:num_start_pts
     % number of data larger than number of hypersamples, so we use parfor here
 
     start_pt = start_pts(start_pt_ind,:);
+    
+    input_scales = 0.5*max(eps,min(bsxfun(@(x,y) abs(x-y), start_pt, ...
+        X_data(setdiff(1:end,start_pt_inds(start_pt_ind)),:)),[],1));
     
     [unused_f, g] = exp_loss(start_pt);
     
@@ -384,6 +400,9 @@ for start_pt_ind = 1:num_start_pts
     
     start_pt = start_pts(start_pt_ind,:);
     
+    input_scales = 0.5*max(eps,min(bsxfun(@(x,y) abs(x-y), start_pt, ...
+        X_data(setdiff(1:end,start_pt_inds(start_pt_ind)),:)),[],1));
+    
     best_X_line = nan(num_line_pts, num_dims);
     best_loss_line = nan(num_line_pts,1);
     
@@ -397,9 +416,11 @@ for start_pt_ind = 1:num_start_pts
             direction = upper_bound - start_pt;
         end
     end
+    unzeroed_direction = direction;
+    unzeroed_direction(abs(direction)<eps) = eps;
 
-    ups = (upper_bound - start_pt)./direction;
-    downs = (lower_bound - start_pt)./direction;
+    ups = (upper_bound - start_pt)./unzeroed_direction;
+    downs = (lower_bound - start_pt)./unzeroed_direction;
     bnds = sort([ups;downs]);
     min_bnd = max(bnds(1,:));
     max_bnd = min(bnds(2,:));
@@ -407,8 +428,14 @@ for start_pt_ind = 1:num_start_pts
     X_line = @(line_pt) start_pt + line_pt*direction;
     
     if opt.plots
-    coords = [X_line(min_bnd); X_line(max_bnd)];
-    line(coords(:,1), coords(:,2), [max_y,max_y], 'Color','w')
+        
+        switch num_dims
+            case 1
+                
+            case 2
+                coords = [X_line(min_bnd); X_line(max_bnd)];
+                line(coords(:,1), coords(:,2), [max_y,max_y], 'Color','w')
+        end
     end
 
     line_pts = linspace(min_bnd, max_bnd, num_line_pts-1);
@@ -418,18 +445,30 @@ for start_pt_ind = 1:num_start_pts
         line_pt = line_pts(line_pt_ind-1);
         X_line_pt = X_line(line_pt);
         
-        [unused_f, g] = exp_loss(X_line_pt);
+        [original_loss, g] = exp_loss(X_line_pt);
         zoomed = ...
             simple_zoom_pt(X_line_pt, g, input_scales, 'minimise');
         zoomed = cap(zoomed, lower_bound, upper_bound);
         
-        best_X_line(line_pt_ind,:) = zoomed;
-        best_loss_line(line_pt_ind) = exp_loss(zoomed);
+        zoomed_loss = exp_loss(zoomed);
+        
+        if original_loss < zoomed_loss
+            best_X_line(line_pt_ind,:) = X_line_pt;
+            best_loss_line(line_pt_ind) = original_loss;
+        else
+            best_X_line(line_pt_ind,:) = zoomed;
+            best_loss_line(line_pt_ind) = zoomed_loss;
+        end
         
         if opt.plots
-        plot3(X_line_pt(1),X_line_pt(2),max_y,'w.','MarkerSize',10)
-        plot3(zoomed(1),zoomed(2),max_y,'w.','MarkerSize',14)
-        plot3(zoomed(1),zoomed(2),max_y,'k.','MarkerSize',6)
+            switch num_dims 
+                case 1
+                    plot(zoomed,best_loss_line(line_pt_ind),'ro','MarkerSize',6)
+                case 2
+                    plot3(X_line_pt(1),X_line_pt(2),max_y,'w.','MarkerSize',10)
+                    plot3(zoomed(1),zoomed(2),max_y,'w.','MarkerSize',14)
+                    plot3(zoomed(1),zoomed(2),max_y,'w.','MarkerSize',6)
+            end
         end
     end
     
@@ -443,8 +482,14 @@ end
 X_min = best_X(min_ind,:);
 
 if opt.plots
-    plot3(X_min(1),X_min(2),max_y,'w+','LineWidth',5,'MarkerSize',10)
-    keyboard
+    switch num_dims
+        case 1
+            plot(X_min,min_best_loss,'r+','MarkerSize',10)
+            keyboard
+        case 2
+            plot3(X_min(1),X_min(2),max_y,'w+','LineWidth',5,'MarkerSize',10)
+            keyboard
+    end
 end
 
 

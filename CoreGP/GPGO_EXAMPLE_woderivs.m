@@ -8,9 +8,9 @@ upper_bound = [10 10];
 % start optimizing
 f = @banana;
 
-opt.plots = true;
+opt.plots = false;
 opt.derivative_observations = false;
-opt.function_evaluations = 40;
+opt.function_evaluations = 200;
 [minimum, minimum_location, X_data, y_data, gp, quad_gp] = ...
     gpgo(f, x0, lower_bound, upper_bound, opt);
 

@@ -186,7 +186,9 @@ for sample_ind = 1:length(samples)
         Kmat = nan(NData);
         diag_Kmat = diag_inds(Kmat);
         K_old = temp_hypersamples(sample).K;
-        Kmat(diag_Kmat(setdiff(1:end,active))) = diag(K_old);
+        
+        non_active_inds = setdiff(1:length(diag_Kmat),active);
+        Kmat(diag_Kmat(non_active_inds)) = diag(K_old);
         
 %         % set the diagonal of K_new to be the same diagonal as of our
 %         % previous covariance matrix -- we can cheaply reconstruct it from
@@ -201,8 +203,17 @@ for sample_ind = 1:length(samples)
         [Kmat, new_jitters] = ...
             improve_covariance_conditioning(Kmat,abs(y_data_minus_Mu));
         
-        jitters  = temp_hypersamples(sample).jitters;
-        jitters(active) = new_jitters(active);
+        jitters = zeros(NData,1);
+        jitters(non_active_inds)  = temp_hypersamples(sample).jitters;
+        jitters = jitters + new_jitters;
+        
+        altered_jitter_inds = non_active_inds(new_jitters(non_active_inds)>0);
+        
+        for i = 1:length(altered_jitter_inds)
+            ind = altered_jitter_inds(i);
+            K_old(ind,ind) = K_old(ind,ind) + new_jitters(ind);
+            cholK_old = revisechol(K_old, cholK_old, ind);
+        end
         
         cholK = updatechol(Kmat,cholK_old,active);
 		

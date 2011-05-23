@@ -8,11 +8,14 @@ upper_bound = [10 10];
 % start optimizing
 f = @banana;
 
-opt.plots  = true;
+opt.plots  = false;
 opt.derivative_observations = true;
-opt.function_evaluations = 40;
+opt.function_evaluations = 67;
 [minimum, minimum_location, X_data, y_data, gp, quad_gp] = ...
     gpgo(f, x0, lower_bound, upper_bound, opt);
+
+minimum
+minimum_location
 
 save banana_example
 
@@ -44,7 +47,7 @@ for dim  = 1:num_dims
 %    saveas(gcf,['x',num2str(dim),'.png'])
 end
 
-input_importance(gp, X_data)
+input_importance(gp, X_data);
 
 figure
-plot3(X_data(:,1),X_data(:,2), y_data,'.')
+plot3(X_data(:,1),X_data(:,2), y_data,'.');
