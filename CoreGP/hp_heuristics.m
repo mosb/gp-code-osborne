@@ -9,6 +9,15 @@ end
 
 num_dims = size(XData,2);
 num_data = size(XData,1);
+
+if num_data == 1
+    est_input_scales = ones(1,num_dims);
+    est_output_scale = yData_minus_mu;
+    est_noise_sd = 0.1*yData_minus_mu;
+    return
+end
+
+
 % window length to use for 
 noise_length = min(num_data,max(5,ceil(num_data/50)));
 dist_step = ceil(num_data/50);
@@ -93,7 +102,9 @@ for dim = 1:num_dims
 
 end
 
+est_input_scales(isnan(est_input_scales)) = 1;
 est_input_scales(range(XData)<eps) = 1;
+est_output_scale(isnan(est_output_scale)) = max(yData_minus_mu);
 est_output_scale = mean(est_output_scale);
 est_noise_sd = max(eps,mean(est_noise_sd));
 

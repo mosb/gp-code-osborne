@@ -8,8 +8,9 @@ function [minimum, minimum_location, X_data, y_data, gp, quad_gp] = ...
 %
 % default_opt = struct('function_evaluations', 100 * num_dims, ...
 %                         'total_time', 3600*24*7, ...
+%                         'target', -inf, ...
 %                        'lookahead_steps', 1, ...
-%                        'derivative_observations', false, ...
+%                        'derivative_observations', nargout(fn)>1, ...
 %                        'input_scales', 1,...
 %                        'exp_loss_minimiser',@fast_exp_loss_min,...
 %                        'exp_loss_evals', 100 * num_dims,...
@@ -17,10 +18,11 @@ function [minimum, minimum_location, X_data, y_data, gp, quad_gp] = ...
 %                        'mean_fn', 'constant', ...
 %                        'num_hypersamples', 10 * num_dims, ...
 %                        'retrain_period', 10 * num_dims, ...
-%                        'train_evals', 10 * num_dims, ...
+%                        'train_evals', 100 * num_dims, ...
 %                        'plots', false, ...
-%                        'save_str', false);
-  
+%                        'save_str', false, ...
+%                         'verbose', false);
+%   
 matlabpool close force
 matlabpool open
 
@@ -42,19 +44,21 @@ end
 
 default_opt = struct('function_evaluations', 100 * num_dims, ...
                         'total_time', 3600*24*7, ...
+                        'target', -inf, ...
                        'lookahead_steps', 1, ...
                        'derivative_observations', nargout(fn)>1, ...
                        'input_scales', 1,...
                        'exp_loss_minimiser',@fast_exp_loss_min,...
-                       'exp_loss_evals', 100 * num_dims,...
+                       'exp_loss_evals', 50 * num_dims,...
                        'cov_fn','matern', ...
                        'mean_fn', 'constant', ...
                        'num_hypersamples', 10 * num_dims, ...
-                       'retrain_period', 10 * num_dims, ...
-                       'train_evals', 100 * num_dims, ...
+                       'retrain_period', 10  * num_dims, ...
+                       'train_evals', 50 * num_dims, ...
                        'plots', false, ...
                        'save_str', false, ...
                         'verbose', false);
+                  
                    
 if isfield(opt,'total_time')
     % we probably want to use total_time rather than function_evaluations
@@ -73,11 +77,11 @@ end
 if opt.derivative_observations
     % assumed that each evaluation of the function yield both the
     % appropriate value of the objective function along with the gradient
-    % at that point. We store the gradient by adding an additional
-    % num_dimsension to the end of x, containing an integer indicating the
-    % element of the gradient that the corresponding element of y contains.
-    % If the additional num_dimsension is 0, that corresponds to an observation
-    % of the objective observation.
+    % at that point, as per [y,g] = fn(x). We store the gradient by adding
+    % an additional num_dimension to the end of x, containing an integer
+    % indicating the element of the gradient that the corresponding element
+    % of y contains. If the additional num_dimsension is 0, that
+    % corresponds to an observation of the objective observation.
     total_data = opt.function_evaluations*(num_dims+1);
     X_data = nan(total_data, num_dims+1);
     y_data = nan(total_data, 1);
@@ -99,6 +103,9 @@ gp.hyperparams(1)=struct('name','logNoiseSD',...
         'NSamples',1,...
         'type','inactive');
 input_scales = (upper_bound-lower_bound)/10;
+if all(input_scales==0)
+    error('lower bound is equal to upper bound');
+end
 gp = set_gp(opt.cov_fn, opt.mean_fn, gp, input_scales, [], ...
     opt.num_hypersamples);
 
@@ -127,6 +134,9 @@ while evaluation < opt.function_evaluations && ...
     if opt.derivative_observations
         try
             [y,g] = fn(x);
+            if size(g,1)==1;
+                g=g';
+            end
         catch ME
             y = max([y_data;inf]);
             g = zeros(num_dims,1);
@@ -168,6 +178,11 @@ while evaluation < opt.function_evaluations && ...
 
         [min_so_far, min_ind] = min(y_data_so_far);
         
+    end
+    
+    if y<opt.target
+        % a sufficiently low y has been found.
+        break
     end
     
     %if opt.verbose
@@ -222,7 +237,7 @@ while evaluation < opt.function_evaluations && ...
     
     x = opt.exp_loss_minimiser(exp_loss, ...
                 lower_bound, upper_bound, opt.exp_loss_evals, ...
-                gp, min_ind, opt);
+                X_data_so_far, min_ind, opt);
 	
     if opt.plots && num_dims == 1
         clf
@@ -282,7 +297,7 @@ matlabpool close
 
 function X_min = exp_loss_direct(exp_loss, ...
                 lower_bound, upper_bound, exp_loss_evals,...
-                gp, min_ind, opt)
+                X_data, min_ind, opt)
 % find the position at which fn exp_loss is minimised.
 
 Problem.f = @(x) exp_loss(x');
@@ -296,10 +311,10 @@ X_min = X_min';
 
 function X_min = fast_exp_loss_min(exp_loss, ...
                 lower_bound, upper_bound, exp_loss_evals, ...
-                gp, y_min_ind, opt)
+                X_data, y_min_ind, opt)
 % find the position at which fn exp_loss is minimised.
 
-X_data = gp.X_data;
+bounds = [lower_bound;upper_bound];
 
 if opt.derivative_observations
     plain_obs = find(X_data(:,end) == 0);
@@ -348,7 +363,7 @@ if opt.plots
             X1 = repmat(x1',num,1);
             F = reshape(f,num,num);
 
-            max_y = max(gp.y_data);
+            max_y = max(f+1);
 
             clf
             contourf(X1,X2,F);
@@ -411,9 +426,19 @@ for start_pt_ind = 1:num_start_pts
     
     direction = x(start_pt_ind,:) - start_pt;
     if norm(direction) == 0
-        direction = mean([lower_bound;upper_bound]) - start_pt;
+        % move towards a corner. The corner is chosen by rotating through
+        % them all using a binary conversion.
+        
+        bin_vec = de2bi(start_pt_inds(start_pt_ind))+1;
+        
+        sel_vec = ones(1,num_dims);
+        num = min(length(sel_vec),length(bin_vec));
+        sel_vec(1:num) = bin_vec(1:num);
+        
+        direction =...
+            bounds(sub2ind([2,num_dims],sel_vec,1:num_dims)) - start_pt;
         if norm(direction) == 0
-            direction = upper_bound - start_pt;
+            direction = mean([lower_bound;upper_bound]) - start_pt;
         end
     end
     unzeroed_direction = direction;
@@ -440,8 +465,7 @@ for start_pt_ind = 1:num_start_pts
 
     line_pts = linspace(min_bnd, max_bnd, num_line_pts-1);
     
-    %par
-    for line_pt_ind = 2:num_line_pts
+    parfor line_pt_ind = 2:num_line_pts
         line_pt = line_pts(line_pt_ind-1);
         X_line_pt = X_line(line_pt);
         
@@ -460,16 +484,16 @@ for start_pt_ind = 1:num_start_pts
             best_loss_line(line_pt_ind) = zoomed_loss;
         end
         
-        if opt.plots
-            switch num_dims 
-                case 1
-                    plot(zoomed,best_loss_line(line_pt_ind),'ro','MarkerSize',6)
-                case 2
-                    plot3(X_line_pt(1),X_line_pt(2),max_y,'w.','MarkerSize',10)
-                    plot3(zoomed(1),zoomed(2),max_y,'w.','MarkerSize',14)
-                    plot3(zoomed(1),zoomed(2),max_y,'w.','MarkerSize',6)
-            end
-        end
+%         if opt.plots
+%             switch num_dims 
+%                 case 1
+%                     plot(zoomed,best_loss_line(line_pt_ind),'ro','MarkerSize',6)
+%                 case 2
+%                     plot3(X_line_pt(1),X_line_pt(2),max_y,'w.','MarkerSize',10)
+%                     plot3(zoomed(1),zoomed(2),max_y,'w.','MarkerSize',14)
+%                     plot3(zoomed(1),zoomed(2),max_y,'w.','MarkerSize',6)
+%             end
+%         end
     end
     
     [min_best_loss_line, min_ind_line] = min(best_loss_line);
@@ -485,10 +509,12 @@ if opt.plots
     switch num_dims
         case 1
             plot(X_min,min_best_loss,'r+','MarkerSize',10)
-            keyboard
+            refresh
+            drawnow
         case 2
             plot3(X_min(1),X_min(2),max_y,'w+','LineWidth',5,'MarkerSize',10)
-            keyboard
+            refresh
+            drawnow
     end
 end
 
