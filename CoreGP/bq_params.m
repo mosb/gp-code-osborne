@@ -10,6 +10,9 @@ if isfield(gp,'grad_hyperparams')
 else
     grad_hyperparams = isfield(gp.hypersamples,'glogL');
 end
+if ~isfield(gp, 'active_hp_inds')
+    gp.active_hp_inds = 1:numel(gp.hyperparams);
+end
 active_hp_inds = gp.active_hp_inds;
 
 hypersamples = remove_infs(cat(1,gp.hypersamples.hyperparameters));

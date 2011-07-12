@@ -23,8 +23,7 @@ function [minimum, minimum_location, X_data, y_data, gp, quad_gp] = ...
 %                        'save_str', false, ...
 %                         'verbose', false);
 %   
-matlabpool close force
-matlabpool open
+
 
 if size(X_0,1)~=1 && size(X_0,2)==1
     X_0 = X_0';
@@ -57,7 +56,8 @@ default_opt = struct('function_evaluations', 100 * num_dims, ...
                        'train_evals', 50 * num_dims, ...
                        'plots', false, ...
                        'save_str', false, ...
-                        'verbose', false);
+                        'verbose', false, ...
+                        'pool_open', false);
                   
                    
 if isfield(opt,'total_time')
@@ -72,6 +72,11 @@ for i = 1:length(names);
     if (~isfield(opt, name))
       opt.(name) = default_opt.(name);
     end
+end
+
+if ~opt.pool_open
+    matlabpool close force
+    matlabpool open
 end
 
 if opt.derivative_observations
@@ -293,7 +298,9 @@ if nargout>5
     quad_gp.quad_output_scale = quad_output_scale;
 end
 
-matlabpool close
+if ~opt.pool_open
+    matlabpool close
+end
 
 function X_min = exp_loss_direct(exp_loss, ...
                 lower_bound, upper_bound, exp_loss_evals,...
