@@ -8,7 +8,8 @@ function invK_N_invK = bq_params(gp,quad_gp)
 if isfield(gp,'grad_hyperparams')
     grad_hyperparams = gp.grad_hyperparams;
 else
-    grad_hyperparams = isfield(gp.hypersamples,'glogL');
+    grad_hyperparams = isfield(gp.hypersamples,'glogL') && ...
+        ~isempty(gp.hypersamples(1).glogL);
 end
 if ~isfield(gp, 'active_hp_inds')
     gp.active_hp_inds = 1:numel(gp.hyperparams);
@@ -38,6 +39,8 @@ if nargin<2
 
         [quad_noise_sd, quad_input_scales] = ...
             hp_heuristics(r_XData, r_yData, 10);
+        
+        quad_input_scales = 10*quad_input_scales;
     end
 else
 %     best_quad_hypersample_ind = max([likelihood_gp.hypersamples(:).logL]);
@@ -49,7 +52,7 @@ else
     quad_noise_sd = quad_gp.quad_noise_sd;
     quad_input_scales = quad_gp.quad_input_scales;
 end
-quad_input_scales = max(eps, quad_input_scales);
+quad_input_scales = real(max(eps, quad_input_scales));
 
 if ~grad_hyperparams
     K_q = ones(num_data);
@@ -126,7 +129,7 @@ for active_ind = 1:length(active_hp_inds)
     
 end
 
-K_q = K_q + quad_noise_sd^2*eye(length(num_data));
+K_q = K_q + quad_noise_sd^2*eye(num_data);
 noise_vec = quad_noise_sd^2*ones(1,length(K_r));
 K_r = K_r + diag(noise_vec);
 
@@ -137,5 +140,5 @@ R_r = chol(K_r);
 invK_N_invK = solve_chol(R_r, solve_chol(R_q, N)')';
 
 function x = remove_infs(x)
-
+x = real(x);
 x = max(-1e200,min(1e200,x));
