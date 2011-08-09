@@ -17,7 +17,9 @@ if isfield(covvy,'hyperparams')
     is_input_scale_cell = strfind(names,'logInputScale');
     input_scale_inds = find(~cellfun(@(x) isempty(x),is_input_scale_cell));
 
-    hps_struct.logInputScales = input_scale_inds;
+    if ~isempty(input_scale_inds)
+        hps_struct.logInputScales = input_scale_inds;
+    end
     
 %         is_planar_weight_cell = strfind(names,'PlanarMeanWeight');
 %     planar_weight_inds = find(~cellfun(@(x) isempty(x),is_planar_weight_cell));
@@ -43,6 +45,8 @@ if isfield(covvy,'hyperparams')
     
     if nargin<2 && isfield(hps_struct,'logInputScales')
         num_dims = length(hps_struct.logInputScales);
+    elseif nargin<2 && isfield(hps_struct,'log_w0s')
+        num_dims = length(hps_struct.log_w0s);
     elseif  nargin<2 && isfield(covvy,'num_dims')
         num_dims = covvy.num_dims;
     elseif nargin<2 && ~isfield(covvy,'num_dims')

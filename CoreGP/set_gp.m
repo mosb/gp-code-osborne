@@ -44,8 +44,12 @@ else
 
     num_existing_samples = prod([gp.hyperparams.NSamples]);
     num_existing_hps = numel(gp.hyperparams);
+    
+    num_hypersamples = max(num_existing_samples, num_hypersamples);
 end
 hps_struct = set_hps_struct(gp);
+
+
 
 
 have_X_data = nargin >= 4 && ~isempty(X_data);
@@ -171,6 +175,10 @@ if create_covfn
 elseif nargin(gp.covfn) == 2
     % we have not initialised the cov fn with hps_struct yet
     gp.covfn = @(flag) gp.covfn(hps_struct,flag);
+end
+
+if ~isfield(gp, 'sqd_diffs_cov')
+    gp.sqd_diffs_cov = false;
 end
 
 if have_y_data && have_X_data

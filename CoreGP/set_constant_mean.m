@@ -13,13 +13,13 @@ function gp = set_constant_mean(gp, XData, YData, num_samples)
 % mean for the prior for the constant mean hyperparameter. The SD
 % taken is also estimated from the least-squares fit.
 
-if nargin == 1
+if nargin == 1 || isempty(YData)
     num_samples = 1;
     type = 'inactive';
     
     const = 0;
     const_priorSD = 10;
-elseif nargin == 2
+elseif nargin == 2 
     num_samples = XData;
     type = 'real';
     
@@ -29,7 +29,17 @@ elseif nargin>2
     num_data = length(YData);
     const = mean(YData);
 
-    if nargin>3
+    if nargin>3 && (isempty(num_samples) || isnan(num_samples) )
+        
+        type = 'inactive';
+        const_priorSD = 1;
+        
+        
+    elseif nargin <=3
+        num_samples = 1;
+        type = 'inactive';
+        const_priorSD = 1;
+    else
         type = 'real';
         
         error = @(x) sqrt(sum((YData - x*ones(num_data,1)).^2));
@@ -38,16 +48,12 @@ elseif nargin>2
         upper_const = fsolve(objective,const);
           
         const_priorSD = upper_const - const;
-    else
-        num_samples = 1;
-        type = 'inactive';
-        const_priorSD = 1;
     end
 end
 
 if isfield(gp, 'hyperparams')
     meanPos = numel(gp.hyperparams)+1;
-    
+
     gp.hyperparams(meanPos) = orderfields(...
     struct('name','MeanConst',...
     'priorMean',const,...
@@ -58,7 +64,7 @@ if isfield(gp, 'hyperparams')
 
 else
     meanPos = 1;
-    
+
     gp.hyperparams(meanPos) = ...
     struct('name','MeanConst',...
     'priorMean',const,...

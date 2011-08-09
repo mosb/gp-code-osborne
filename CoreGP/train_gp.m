@@ -2,6 +2,8 @@ function [gp] = train_gp(covfn_name, meanfn_name, gp, XData, yData, ...
     opt)
 % train gp
 
+warning off
+
 if nargin<6
     opt = struct();
 elseif ~isstruct(opt)
@@ -149,7 +151,7 @@ gp.grad_hyperparams = grad_hyperparams;
 gp = revise_gp(XData, yData, gp, 'overwrite');
 
 matlabpool close
-
+warning on
 
 toc;
 

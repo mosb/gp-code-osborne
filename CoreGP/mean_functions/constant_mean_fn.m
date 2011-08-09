@@ -15,12 +15,19 @@ switch flag
         Mean=@(hps,Xs) Dinputs_Mean(Xs);
     case 'grad hyperparams'
         Mean=@(hps,Xs) Dhps_Mean(hps, Xs, mean_pos);
+    case 'sp grad inputs'
+        Mean=@(hps,Xs) spDinputs_Mean(Xs);
 end
 
 function Dinputs = Dinputs_Mean(Xs)
 
 [L,num_dims] = size(Xs);
 Dinputs = mat2cell2d(zeros(num_dims*L,L),L*ones(num_dims,1),L);
+
+function Dinputs = spDinputs_Mean(Xs)
+
+[L,num_dims] = size(Xs);
+Dinputs = zeros(num_dims*L,L);
 
 function DMean = Dhps_Mean(hps, Xs, mean_pos)
 

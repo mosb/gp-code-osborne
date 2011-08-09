@@ -23,6 +23,8 @@ switch flag
     case 'grad hyperparams'
         Mean=@(hps, Xs) Dhps_Mean(Xs, hps,...
             planar_weight_inds,const_ind);
+    case 'sp grad inputs'
+        Mean=@(hps, Xs) spDinputs_Mean(Xs, hps, planar_weight_inds);
 end
 
 function Mean  = fMean(Xs, hps, planar_weight_inds, const_ind)
@@ -47,6 +49,16 @@ planar_weights = hps(planar_weight_inds);
 % end;toc
 
 DMean = mat2cell2d(kron2d(planar_weights,ones(L,1)),L*ones(dims,1),1);
+
+function DMean = spDinputs_Mean(Xs, hps, planar_weight_inds)
+if size(hps,1) == 1
+    hps = hps';
+end
+planar_weights = hps(planar_weight_inds);
+[L,dims] = size(Xs);
+
+planar_weights = reshape(planar_weights,1,1,dims);
+DMean = repmat(planar_weights,L,1);
 
 function DDMean = DDinputs_Mean(Xs)
 % below doesn't look right, why is num_hps necessary?

@@ -1,6 +1,7 @@
 function D = updatedatahalf(S,L,C,R,two)
 % D = updatedatahalf(S,L,C,R,two)
-% D is inv(S')*L, and C is inv(R')*L(setdiff(1:end,two))
+% D is inv(S')*L, and C is inv(R')*L(setdiff(1:end,two)). Note that
+% L(two,:) is the only part of L ever called by this function.
 
 if nargin<5
     two=length(S);

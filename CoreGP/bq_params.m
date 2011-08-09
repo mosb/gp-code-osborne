@@ -28,6 +28,7 @@ if nargin<2
     if size(hypersamples,1) == 1
         quad_input_scales = ones(1,max(active_hp_inds));
         quad_noise_sd = 0;
+        quad
     elseif ~isfield(gp.hypersamples,'logL')
         quad_noise_sd = 0;
         
@@ -37,8 +38,12 @@ if nargin<2
         r_XData = vertcat(gp.hypersamples.hyperparameters);
         r_yData = vertcat(gp.hypersamples.logL);
 
-        [quad_noise_sd, quad_input_scales] = ...
+        [quad_noise_sd, quad_input_scales, quad_output_scale] = ...
             hp_heuristics(r_XData, r_yData, 10);
+        
+        lambda = quad_output_scale * ...
+            prod(2*pi*quad_input_scales)^(0.25);
+        quad_noise_sd = quad_noise_sd / lambda;
         
         quad_input_scales = 10*quad_input_scales;
     end
@@ -49,7 +54,12 @@ else
 %     
 %     hps_struct = set_hps_struct(likelihood_gp);
 %     quad_input_scales = exp(best_quad_hypersample(hps_struct.logInputScales));
-    quad_noise_sd = quad_gp.quad_noise_sd;
+    
+    % quad_output_scale^2 = lambda^2 / sqrt(prod(2*pi*quad_input_scales
+    lambda = quad_gp.quad_output_scale * ...
+        prod(2*pi*quad_gp.quad_input_scales)^(0.25);
+
+    quad_noise_sd = quad_gp.quad_noise_sd / lambda;
     quad_input_scales = quad_gp.quad_input_scales;
 end
 quad_input_scales = real(max(eps, quad_input_scales));

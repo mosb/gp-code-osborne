@@ -20,7 +20,7 @@ end
 
 if params.print
     display('Beginning prediction')
-    tic;
+    start_time = cputime;
 end
 
 if nargin<4
@@ -45,6 +45,5 @@ end
 
 
 if params.print
-    display('Prediction complete')
-    toc;
+    fprintf('Prediction complete in %g seconds\n', cputime-start_time)
 end

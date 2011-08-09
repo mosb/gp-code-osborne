@@ -15,7 +15,7 @@ hps_struct = set_hps_struct(gp);
 num_dims = hps_struct.num_dims;
 
 
-if nargin == 2
+if nargin == 2 || isempty(YData)
     num_samples = XData;
     type = 'real';
     

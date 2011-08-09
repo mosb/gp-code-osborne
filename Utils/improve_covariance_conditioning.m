@@ -1,10 +1,13 @@
-function [out, sqd_jitters] = improve_covariance_conditioning(in,importance,allowed_error)
+function [out, sqd_jitters] = improve_covariance_conditioning(in,importance,allowed_error,flag)
 % function [out] = improve_covariance_conditioning(in,importance,allowed_error)
 % in: potentially poorly conditioned covariance matrix
 % importance: the relative importances of the variables associated with the
 % rows/columns of in
 % allowed_error: the allowed error in the output
+% flag: if flag=='identify_problems', instead out is a logical vector
+% specifying with points are problematic
 % out: covariance matrix with improved conditioning
+% sqd_jitters: the elements that were added to the diagonal of out
 % A heuristic method of managing potential issues with the conditioning of
 % covariance matrix. If in contains nan elements, it is assumed that they
 % are to be replaced by non-problematic entries. 
@@ -19,6 +22,13 @@ end
 if nargin<3
     allowed_error = 10^-14;
 end
+if nargin<4
+    identify_problems = false;
+else
+    identify_problems = strcmpi(flag, 'identify_problems');
+end
+
+
 
 % see conditioning_as_a_fn_of_number_dissim_sqdexp.m for details of these
 % constants, obtained by regression.
@@ -57,7 +67,12 @@ mod_in(usable_inds) = abs(usable_inv_scales.*usable_in.*usable_inv_scales_t);
 % a = [];
 % b = [];
 
-sqd_jitters = zeros(N,1);
+if identify_problems
+    out = false(N,1);
+else
+    sqd_jitters = zeros(N,1);
+end
+
 while ~isempty(problem_xinds) % We still have problems
     % Remove the sample with the lowest importance - if there's a tie,
     % remove the sample that lead to the most problems
@@ -94,13 +109,17 @@ while ~isempty(problem_xinds) % We still have problems
                 problem_xinds(right_problems)];
     num_problems = length(other_pts);
                 
-    % too_similar = K(x,y) / sqrt( (K(x,x) + sqd_jitter) * K(y,y) ); 
-    % too_similar is what we're trying to achieve using the jitter. The
-    % problem is that here we only take into account the `problem points',
-    % where all other points will also influence the conditioning.
-    sqd_jitters(current_problem_pt) = max(0,max(-sqd_scales(current_problem_pt) ...
-        +too_similar_fn(num_problems)^(-2) * in(problems_vec).^2./sqd_scales(other_pts)));
-
+    if ~identify_problems
+        % too_similar = K(x,y) / sqrt( (K(x,x) + sqd_jitter) * K(y,y) ); 
+        % too_similar is what we're trying to achieve using the jitter. One
+        % problem is that here we only take into account the `problem points',
+        % where all other points will also influence the conditioning.
+        sqd_jitters(current_problem_pt) = ...
+            max(0,max(-sqd_scales(current_problem_pt) ...
+            +too_similar_fn(num_problems)^(-2) * in(problems_vec).^2./sqd_scales(other_pts)));
+    else
+        out(current_problem_pt) = true;
+    end
     problem_xinds(current_problems)=[];
     problem_yinds(current_problems)=[];
     
@@ -109,5 +128,7 @@ while ~isempty(problem_xinds) % We still have problems
 
 end
 
-diag_sqd_jitters = diag(sqd_jitters);
-out = in + diag_sqd_jitters;
+if ~identify_problems
+    diag_sqd_jitters = diag(sqd_jitters);
+    out = in + diag_sqd_jitters;
+end

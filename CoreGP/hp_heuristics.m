@@ -1,5 +1,7 @@
 function [est_noise_sd,est_input_scales,est_output_scale] = ...
     hp_heuristics(XData,yData_minus_mu,num_samples)
+% [est_noise_sd,est_input_scales,est_output_scale] = ...
+%     hp_heuristics(XData,yData_minus_mu,num_samples)
 % yData_minus_mu is the data with the appropriate mean function already
 % subtracted off
 
@@ -15,6 +17,11 @@ if num_data == 1
     est_output_scale = yData_minus_mu;
     est_noise_sd = 0.1*yData_minus_mu;
     return
+elseif num_data > 10000
+    filter = ceil(linspace(1, num_data, 10000));
+    XData = XData(filter,:);
+    yData_minus_mu = yData_minus_mu(filter,:);
+    num_data = size(XData,1);
 end
 
 
@@ -22,7 +29,7 @@ end
 noise_length = min(num_data,max(5,ceil(num_data/50)));
 dist_step = ceil(num_data/50);
 
-XData(XData == -Inf) = -500;
+yData_minus_mu(yData_minus_mu == -Inf) = -500;
 
 % a and b, parameters of the Gamma prior for the precision should be
 % essentially washed out by sufficient data
@@ -102,10 +109,21 @@ for dim = 1:num_dims
 
 end
 
-est_input_scales(isnan(est_input_scales)) = 1;
-est_input_scales(range(XData)<eps) = 1;
+% % over-estimating the input scales is usually better than under-estimating
+% est_input_scales = 10*est_input_scales;
+
+est_input_scales = min(est_input_scales, 3*range(XData));
+
+problems = or(or(...
+            isnan(est_input_scales), ...
+            (abs(real(est_input_scales)-est_input_scales) > eps)), ...
+            range(XData)<eps);
+        
+
+
+est_input_scales(problems) = 1;
 est_output_scale(isnan(est_output_scale)) = max(yData_minus_mu);
-est_output_scale = mean(est_output_scale);
-est_noise_sd = max(eps,mean(est_noise_sd));
+est_output_scale = max(est_output_scale);
+est_noise_sd = max(eps,min(est_noise_sd));
 
 

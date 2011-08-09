@@ -15,8 +15,11 @@ elseif isfield(gp, 'derivs_mean')
     derivs = gp.derivs_mean;
 elseif ~isfield(gp, 'use_derivatives') && isfield(gp, 'covfn') && (nargin(gp.covfn)~=1)
     derivs=true;
+elseif isfield(gp.hypersamples,'glogL') && ...
+        ~isempty(gp.hypersamples(1).glogL)
+    derivs=true;
 else
-    % we can determine the gradient of the covariance wrt hyperparams
+    % we can't determine the gradient of the covariance wrt hyperparams
     derivs=false;
 end
 
