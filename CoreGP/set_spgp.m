@@ -182,10 +182,14 @@ if update_best_hypersample
     end
     if create_X_c
         best_X_c = gp.hypersamples(best_ind).X_c;
+        num_best_c = size(best_X_c,1);
     end
     if create_w_c
         best_log_tw_c = gp.hypersamples(best_ind).log_tw_c;
+        num_best_c = size(best_log_tw_c,1);
     end
+    
+    gp = rmfield(gp, 'hypersamples');
     
 elseif have_y_data && have_X_data
     
@@ -267,7 +271,14 @@ end
 
 if create_X_c
     if update_best_hypersample
-        X_c = best_X_c;
+        if num_c <= num_best_c
+            X_c = best_X_c(1:num_c, :);
+        else
+            X_c = nan(num_c, num_dims);
+            X_c(1:num_best_c, :) = best_X_c;
+            X_c(num_best_c+1:num_c, :) = ...
+                metrickcentres(X_data, num_c-num_best_c);
+        end
     elseif have_X_data
         if num_c >= num_data
             X_c = X_data;
@@ -293,7 +304,11 @@ if create_w_c
             log(bsxfun(@minus, w_c, 0.5 * w_0));
     end
     if update_best_hypersample
-        gp.hypersamples(end).log_tw_c = best_log_tw_c;
+        if num_c <= num_best_c
+            gp.hypersamples(end).log_tw_c = best_log_tw_c(1:num_c,:);
+        else
+            gp.hypersamples(end).log_tw_c(1:num_best_c,:) = best_log_tw_c;
+        end
     end
 end
 
