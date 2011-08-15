@@ -1,11 +1,15 @@
-function [noise, lambda, w_0, X_c, w_c] = disp_spgp_hps(gp, best_ind)
+function [noise, lambda, w_0, X_c, w_c] = disp_spgp_hps(gp, best_ind, flag)
 
 if ~isfield(gp, 'hypersamples') && isfield(gp, 'logL')
     gp1.hypersamples = gp;
     gp = gp1;
 end
 
-if nargin<2
+if nargin<3
+    flag= [];
+end
+
+if nargin<2 || isempty(best_ind)
     if isfield(gp.hypersamples, 'logL')
         [logL, best_ind] = max([gp.hypersamples.logL]);
     else
@@ -41,6 +45,9 @@ w_c = bsxfun(@plus, tw_c, 0.5*w_0);
 
     
 if nargout == 0
+    if ~strcmpi(flag,'no_logL')
+        fprintf('log-likelihood of %g for ', logL);
+    end
     fprintf('hyperparameters:\n');
     
     fprintf('noise SD:\t%g\n', ...

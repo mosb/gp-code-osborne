@@ -35,14 +35,10 @@ fprintf('Beginning training of GP, budgeting for %g seconds\n', ...
     opt.optim_time);
 start_time = cputime;
 
-
-% wipe gp
-rm_names = {'hyperparams','hypersamples', 'X_c', 'w_c'};
-for i = 1:length(rm_names);
-    rm_name = rm_names{i};
-    if isfield(gp, rm_name)
-      gp = rmfield(gp,rm_name);
-    end
+if isfield(gp, 'hypersamples')
+    hypersamples = gp.hypersamples;
+    gp = struct();
+    gp.hypersamples = hypersamples;
 end
 
 
@@ -67,7 +63,7 @@ if opt.derivative_observations
 
     
 else
-    gp = set_spgp(opt.mean_fn, [], X_data, y_data, ...
+    gp = set_spgp(opt.mean_fn, gp, X_data, y_data, ...
         opt.num_c, opt.num_hypersamples);
 end
 % don't want to use likelihood gradients for BMC purposes
@@ -125,7 +121,7 @@ quad_log_tw_c_scales = quad_input_scales;
 fprintf('Initial best log-likelihood: \t%g',max_logL);
 if opt.verbose
     fprintf(', for ')
-    disp_spgp_hps(hypersamples,max_ind);
+    disp_spgp_hps(hypersamples, max_ind,'no_logL');
 end
 fprintf('\n');
 
@@ -287,7 +283,7 @@ for num_pass = 1:num_passes
                 
         if opt.verbose
             fprintf(', \t for ');
-            disp_spgp_hps(hypersamples(hypersample_ind));
+            disp_spgp_hps(hypersamples(hypersample_ind), [], 'no_logL');
             fprintf('\n');
         end
 
@@ -527,7 +523,7 @@ gp.w0_inds = w0_inds;
 fprintf('Final best log-likelihood: \t%g',max_logL);
 if opt.verbose
     fprintf(', for ')
-    disp_spgp_hps(gp,max_ind);
+    disp_spgp_hps(gp, max_ind, 'no_logL');
 else
     fprintf('\n');
 end

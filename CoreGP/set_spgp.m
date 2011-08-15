@@ -158,8 +158,36 @@ if create_meanfn
     end
 end
 
-
-if have_y_data && have_X_data
+update_best_hypersample = isfield(gp, 'hypersamples');
+if update_best_hypersample
+    [logL, best_ind] = max([gp.hypersamples.logL]);
+    best_hypersample = gp.hypersamples(best_ind).hyperparameters;
+    
+    if create_logNoiseSD
+        gp.hyperparams(noise_ind).priorMean = best_hypersample(noise_ind);
+        gp.hyperparams(noise_ind).priorSD = 0.5;
+    end
+    if create_log_w0s
+        
+        for dim = 1:num_dims  
+            gp.hyperparams(w0_inds(dim)).priorMean = ...
+                best_hypersample(w0_inds(dim));
+            gp.hyperparams(w0_inds(dim)).priorSD = 1.5;            
+        end
+    end
+    if create_log_lambda
+        gp.hyperparams(lambda_ind).priorMean = ...
+            best_hypersample(lambda_ind);
+        gp.hyperparams(lambda_ind).priorSD = 1.5;
+    end
+    if create_X_c
+        best_X_c = gp.hypersamples(best_ind).X_c;
+    end
+    if create_w_c
+        best_log_tw_c = gp.hypersamples(best_ind).log_tw_c;
+    end
+    
+elseif have_y_data && have_X_data
     
     gp.X_data = X_data;
     gp.y_data = y_data;
@@ -218,9 +246,15 @@ priorMean_cell = mat2cell2d(priorMean_mat, ones(num_hypersamples,1), ...
 [gp.hypersamples(1:num_hypersamples).hyperparameters] = priorMean_cell{:};
 
 log_w_0_mat = nan(num_hypersamples, num_dims);
-stream = RandStream('mrg32k3a');
-RandStream.setDefaultStream(stream);
-phi = lhsdesign(num_hypersamples, num_dims);
+try
+    stream = RandStream('mrg32k3a');
+    RandStream.setDefaultStream(stream);
+catch
+    1;
+end
+phi = lhsdesign(num_hypersamples-1, num_dims);
+% this line ensures the prior mean is included
+phi = [phi; 0.5 * ones(1, num_dims)];
 for dim = 1:num_dims;
     log_w_0_mat(:, dim) = norminv(phi(:,dim), ...
         gp.hyperparams(w0_inds(dim)).priorMean, ...
@@ -232,7 +266,9 @@ for sample = 1:num_hypersamples
 end
 
 if create_X_c
-    if have_X_data
+    if update_best_hypersample
+        X_c = best_X_c;
+    elseif have_X_data
         if num_c >= num_data
             X_c = X_data;
             num_c = num_data;
@@ -255,6 +291,9 @@ if create_w_c
         
         gp.hypersamples(sample).log_tw_c = ...
             log(bsxfun(@minus, w_c, 0.5 * w_0));
+    end
+    if update_best_hypersample
+        gp.hypersamples(end).log_tw_c = best_log_tw_c;
     end
 end
 
