@@ -274,10 +274,11 @@ if create_X_c
         if num_c <= num_best_c
             X_c = best_X_c(1:num_c, :);
         else
-            X_c = nan(num_c, num_dims);
+            more_X_c = metrickcentres(X_data, num_c-num_best_c);
+            
+            X_c = nan(num_best_c + size(more_X_c,1), num_dims);
             X_c(1:num_best_c, :) = best_X_c;
-            X_c(num_best_c+1:num_c, :) = ...
-                metrickcentres(X_data, num_c-num_best_c);
+            X_c(num_best_c+1:end, :) = more_X_c;
         end
     elseif have_X_data
         if num_c >= num_data
