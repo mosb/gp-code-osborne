@@ -20,7 +20,8 @@ default_opt = struct(...
                     'maxevals_c', 10, ...
                     'maxevals_hs', 10, ...
                     'plots', true, ...
-                    'num_passes', 6);
+                    'num_passes', 6, ...
+                    'force_training', true);
                            
 names = fieldnames(default_opt);
 for i = 1:length(names);
@@ -175,11 +176,20 @@ opt.maxevals_c = ceil(maxevals_c * scale_factor);
 
 if opt.maxevals_hs == 1
     warning('insufficient time allowed to train sparse GP');
-    gp.hypersamples = hypersamples;
-    return
+    if opt.force_training
+        warning('proceeding with minimum possible likelihood evaluations');
+        opt.maxevals_hs = 2;
+    else
+        gp.hypersamples = hypersamples;
+        return
+    end
 end
 if opt.maxevals_c == 1
     warning('insufficient time allowed to train X_c and w_c');
+    if opt.force_training
+        warning('proceeding with minimum possible likelihood evaluations');
+        opt.maxevals_c = 2;
+    end
 end
 
 
@@ -203,6 +213,7 @@ for num_pass = 1:num_passes
     parfor hypersample_ind = 1:num_hypersamples
         
         warning('off','revise_spgp:X_c_problems');
+        warning('off','revise_spgp:small_num_data');
         
         if opt.verbose
             fprintf('Hyperparameter sample %g\n',hypersample_ind)

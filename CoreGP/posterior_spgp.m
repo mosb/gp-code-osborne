@@ -18,7 +18,8 @@ end
 noise_corrected_variance = nargout~=1 && ...
     any(strcmpi(flag,'noise_corrected_variance'));
 if noise_corrected_variance
-    Noise = get_noise(gp, 'plain');
+    diag_sqd_noise = gp.diag_sqd_noise;
+    % assume noise has zero derivative for now.
 end
 
 % actually return a vector of variances in the place of a covariance
@@ -41,11 +42,10 @@ uppr.UT=true;
 
 hs = gp.hypersamples(sample).hyperparameters;
 
-Mu = get_mu(gp, 'plain');
-DMu = get_mu(gp, 'sp grad inputs');
+Mu = gp.Mu;
+DMu = gp.DMu_inputs;
 
-diag_sqd_noise = get_diag_sqd_noise(gp, 'plain');
-% assume noise has zero derivative for now.
+
 
 
 lambda = exp(hs(gp.lambda_ind));

@@ -1,4 +1,4 @@
-n=9;
+n=11;
 lower_bound = [-5 0];
 upper_bound = [10 15];
 x0 = rand(n,2);
@@ -10,7 +10,7 @@ x0 = x0.*(upper_bound - lower_bound) + lower_bound;
 % branin = 0.397887
 
 % start optimizing
-f = @(x) branin(x) + 0.4*x(:,1) - 0.1*x(:,1);
+f = @(x) branin(x);
 
 opt.verbose = false;
 opt.plots = true;

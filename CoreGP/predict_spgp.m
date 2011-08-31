@@ -1,4 +1,4 @@
-function [YMean,YSD,gp,closestInd]=predict_spgp(XStar,...
+function [YMean, YSD, X_c, y_c, gp, closestInd]=predict_spgp(XStar,...
     gp, quad_gp, params)
 % [YMean,YSD,gp,closestInd,output]=predict_spgp(XStar,...
 %    gp, params, quad_gp)
@@ -21,9 +21,15 @@ if params.print
     start_time = cputime;
 end
 
+r_y_data = vertcat(gp.hypersamples.logL);
+[max_logL, max_ind] = max(r_y_data);
+
+X_c = gp.hypersamples(max_ind).X_c;
+num_c = size(X_c, 1);
+XStar = [XStar; X_c];
+
 if nargin<3
-    [dummyVar,closestInd] = max([gp.hypersamples.logL]);
-    [YMean,YVar] = posterior_spgp(XStar,gp,closestInd,'var_not_cov');
+    [YMean,YVar] = posterior_spgp(XStar,gp,max_ind,'var_not_cov');
     YSD=sqrt(YVar); 
 else
     gp.grad_hyperparams = false; 
@@ -45,7 +51,7 @@ else
     YVar = YVar - YMean.^2;
     YSD = sqrt(YVar); 
 end
-
+y_c = YMean(end-num_c+1:end);
 
 if params.print
     fprintf('Prediction complete in %g seconds\n', cputime-start_time)

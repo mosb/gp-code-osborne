@@ -45,12 +45,12 @@ end
 
 grad_hyperparams = nargin > 5 && ~isempty(grad_hp_inds);
 
-diag_sqd_noise = get_diag_sqd_noise(gp, 'plain');
+diag_sqd_noise = gp.diag_sqd_noise;
 if grad_hyperparams
     Ddiag_sqd_noise = get_diag_sqd_noise(gp, {'grad hyperparams',grad_hp_inds});
 end
 
-Mu = get_mu(gp, 'plain');
+Mu = gp.Mu;
 % assume mean has zero derivative with respect to active hyperparameters
 % for now.
 
@@ -101,7 +101,7 @@ uppr.UT = true;
 
 
 if num_data < num_dims
-    warning('make sure each data point is a row of X_data');
+    warning('revise_spgp:small_num_data', 'make sure each data point is a row of X_data');
 end
 
 temp_hypersamples = gp.hypersamples;

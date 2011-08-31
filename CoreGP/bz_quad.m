@@ -1,9 +1,10 @@
 function output = bz_quad(prior, varargin)
+% output = bz_quad(prior, varargin)
 % Returns the mean estimate for an integral. 
-% prior is a structure specifying the first term in the integral.
+% prior is a structure specifying the first term in the integral. 
 % varargin are the remaining terms in the integral, assumed to be of the
-% form of a GP conditional mean. We assume the covariance for these GPs is
-% Gaussian (normalised sqd exp).
+% form of a GP conditional mean. We assume the covariance for each of these
+% GPs is Gaussian (normalised sqd exp).
 
 num_terms = length(varargin);
 num_variables = numel(prior);
@@ -48,9 +49,6 @@ for variable = 1:num_variables
                     
                 case 2
                     meshgrid
-                case 3
-                    meshgrid
-                    Yotta_var
             end
         case 'bounded'
 

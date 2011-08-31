@@ -158,6 +158,10 @@ if create_meanfn
     end
 end
 
+gp.Mu = get_mu(gp, 'plain');
+gp.DMu_inputs = get_mu(gp, 'sp grad inputs');
+gp.diag_sqd_noise = get_diag_sqd_noise(gp, 'plain');
+
 update_best_hypersample = isfield(gp, 'hypersamples');
 if update_best_hypersample
     [logL, best_ind] = max([gp.hypersamples.logL]);
@@ -270,27 +274,28 @@ for sample = 1:num_hypersamples
 end
 
 if create_X_c
-    if update_best_hypersample
-        if num_c <= num_best_c
-            X_c = best_X_c(1:num_c, :);
-        else
-            more_X_c = metrickcentres(X_data, num_c-num_best_c);
-            
-            X_c = nan(num_best_c + size(more_X_c,1), num_dims);
-            X_c(1:num_best_c, :) = best_X_c;
-            X_c(num_best_c+1:end, :) = more_X_c;
-        end
-    elseif have_X_data
+    
+    if have_X_data 
         if num_c >= num_data
             X_c = X_data;
             num_c = num_data;
+        elseif update_best_hypersample
+            if num_c <= num_best_c
+                X_c = best_X_c(1:num_c, :);
+            else
+                more_X_c = metrickcentres(X_data, num_c-num_best_c);
+
+                X_c = nan(num_best_c + size(more_X_c,1), num_dims);
+                X_c(1:num_best_c, :) = best_X_c;
+                X_c(num_best_c+1:end, :) = more_X_c;
+            end
         else
             X_c = metrickcentres(X_data, num_c);
         end
     else
         X_c = zeros(num_c, num_dims);
     end
-    
+
     for sample = 1:num_hypersamples
         gp.hypersamples(sample).X_c = X_c;
     end
