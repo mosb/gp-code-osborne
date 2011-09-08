@@ -58,11 +58,12 @@ switch flag
 end
 
 function DK = Dhps_K(Xs1,Xs2,type,TL,input_scale_inds,output_scale_ind,num_hps)
-L1 = size(Xs1,1);
+[L1,num_dims] = size(Xs1);
 L2 = size(Xs2,1);
+grad_hp_inds = 1:num_dims;
 
 DK = mat2cell2d(zeros(num_hps*L1,L2),L1*ones(num_hps,1),L2);
 DK(input_scale_inds) = ...
-    matrify(@(varargin) gTcov(type,TL,varargin{:}),Xs1,Xs2);
+    matrify(@(varargin) gTcov(type,TL,grad_hp_inds,varargin{:}),Xs1,Xs2);
 DK{output_scale_ind} = ...
     2*matrify(@(varargin) fcov(type,TL,varargin{:}),Xs1,Xs2);

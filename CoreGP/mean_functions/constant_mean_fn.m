@@ -27,7 +27,7 @@ Dinputs = mat2cell2d(zeros(num_dims*L,L),L*ones(num_dims,1),L);
 function Dinputs = spDinputs_Mean(Xs)
 
 [L,num_dims] = size(Xs);
-Dinputs = zeros(num_dims*L,L);
+Dinputs = zeros(L,1,num_dims);
 
 function DMean = Dhps_Mean(hps, Xs, mean_pos)
 

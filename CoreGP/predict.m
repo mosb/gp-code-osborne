@@ -1,11 +1,35 @@
 function [mean_out, sd_out] = predict(X_star, gp, r_gp, opt)
 % function [mean, sd] = predict(X_star, gp, r_gp, opt)
-% return the posterior mean and sd by marginalising hyperparameters
-
-[num_star, num_dims] = size(X_star);
-
-hs_s = vertcat(gp.hypersamples.hyperparameters);
-[num_s, num_hps] = size(hs_s);
+% return the posterior mean and sd by marginalising hyperparameters.
+% - X_star (n by d) is a matrix of the n (d-dimensional) points at which
+% predictions are to be made
+% - gp requires fields:
+% * hyperparams(i).priorMean
+% * hyperparams(i).priorSD
+% * hypersamples.logL
+% * hypersamples (if opt.prediction_model is gp or spgp)
+% * hypersamples.hyperparameters (if using a handle for
+% opt.prediction_model)
+% - (optional) r_gp requires fields
+% * quad_output_scale
+% * quad_noise_sd
+% * quad_input_scales
+% alternatively: 
+% [mean, sd] = predict(sample_struct, prior_struct, r_gp, opt)
+% - sample_struct requires fields
+% * samples
+% * log_r
+% and
+% * mean_y
+% * var_y
+% or
+% * qd
+% * qdd
+% or
+% * q (if a posterior is required; returned in mean_out)
+% - prior_struct requires fields
+% * means
+% * sds
 
 if nargin<4
     opt = struct();
@@ -14,10 +38,107 @@ end
 % is required
 want_sds = nargout > 1; 
 
+if isstruct(X_star)
+    sample_struct = X_star;
+    prior_struct = gp;
+    
+    hs_s = sample_struct.samples;
+    log_r_s = sample_struct.log_r;
+    
+    [num_s, num_hps] = size(hs_s);
+    if isfield(sample_struct, 'mean_y')
+        
+        mean_y = sample_struct.mean_y;
+        var_y = sample_struct.var_y;
+        
+        % these quantities need to be num_s by num_star matrices
+        if size(mean_y, 1) ~= num_s
+            mean_y = mean_y';
+        end
+        if size(var_y, 1) ~= num_s
+            var_y = var_y';
+        end
+
+        qd_s = mean_y;
+        qdd_s = var_y + mean_y.^2;
+        
+    elseif isfield(sample_struct, 'qd') && ...
+            isfield(sample_struct, 'qdd')
+        
+        qd_s = sample_struct.qd;
+        qdd_s = sample_struct.qdd;
+        
+    elseif isfield(sample_struct, 'q')
+        % output argument will be 
+        want_sds = true;
+        want_posterior = true;
+        
+        qd_s = sample_struct.q;
+        qdd_s = sample_struct.q;
+        
+    end
+        
+    num_star = size(qd_s, 2);
+    
+    prior_means = prior_struct.means;
+    prior_sds = prior_struct.sds;
+    
+    opt.prediction_model = 'arbitrary';
+    
+else
+    [num_star] = size(X_star, 1);
+    
+    hs_s = vertcat(gp.hypersamples.hyperparameters);
+    log_r_s = vertcat(gp.hypersamples.logL);
+    
+    [num_s, num_hps] = size(hs_s);
+    
+    prior_means = vertcat(gp.hyperparams.priorMean);
+    prior_sds = vertcat(gp.hyperparams.priorSD);
+    
+    mean_y = nan(num_star, num_s);
+    var_y = nan(num_star, num_s);
+
+    if ischar(opt.prediction_model)
+        switch opt.prediction_model
+            case 'spgp'
+                for hs = 1:num_s
+                    [mean_y(:, hs), var_y(:, hs)] = ...
+                        posterior_spgp(X_star,gp,hs,'var_not_cov');
+                end
+            case 'gp'
+                for hs = 1:num_s
+                    [mean_y(:, hs), var_y(:, hs)] = ...
+                        posterior_gp(X_star,gp,hs,'var_not_cov');
+                end
+        end
+    elseif isa(opt.prediction_model, 'function_handle')
+        for hs = 1:num_s
+            sample = gp.hypersamples(hs).hyperparameters;
+            [mean_y(:, hs), var_y(:, hs)] = ...
+                opt.prediction_model(X_star,sample);
+        end
+    end
+    
+    mean_y = mean_y';
+    var_y = var_y';
+
+    qd_s = mean_y;
+    qdd_s = var_y + mean_y.^2;
+    
+end
+
+
+
+
+
+
+
 default_opt = struct('num_c', min(num_s, 500),...
                     'gamma_const', 100, ...
                     'num_box_scales', 3, ...
-                    'sparse', true, ...
+                    'prediction_model', 'spgp', ...
+                    'no_adjustment', false, ...
                     'print', true);
                 
 names = fieldnames(default_opt);
@@ -30,23 +151,16 @@ end
 
 num_c = opt.num_c;
 
-
-prior_means = vertcat(gp.hyperparams.priorMean);
-prior_sds = vertcat(gp.hyperparams.priorSD);
-
 prior_sds_stack = reshape(prior_sds, 1, 1, num_hps);
 prior_var_stack = prior_sds_stack.^2;
 
-
-
-              
-log_r_s = vertcat(gp.hypersamples.logL);
+  
 log_r_s = log_r_s - max(log_r_s);
 r_s = exp(log_r_s);
 
 
 
-if nargin<3
+if nargin<3 || isempty(r_gp)
     [r_noise_sd, r_input_scales, r_output_scale] = ...
         hp_heuristics(hs_s, r_s, 10);
 
@@ -76,6 +190,7 @@ upper_bound = max(hs_s) + opt.num_box_scales*input_scales;
 hs_c = far_pts(hs_s, [lower_bound; upper_bound], num_c);
 hs_sc = [hs_s; hs_c];
 num_sc = size(hs_sc, 1);
+num_c = num_sc - num_s;
 
 sqd_dist_stack_sc = bsxfun(@minus,...
                     reshape(hs_sc,num_sc,1,num_hps),...
@@ -170,24 +285,9 @@ Yot_s_eps = sqd_output_scale.^2 * prod(const_s_eps) * ...
 inv_K_Yot_inv_K_s = solve_chol(R_s, solve_chol(R_s, Yot_s)')';
 inv_K_Yot_inv_K_s_eps = solve_chol(R_eps, solve_chol(R_s, Yot_s_eps)')';
            
-mean_y = nan(num_star, num_s);
-var_y = nan(num_star, num_s);
-for hs = 1:num_s
-    if opt.sparse
-        [mean_y(:, hs), var_y(:, hs)] = ...
-            posterior_spgp(X_star,gp,hs,'var_not_cov');
-    else
-        [mean_y(:, hs), var_y(:, hs)] = ...
-            posterior_gp(X_star,gp,hs,'var_not_cov');
-    end
 
-end
 
-mean_y = mean_y';
-var_y = var_y';
 
-qd_s = mean_y;
-qdd_s = var_y + mean_y.^2;
 
 mu_qd = mean(qd_s);
 mu_qdd = mean(qdd_s);
@@ -274,12 +374,21 @@ adj_rhodd_tq = (minty_qdd_eps_rqdd + gamma_qdd * minty_eps_rqdd) / minty_r;
 adj_rhodd_tr = (minty_qdd_eps_rr + gamma_r * minty_eps_qddr ...
     -(minty_eps_rr + gamma_r * minty_Delta_tr) * rhodd) / minty_r;
 end
+if opt.no_adjustment
+    adj_rhod_tr = 0;
+    adj_rhodd_tq = 0;
+    adj_rhodd_tr = 0;
+end
 
 
 mean_out = rhod + adj_rhod_tr;
 if want_sds
 second_moment = rhodd + adj_rhodd_tq + adj_rhodd_tr;
-sd_out = sqrt(second_moment - mean_out.^2);
+if want_posterior
+    mean_out = second_moment;
+else
+    sd_out = sqrt(second_moment - mean_out.^2);
+end
 end
 
 % for i = 1:num_hps

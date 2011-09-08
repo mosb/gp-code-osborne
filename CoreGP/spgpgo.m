@@ -361,7 +361,8 @@ while evaluation < opt.function_evaluations && ...
     if opt.save_str
         %save(opt.save_str,'-struct','gp');
         save(opt.save_str, 'X_data_so_far', 'y_data_so_far',...
-            'noise', 'lambda', 'w_0', 'X_c', 'w_c')
+            'noise', 'lambda', 'w_0', 'X_c', 'w_c', ...
+            'errors')
     end
 end
 
