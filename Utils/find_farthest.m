@@ -74,8 +74,10 @@ if size(points,2)>1
     candidates = scaled_candidates.*repmat(length_scales,Ncandidates,1);
 
     % may want pc_distances even if there aren't enough
+
     pc_distances = sqrt(squared_distance(points, candidates, length_scales));
 
+    
     enough = (size(candidates, 1) >= requested);
     if (~enough)
       farthest = candidates;
