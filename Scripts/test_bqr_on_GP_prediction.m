@@ -30,18 +30,21 @@ max_num_samples = 500;
 samples = slicesample(prior.means, max_num_samples,...
     'pdf', p_r_fn,'width', prior_sds);
 
+for i = 1:max_num_samples
+    gp.hypersamples(i).hyperparameters = samples(i,:);
+end
+gp = revise_gp(X_data, y_data, gp, 'overwrite');
+
+
+
 for i = 1:num_samples
     
     
-    gp.hypersamples(i).hyperparameters = new_sample;
-
-    gp = revise_gp(X_data, y_data, gp, 'overwrite',[], i);
-
-    
+   
         opt.print = false;
         opt.optim_time = 60;
 
-        gp = train_gp('sqdexp', 'constant', [], samples, r, opt);
+        gp = train_gp('sqdexp', 'constant', [], samples(, r, opt);
         [best_hypersample, best_hypersample_struct] = disp_hyperparams(gp);
         
         r_gp.quad_output_scale = best_hypersample_struct.output_scale;
