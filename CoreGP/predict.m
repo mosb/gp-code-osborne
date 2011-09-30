@@ -1,4 +1,4 @@
-function [mean_out, sd_out] = predict(X_star, gp, r_gp, opt)
+function [mean_out, sd_out, rhod, rhodd] = predict(X_star, gp, q_gp, r_gp, opt)
 % function [mean, sd] = predict(X_star, gp, r_gp, opt)
 % return the posterior mean and sd by marginalising hyperparameters.
 % - X_star (n by d) is a matrix of the n (d-dimensional) points at which
@@ -34,9 +34,26 @@ function [mean_out, sd_out] = predict(X_star, gp, r_gp, opt)
 if nargin<4
     opt = struct();
 end
+
+default_opt = struct('num_c', 100,...
+                    'gamma_const', 100, ...
+                    'num_box_scales', 3, ...
+                    'prediction_model', 'spgp', ...
+                    'no_adjustment', false, ...
+                    'print', true);
+                
+names = fieldnames(default_opt);
+for i = 1:length(names);
+    name = names{i};
+    if (~isfield(opt, name))
+      opt.(name) = default_opt.(name);
+    end
+end
+
 % not fully optimised, further operations could be avoided if only the mean
 % is required
 want_sds = nargout > 1; 
+ want_posterior = false;
 
 if isstruct(X_star)
     sample_struct = X_star;
@@ -62,14 +79,17 @@ if isstruct(X_star)
         qd_s = mean_y;
         qdd_s = var_y + mean_y.^2;
         
-    elseif isfield(sample_struct, 'qd') && ...
-            isfield(sample_struct, 'qdd')
+    elseif isfield(sample_struct, 'qd') 
         
         qd_s = sample_struct.qd;
-        qdd_s = sample_struct.qdd;
+        if isfield(sample_struct, 'qdd')
+            qdd_s = sample_struct.qdd;
+        else
+            qdd_s = sample_struct.qd;
+        end
         
     elseif isfield(sample_struct, 'q')
-        % output argument will be 
+        % output argument will be a posterior, not a posterior mean
         want_sds = true;
         want_posterior = true;
         
@@ -129,26 +149,7 @@ else
 end
 
 
-
-
-
-
-
-default_opt = struct('num_c', min(num_s, 500),...
-                    'gamma_const', 100, ...
-                    'num_box_scales', 3, ...
-                    'prediction_model', 'spgp', ...
-                    'no_adjustment', false, ...
-                    'print', true);
-                
-names = fieldnames(default_opt);
-for i = 1:length(names);
-    name = names{i};
-    if (~isfield(opt, name))
-      opt.(name) = default_opt.(name);
-    end
-end
-
+opt.num_c = min(opt.num_c, num_s);
 num_c = opt.num_c;
 
 prior_sds_stack = reshape(prior_sds, 1, 1, num_hps);
@@ -158,9 +159,25 @@ prior_var_stack = prior_sds_stack.^2;
 log_r_s = log_r_s - max(log_r_s);
 r_s = exp(log_r_s);
 
+mu_qd = mean(qd_s);
+mu_qdd = mean(qdd_s);
 
+qdmm_s = bsxfun(@minus, qd_s, mu_qd);
+qddmm_s = bsxfun(@minus, qdd_s, mu_qdd);
 
-if nargin<3 || isempty(r_gp)
+if nargin<3 || isempty(q_gp)
+    [q_noise_sd, q_input_scales, q_output_scale] = ...
+        hp_heuristics(hs_s, qd_s, 10);
+
+    sqd_output_scale = q_output_scale^2;
+    q_input_scales = 10*q_input_scales;
+else
+    sqd_output_scale = q_gp.quad_output_scale^2;
+    q_noise_sd =  q_gp.quad_noise_sd;
+    q_input_scales = q_gp.quad_input_scales;
+end
+
+if nargin<4 || isempty(r_gp)
     [r_noise_sd, r_input_scales, r_output_scale] = ...
         hp_heuristics(hs_s, r_s, 10);
 
@@ -181,13 +198,16 @@ eps_input_scales = 0.5 * input_scales;
 
 sqd_lambda = sqd_output_scale* ...
     prod(2*pi*input_scales.^2)^(-0.5);
+eps_sqd_lambda = sqd_output_scale* ...
+    prod(2*pi*eps_input_scales.^2)^(-0.5);
 r_noise_sd = r_noise_sd / sqrt(sqd_lambda);
 
 lower_bound = min(hs_s) - opt.num_box_scales*input_scales;
 upper_bound = max(hs_s) + opt.num_box_scales*input_scales;
 
-% find the candidate points, far removed frome xisting samples
-hs_c = far_pts(hs_s, [lower_bound; upper_bound], num_c);
+% find the candidate points, far removed from existing samples
+hs_c = find_farthest(hs_s, [lower_bound; upper_bound], num_c, ...
+                            input_scales);
 hs_sc = [hs_s; hs_c];
 num_sc = size(hs_sc, 1);
 num_c = num_sc - num_s;
@@ -203,17 +223,23 @@ sqd_eps_input_scales_stack = reshape(eps_input_scales.^2,1,1,num_hps);
                 
 K_s = sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
                     sqd_dist_stack_s, sqd_input_scales_stack), 3)); 
-K_s = improve_covariance_conditioning(K_s);
-R_s = chol(K_s);
+K_rs = improve_covariance_conditioning(K_s, r_s, 10^-16);
+R_rs = chol(K_rs);
+K_qds = improve_covariance_conditioning(K_s, qdmm_s, 10^-16);
+R_qds = chol(K_qds);
+K_qdds = improve_covariance_conditioning(K_s, qddmm_s, 10^-16);
+R_qdds = chol(K_qdds);
 
-K_eps = sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
+K_eps = eps_sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
                     sqd_dist_stack_sc, sqd_eps_input_scales_stack), 3)); 
-K_eps = improve_covariance_conditioning(K_eps);
+importance_sc = ones(num_sc,1);
+importance_sc(num_s + 1 : end) = 10;
+K_eps = improve_covariance_conditioning(K_eps, importance_sc, 10^-16);
 R_eps = chol(K_eps);     
 
-sqd_dist_stack_s_c = sqd_dist_stack_sc(1:num_s, num_s+1:end, :);
-K_s_c = sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
-                    sqd_dist_stack_s_c, sqd_input_scales_stack), 3));  
+sqd_dist_stack_s_sc = sqd_dist_stack_sc(1:num_s, :, :);
+K_s_sc = sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
+                    sqd_dist_stack_s_sc, sqd_input_scales_stack), 3));  
              
 sum_prior_var_sqd_input_scales_stack = ...
     prior_var_stack + sqd_input_scales_stack;
@@ -258,7 +284,7 @@ yot_eps = sqd_output_scale * ...
     sum(bsxfun(@rdivide, hs_sc_minus_mean_stack.^2, ...
     sum_prior_var_sqd_input_scales_stack_eps),3));
 
-yot_inv_K_s = solve_chol(R_s, yot_s)';
+yot_inv_K_rs = solve_chol(R_rs, yot_s)';
 yot_inv_K_eps = solve_chol(R_eps, yot_eps)';
                 
 Yot_s = sqd_output_scale.^2 * prod(bsxfun(@times, const, ...
@@ -282,18 +308,11 @@ Yot_s_eps = sqd_output_scale.^2 * prod(const_s_eps) * ...
 % covmat = kron2d(diag(prior_sds.^2), ones(2)) + diag(scalesss(:));
 % sqd_output_scale.^2 * mvnpdf(As(:),Bs(:),covmat);
 
-inv_K_Yot_inv_K_s = solve_chol(R_s, solve_chol(R_s, Yot_s)')';
-inv_K_Yot_inv_K_s_eps = solve_chol(R_eps, solve_chol(R_s, Yot_s_eps)')';
-           
-
-
-
-
-mu_qd = mean(qd_s);
-mu_qdd = mean(qdd_s);
-
-qd_s = bsxfun(@minus, qd_s, mu_qd);
-qdd_s = bsxfun(@minus, qdd_s, mu_qdd);
+inv_K_Yot_inv_K_qds = solve_chol(R_qds, solve_chol(R_rs, Yot_s)')';
+inv_K_Yot_inv_K_qdds = solve_chol(R_qdds, solve_chol(R_rs, Yot_s)')';
+inv_K_Yot_inv_K_qds_eps = solve_chol(R_eps, solve_chol(R_qds, Yot_s_eps)')';
+inv_K_Yot_inv_K_qdds_eps = solve_chol(R_eps, solve_chol(R_qdds, Yot_s_eps)')';
+          
 
 tilde = @(x, gamma_x) log(bsxfun(@rdivide, x, gamma_x) + 1);
 %inv_tilda = @(tx, gamma_x) exp(bsxfun(@plus, tx, log(gamma_x))) - gamma_x;
@@ -301,42 +320,48 @@ tilde = @(x, gamma_x) log(bsxfun(@rdivide, x, gamma_x) + 1);
 gamma_r = opt.gamma_const;
 tr_s = tilde(r_s, gamma_r);
 
-gamma_qdd = opt.gamma_const*max(qdd_s);
+gamma_qdd = opt.gamma_const*max(eps,max(qdd_s));
 tqdd_s = tilde(qdd_s, gamma_qdd);
-
 
 
 lowr.UT = true;
 lowr.TRANSA = true;
 uppr.UT = true;
 
-two_thirds = linsolve(R_s,linsolve(R_s, K_s_c, lowr), uppr)';
+two_thirds_r = linsolve(R_rs,linsolve(R_rs, K_s_sc, lowr), uppr)';
+two_thirds_qd = linsolve(R_qds,linsolve(R_qds, K_s_sc, lowr), uppr)';
+two_thirds_qdd = linsolve(R_qdds,linsolve(R_qdds, K_s_sc, lowr), uppr)';
 
-mean_r_c =  two_thirds * r_s;
-mean_qd_c = bsxfun(@plus, mu_qd, two_thirds * qd_s);
-mean_qdd_c = bsxfun(@plus, mu_qdd, two_thirds * qdd_s);
+mean_r_sc =  two_thirds_r * r_s;
+mean_qd_sc = bsxfun(@plus, mu_qd, two_thirds_qd * qdmm_s);
+mean_qdd_sc = bsxfun(@plus, mu_qdd, two_thirds_qdd * qddmm_s);
 
-mean_tr_c = two_thirds * tr_s;
-mean_tqdd_c = two_thirds * tqdd_s;
+mean_tr_sc = two_thirds_r * tr_s;
+mean_tqdd_sc = two_thirds_qdd * tqdd_s;
 
-c_inds = num_sc - (num_c-1:-1:0);
+%c_inds = num_sc - (num_c-1:-1:0);
 
-Delta_tr = zeros(num_sc, 1);
-eps_rr_sc = zeros(num_sc, 1);
-Delta_qdd = zeros(num_sc, num_star);
-eps_qdr_sc = zeros(num_sc, num_star);
-eps_rqdd_sc = zeros(num_sc, num_star);
-eps_qddr_sc = zeros(num_sc, num_star);
+% Delta_tr = zeros(num_sc, 1);
+% eps_rr_sc = zeros(num_sc, 1);
+% Delta_tqdd = zeros(num_sc, num_star);
+% eps_qdr_sc = zeros(num_sc, num_star);
+% eps_rqdd_sc = zeros(num_sc, num_star);
+% eps_qddr_sc = zeros(num_sc, num_star);
 
-Delta_tr(c_inds, :) = mean_tr_c - tilde(mean_r_c, gamma_r);
-Delta_qdd(c_inds, :) = mean_tqdd_c - tilde(mean_qdd_c, gamma_qdd);
+% use a crude thresholding here as our tilde transformation will fail if
+% the mean 
+mean_r_sc = max(eps, mean_r_sc);
+mean_qdd_sc = max(eps, mean_qdd_sc);
 
-eps_rr_sc(c_inds) = mean_r_c .* Delta_tr(c_inds);
-eps_qdr_sc(c_inds, :) = bsxfun(@times, mean_qd_c, Delta_tr(c_inds));
-eps_rqdd_sc(c_inds, :) = bsxfun(@times, mean_r_c, Delta_qdd(c_inds, :));
-eps_qddr_sc(c_inds, :) = bsxfun(@times, mean_qdd_c, Delta_tr(c_inds));
+Delta_tr = mean_tr_sc - tilde(mean_r_sc, gamma_r);
+Delta_tqdd = mean_tqdd_sc - tilde(mean_qdd_sc, gamma_qdd);
 
-minty_r = yot_inv_K_s * r_s;
+eps_rr_sc = mean_r_sc .* Delta_tr;
+eps_qdr_sc = bsxfun(@times, mean_qd_sc, Delta_tr);
+eps_rqdd_sc = bsxfun(@times, mean_r_sc, Delta_tqdd);
+eps_qddr_sc = bsxfun(@times, mean_qdd_sc, Delta_tr);
+
+minty_r = yot_inv_K_rs * r_s;
 minty_Delta_tr = yot_inv_K_eps * Delta_tr;
 minty_eps_rr = yot_inv_K_eps * eps_rr_sc;
 minty_eps_qdr = (yot_inv_K_eps * eps_qdr_sc)';
@@ -345,22 +370,22 @@ minty_eps_qddr = (yot_inv_K_eps * eps_qddr_sc)';
 
 % all the quantities below need to be adjusted to account for the non-zero
 % prior means of qd and qdd
-minty_qd_r = qd_s' * inv_K_Yot_inv_K_s * r_s + ...
+minty_qd_r = qdmm_s' * inv_K_Yot_inv_K_qds * r_s + ...
                 mu_qd' * minty_r;
 rhod = minty_qd_r / minty_r;
-minty_qd_eps_rr = qd_s' * inv_K_Yot_inv_K_s_eps * eps_rr_sc + ...
+minty_qd_eps_rr = qdmm_s' * inv_K_Yot_inv_K_qds_eps * eps_rr_sc + ...
                 mu_qd' * minty_eps_rr;
 
 if want_sds               
-minty_qdd_r = qdd_s' * inv_K_Yot_inv_K_s * r_s + ...
+minty_qdd_r = qddmm_s' * inv_K_Yot_inv_K_qdds * r_s + ...
                 mu_qdd' * minty_r;
 rhodd = minty_qdd_r / minty_r;
 % only need the diagonals of this quantity, the full covariance is not
 % required
 minty_qdd_eps_rqdd = ...
-    sum((qdd_s' * inv_K_Yot_inv_K_s_eps) .* eps_rqdd_sc', 2) + ...
+    sum((qddmm_s' * inv_K_Yot_inv_K_qdds_eps) .* eps_rqdd_sc', 2) + ...
                 mu_qdd' .* minty_eps_rqdd;
-minty_qdd_eps_rr = qdd_s' * inv_K_Yot_inv_K_s_eps * eps_rr_sc + ...
+minty_qdd_eps_rr = qddmm_s' * inv_K_Yot_inv_K_qdds_eps * eps_rr_sc + ...
                 mu_qdd' * minty_eps_rr;
 end
 
@@ -386,6 +411,7 @@ if want_sds
 second_moment = rhodd + adj_rhodd_tq + adj_rhodd_tr;
 if want_posterior
     mean_out = second_moment;
+    sd_out = nan;
 else
     sd_out = sqrt(second_moment - mean_out.^2);
 end

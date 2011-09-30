@@ -1,18 +1,60 @@
-function [gp] = train_gp(covfn_name, meanfn_name, gp, XData, yData, ...
-    opt)
-% train gp
+function [gp, quad_gp] = train_gp(cov_fn, mean_fn, gp, X_data, y_data, opt)
+% [gp, quad_gp] = train_spgp(gp, X_data, y_data, opt)
+%OR
+% [gp, quad_gp] = train_gp(cov_fn, mean_fn, gp, X_data, y_data, opt);
 
-warning off
 
-if nargin<6
-    opt = struct();
-elseif ~isstruct(opt)
-    opt.optim_time = opt;
+
+if ischar('cov_fn')
+    % [gp, quad_gp] = train_gp(cov_fn, mean_fn, gp, X_data, y_data, opt);
+
+    if nargin<6
+        opt = struct();
+    end
+    
+    if ~isstruct(opt)
+        optim_time = opt;
+        opt = struct();
+        opt.optim_time = optim_time;
+    end
+    
+    opt.cov_fn = cov_fn;
+    opt.mean_fn = mean_fn;
+else
+    % [gp, quad_gp] = train_spgp(gp, X_data, y_data, opt);
+    
+    gp = cov_fn;
+    X_data = mean_fn;
+    y_data = gp;
+    if nargin<4
+        opt = struct();
+    else
+        opt = X_data;
+    end
+    
+    if ~isstruct(opt)
+        optim_time = opt;
+        opt.optim_time = optim_time;
+    end
 end
 
-default_opt = struct('print', true, ...
-                        'optim_time', 300);
 
+    
+[num_data, num_dims] = size(X_data);
+
+default_opt = struct(...
+                    'cov_fn', 'sqdexp', ...
+                    'mean_fn', 'constant', ...
+                    'num_hypersamples', min(500, 100 * num_dims), ...
+                    'derivative_observations', false, ...
+                    'optim_time', 60, ...
+                    'print', true, ... %if false, print no output whatsoever
+                    'verbose', false, ...
+                    'maxevals_hs', 10, ...
+                    'plots', true, ...
+                    'num_passes', 6, ...
+                    'force_training', true);
+                           
 names = fieldnames(default_opt);
 for i = 1:length(names);
     name = names{i};
@@ -20,213 +62,430 @@ for i = 1:length(names);
       opt.(name) = default_opt.(name);
     end
 end
-
-min_opt.print = opt.print;
-min_opt.showits = 0;
-
-gp = set_gp(covfn_name, meanfn_name, gp, XData, yData, 1);
-gp = hyperparams(gp);
-full_active_inds = gp.active_hp_inds;
-hps_struct = set_hps_struct(gp);
-input_scale_inds = hps_struct.logInputScales;
-noise_sd_ind = hps_struct.logNoiseSD;
-output_scale_ind = hps_struct.logOutputScale;
-num_dims = length(input_scale_inds);
-
-actual_log_noise_sd = gp.hyperparams(noise_sd_ind).priorMean;
-big_log_noise_sd = log(0.1) + gp.hyperparams(output_scale_ind).priorMean;
-
-
-tic;
-neg_log_likelihood...
-    (full_active_inds,gp.hypersamples(1).hyperparameters(full_active_inds),...
-    gp, XData, yData, min_opt);
-time_for_one_likelihood = toc;
-total_num_evals = floor(opt.optim_time/time_for_one_likelihood);
-
-num_input_scale_passes = max(3,ceil(total_num_evals/1e4));
+opt.verbose = opt.verbose && opt.print;
 
 if opt.print
- fprintf('Beginning optimisation of hyperparameters; time budget: %g seconds, budgeting for %d evaluations.\n', ...
-        opt.optim_time, total_num_evals);
-  % of course, this doesn't account for parfor savings, or for the
-  % overheads of direct itself.
+fprintf('Beginning training of GP, budgeting for %g seconds\n', ...
+    opt.optim_time);
 end
+start_time = cputime;
+
+if isfield(gp, 'hypersamples')
+    hypersamples = gp.hypersamples;
+    gp = struct();
+    gp.hypersamples = hypersamples;
+end
+
+
+if opt.derivative_observations
+    % set_gp assumes a standard homogenous covariance, we don't want to tell
+    % it about derivative observations.
+    plain_obs = X_data(:,end) == 0;
     
-tic;
+    set_X_data = X_data(plain_obs,1:end-1);
+    set_y_data = y_data(plain_obs,:);
+    
+    
+    gp = set_gp(opt.cov_fn,opt.mean_fn, gp, set_X_data, set_y_data, ...
+        opt.num_hypersamples);
+    
+    hps_struct = set_hps_struct(gp);
+    gp.covfn = @(flag) derivativise(@gp.covfn,flag);
+    gp.meanfn = @(flag) wderiv_mean_fn(hps_struct,flag);
+    
+    gp.X_data = X_data;
+    gp.y_data = y_data;
 
-num_split_evals = ...
-    max(1,floor(total_num_evals/(num_input_scale_passes*(num_dims+1)+1)));
-
-min_opt.maxevals = num_split_evals;
-
-% switch derivatives off now.
-if isfield(gp, 'grad_hyperparams')
-    grad_hyperparams = gp.grad_hyperparams;
+    
 else
-    grad_hyperparams = false;
+    gp = set_gp(opt.cov_fn,opt.mean_fn, gp, X_data, y_data, ...
+        opt.num_hypersamples);
 end
+gp = hyperparams(gp);
+% don't want to use likelihood gradients for BMC purposes
 gp.grad_hyperparams = false;
 
+full_active_inds = gp.active_hp_inds;
+hps_struct = set_hps_struct(gp);
 
-matlabpool close force
-matlabpool open
+input_scale_inds = hps_struct.logInputScales;
+gp.input_scale_inds = input_scale_inds;
+noise_ind = hps_struct.logNoiseSD;
+gp.noise_ind = noise_ind;
+output_scale_ind = hps_struct.logOutputScale;
+gp.output_scale_ind = output_scale_ind;
 
-for num_pass = 1:num_input_scale_passes
+% big_log_noise_sd = gp.hyperparams(output_scale_ind).priorMean;
+% actual_log_noise_sd = gp.hyperparams(noise_ind).priorMean;
+
+
+num_hypersamples = numel(gp.hypersamples);
+tic
+gp = ...
+    revise_gp(X_data, y_data, gp, 'overwrite',[], 'all', ...
+    [input_scale_inds(1), noise_ind]);
+hs_eval_time = toc/num_hypersamples;
+
+hypersamples = gp.hypersamples;
+gp = rmfield(gp, 'hypersamples');
+
+r_X_data = vertcat(hypersamples.hyperparameters);
+r_y_data = vertcat(hypersamples.logL);
+
+[quad_noise_sd, quad_input_scales, quad_output_scale] = ...
+    hp_heuristics(r_X_data, r_y_data, 100);
+%quad_input_scales = 10 * quad_input_scales;
+
+% only specified in case of early return
+quad_gp.quad_noise_sd = quad_noise_sd;
+quad_gp.quad_input_scales = quad_input_scales;
+quad_gp.quad_output_scale = quad_output_scale;
+
+if opt.optim_time <= 0
+    return
+end
+
+[max_logL, max_ind] = max(r_y_data);
+
+% initial values for w_c and X_c optimisation below
+input_scales = sqrt(exp(...
+hypersamples(max_ind).hyperparameters(input_scale_inds)));
+
+
+if opt.print
+fprintf('Initial best log-likelihood: \t%g',max_logL);
+end
+if opt.verbose
+    fprintf(', for ')
+    disp_gp_hps(hypersamples, max_ind,'no_logL');
+end
+if opt.print
+fprintf('\n');
+end
+
+maxevals_hs = opt.maxevals_hs;
+num_passes = opt.num_passes;
+
+ideal_time = num_hypersamples * (...
+                maxevals_hs * (num_passes * (num_dims + 1)) ...
+                * hs_eval_time...
+                );
+% the 2 *  here is due to expected speed-up due to
+% parallelisation
+scale_factor = ... %2 * 
+    opt.optim_time / ideal_time;
+
+% set the allowed number of likelihood evaluations
+opt.maxevals_hs = ceil(maxevals_hs * scale_factor);
+
+if opt.maxevals_hs == 1
+    warning('insufficient time allowed to train GP, consider decreasing opt.num_hypersamples or increasing opt.optim_time');
+    if opt.force_training
+        warning('proceeding with minimum possible likelihood evaluations');
+        opt.maxevals_hs = 2;
+    else
+        gp.hypersamples = hypersamples;
+        return
+    end
+end
+
+% if opt.verbose
+%     fprintf('%g evals to train input_scale, output_scale and sigma, %g to train X_c and w_c\n', opt.maxevals_hs, opt.maxevals_c);
+% end   
+
+for num_pass = 1:num_passes
     
-    if opt.print
-    fprintf('Beginning optimisation of input scales, pass %g of %g\n', num_pass, num_input_scale_passes)
-    end  
-    
-    inputscales_priorMean = nan(1,num_dims);
-    inputscales_priorSD = nan(1,num_dims);
-
-    gp.hypersamples(1).hyperparameters(noise_sd_ind) = big_log_noise_sd;
- 
-
-    parfor d = 1:num_dims
-        
-        active_hp_inds = [input_scale_inds(d), noise_sd_ind];
-
-        [best_a_hypersample,est_sds] = minimise_active_inds(gp, active_hp_inds, XData, yData, min_opt);
-
-        inputscales_priorMean(d) = best_a_hypersample(1);
-        inputscales_priorSD(d) = est_sds(1);
-        
+    if opt.verbose
+        fprintf('Pass %g\n', num_pass)
     end
     
-    gp.hyperparameters(noise_sd_ind).hyperparameters(noise_sd_ind) = actual_log_noise_sd;
+    input_scale_cell = cell(num_hypersamples, 1);
+    input_scale_logL_cell = cell(num_hypersamples, 1);
+    
+    output_scale_cell = cell(num_hypersamples,1);
+    output_scale_logL_cell = cell(num_hypersamples,1);
+    
+    %par
+    for hypersample_ind = 1:num_hypersamples
+        
+       if opt.verbose
+            fprintf('Hyperparameter sample %g\n',hypersample_ind)
+        end
+        
 
+        % optimise input scale
+
+
+        input_scale_cell{hypersample_ind} = cell(1, num_dims);
+        input_scale_logL_cell{hypersample_ind} = cell(1, num_dims);
+        for d = 1:num_dims 
+            active_hp_inds = [input_scale_inds(d), noise_ind];
+            
+
+            [inputscale_hypersample, input_scale_mat, input_scale_logL_mat] = ...
+                move_hypersample(...
+                hypersamples(hypersample_ind), gp, quad_input_scales, ...
+                active_hp_inds, ...
+                X_data, y_data, opt);
+            
+            log_input_scale_d = ...
+                inputscale_hypersample.hyperparameters(input_scale_inds(d));
+
+            hypersamples(hypersample_ind).hyperparameters(input_scale_inds(d)) = ...
+                log_input_scale_d;
+            
+            input_scale_cell{hypersample_ind}{d} = input_scale_mat;
+            input_scale_logL_cell{hypersample_ind}{d} = input_scale_logL_mat;
+            
+            
+            if opt.verbose
+                fprintf(', \t for input_scale(%g) = %g\n', ...
+                    d, exp(log_input_scale_d));
+            end
+        end
+
+         % optimise output_scale & noise
+
+        active_hp_inds = [output_scale_ind, noise_ind];
+
+        [outputscale_hypersample, output_scale_mat, output_scale_logL_mat] = ...
+            move_hypersample(...
+                hypersamples(hypersample_ind), gp, quad_input_scales, ...
+                active_hp_inds, ...
+                X_data, y_data, opt);
+            
+        output_scale_cell{hypersample_ind} = output_scale_mat;
+        output_scale_logL_cell{hypersample_ind} = output_scale_logL_mat;
+            
+%         hypersamples(hypersample_ind).hyperparameters(active_hp_inds) = ...
+%                 outputscale_hypersample.hyperparameters(active_hp_inds);
+            
+%         if opt.verbose
+%             fprintf(', \t for output_scale = %g\n', ...
+%                 exp(log_output_scale));
+%         end
+% 
+%         % now do a quick joint optimisation to finish off
+% 
+%         [hypersample] = ...
+%             move_hypersample(...
+%                     hypersample, gp, quad_input_scales, ...
+%                     full_active_inds, ...
+%                     X_data, y_data, opt);
+
+        hypersamples(hypersample_ind) = outputscale_hypersample;
+                
+        if opt.verbose
+            fprintf(', \t for ');
+            disp_spgp_hps(hypersamples(hypersample_ind), [], 'no_logL');
+            fprintf('\n');
+        end
+
+    end
+    
+    % now we estimate the scale of variation of the likelihood wrt
+    % log input_scale.
+    
+    input_scale_compcell = cat(1,input_scale_cell{:});
+    input_scale_logL_compcell = cat(1,input_scale_logL_cell{:});
+    quad_noise_sds = nan(num_dims+1,1);
+    quad_output_scales = nan(num_dims+1,1);
+        
     for d = 1:num_dims
-        gp.hyperparams(input_scale_inds(d)).priorMean = inputscales_priorMean(d);
-        gp.hyperparams(input_scale_inds(d)).priorSD = inputscales_priorSD(d);
+        a_hps_mat = cat(1, input_scale_compcell{:,d});
+        logL_mat = cat(1,input_scale_logL_compcell{:,d});
+        
+        sorted_logL_mat = sort(logL_mat);
+              
+        top_inds = logL_mat >= sorted_logL_mat(round(0.9*end));
+        a_hps_mat = a_hps_mat(top_inds,:);
+        logL_mat = logL_mat(top_inds,:);
+
+        [quad_noise_sds(d), a_quad_input_scales, quad_output_scales(d)] = ...
+            hp_heuristics(a_hps_mat,logL_mat,10);
+
+        quad_input_scales(input_scale_inds(d)) = a_quad_input_scales(1);
     end
- 
-    gp.hypersamples(1).hyperparameters(input_scale_inds) = inputscales_priorMean;
-    %gp.hypersamples(1).hyperparameters(full_active_inds)'
     
+    % now we estimate the scale of variation of the likelihood wrt
+    % log output_scale and log noise sd.
+    a_hps_mat = cat(1,output_scale_cell{:});
+    logL_mat = cat(1,output_scale_logL_cell{:});
+    
+    a_hps_mat = max(a_hps_mat, -100);
+    
+    sorted_logL_mat = sort(logL_mat);
+
+    top_inds = logL_mat >= sorted_logL_mat(round(0.9*end));
+    a_hps_mat = a_hps_mat(top_inds,:);
+    logL_mat = logL_mat(top_inds,:);
+
+    [quad_noise_sds(end), a_quad_input_scales, quad_output_scales(end)] = ...
+        hp_heuristics(a_hps_mat,logL_mat,10);
+
+    quad_input_scales(output_scale_ind) = a_quad_input_scales(1);
+    quad_input_scales(noise_ind) = a_quad_input_scales(2);
+    
+    quad_noise_sd = min(quad_noise_sds);
+    quad_output_scale = max(quad_output_scales);
+    
+    if cputime-start_time > opt.optim_time || num_pass == num_passes
+        % need to end here so that we have gp that has been trained on the
+        % whole dataset, rather than on a `close' subset
+        break
+    end  
+  
     if opt.print
-    fprintf('Beginning optimisation of output scale and noise, pass %g of %g\n', num_pass, num_input_scale_passes)
+    fprintf('\n');
     end
-    % optimise output scale & noise
-
-    active_hp_inds = [output_scale_ind, noise_sd_ind];
-
-    [best_a_hypersample,est_sds] = minimise_active_inds(gp, active_hp_inds, XData, yData, min_opt);
-
-    gp.hyperparams(output_scale_ind).priorMean = best_a_hypersample(1);
-    gp.hyperparams(output_scale_ind).priorSD = est_sds(1);
-    gp.hyperparams(noise_sd_ind).priorMean = best_a_hypersample(2);
-    gp.hyperparams(noise_sd_ind).priorSD = est_sds(2);
-    gp.hypersamples(1).hyperparameters(active_hp_inds) = best_a_hypersample;
-
-    gp.hypersamples(1).hyperparameters(full_active_inds)'
+    
 end
 
+gp.hypersamples = hypersamples;
+gp.X_data = X_data;
+gp.y_data = y_data;
+gp.active_hp_inds = full_active_inds;
+gp.input_scale_inds = input_scale_inds;
 
-
-% now do a joint optimisation to finish off
+[max_logL, max_ind] = max([gp.hypersamples.logL]);
 
 if opt.print
-fprintf('Beginning final, joint optimisation\n')
+fprintf('Final best log-likelihood: \t%g',max_logL);
+end
+if opt.verbose
+    fprintf(', for ')
+    disp_gp_hps(gp, max_ind, 'no_logL');
+elseif opt.print
+    fprintf('\n');
 end
 
-[best_a_hypersample,est_sds,neg_logL] = minimise_active_inds(gp, full_active_inds, XData, yData, min_opt);
 
-gp.hypersamples(1).hyperparameters(full_active_inds) = best_a_hypersample;
-gp.hypersamples(1).logL = -neg_logL;
+
+quad_gp.quad_noise_sd = quad_noise_sd;
+quad_gp.quad_input_scales = quad_input_scales;
+quad_gp.quad_output_scale = quad_output_scale;
 
 if opt.print
-fprintf('Completed optimisation of hyperparameters\n')
-gp.hypersamples(1).hyperparameters(full_active_inds)'
-
-fprintf('Maximum likelihood hyperparameters:\n');
-cellfun(@(name, value) fprintf('\t%s\t%g\n', name, value), ...
-    {gp.hyperparams.name}', ...
-    mat2cell2d(gp.hypersamples(1).hyperparameters',...
-    ones(numel(gp.hyperparams),1),1));
-end
-
-gp.grad_hyperparams = grad_hyperparams;
-gp = revise_gp(XData, yData, gp, 'overwrite');
-
-matlabpool close
-warning on
-
-toc;
-
-function [neg_logL neg_glogL] = neg_log_likelihood...
-    (active_hp_inds,a_hypersample, gp, XData, yData, min_opt)
-
-want_derivs = nargout>1;
-gp.grad_hyperparams = want_derivs;
-
-if size(a_hypersample,1)>1
-    gp.hypersamples(1).hyperparameters(active_hp_inds) = a_hypersample';
-else
-    gp.hypersamples(1).hyperparameters(active_hp_inds) = a_hypersample;
-end
-
-gp = revise_gp(XData, yData, gp, 'overwrite');
-
-neg_logL = - gp.hypersamples(1).logL;
-if want_derivs
-    neg_glogL = - [gp.hypersamples(1).glogL{:}];
-end
-if min_opt.print
-fprintf('.');
+    fprintf('Completed retraining of GP in %g seconds\n', cputime-start_time)
+    fprintf('\n');
 end
 
 
+function [hypersample, a_hps_mat, logL_mat] = move_hypersample(...
+    hypersample, gp, quad_input_scales, active_hp_inds, X_data, y_data, opt)
 
-function [best_a_hypersample, est_sds, neg_logL] = minimise_active_inds(gp,...
-    active_hp_inds, XData, yData, min_opt)
+gp.hypersamples = hypersample;
+a_quad_input_scales = quad_input_scales(active_hp_inds);
 
+flag = false;
+i = 0;
+a_hps_mat = nan(opt.maxevals_hs,length(active_hp_inds));
+logL_mat = nan(opt.maxevals_hs,1);
 
-a_priorMeans=[gp.hyperparams(active_hp_inds).priorMean];
-a_priorSDs=[gp.hyperparams(active_hp_inds).priorSD];
-a_lower_bound = a_priorMeans - 3*a_priorSDs;
-a_upper_bound = a_priorMeans + 3*a_priorSDs;
+if opt.verbose && opt.plots
+    for a = 1:length(active_hp_inds)
+        figure(a);clf; hold on;
+        title(['Optimising hyperperparameter ',num2str(a)])
+    end
+end
 
+broken = false;
 
-objective = @(a_hypersample) neg_log_likelihood...
-    (active_hp_inds,a_hypersample, gp, XData, yData, min_opt);
+while (~flag || ceil(opt.maxevals_hs/5) > i) && i < opt.maxevals_hs-1
+    i = i+1;
+    
+    try
+        gp = ...
+            revise_gp(X_data, y_data, gp, 'overwrite', [], 'all', active_hp_inds);
+    catch
+        broken = true;
+        i = i - 1;
+        break;
+    end
+    
+    logL = gp.hypersamples.logL;
+%     if opt.verbose
+%         fprintf('%g,',logL)
+%     end
+    a_hs=gp.hypersamples.hyperparameters(active_hp_inds);
+    
+    a_hps_mat(i,:) = a_hs;
+    logL_mat(i) = logL;
+    
+    if opt.verbose && opt.plots
+        for a = 1:length(active_hp_inds)
+            figure(a)
+            x = a_hs(a);
+            plot(x, logL, '.');
 
-Problem.f = objective;
-a_bounds = [a_lower_bound; a_upper_bound]';
+            g = [gp.hypersamples.glogL{a}];
+            scale = a_quad_input_scales(a);
 
-% N = 10;
-% grid_pts = allcombs([linspace(a_lower_bound(1),a_upper_bound(1),N)',...
-%     linspace(a_lower_bound(2),a_upper_bound(2),N)']);
-% obj = nan(length(grid_pts),1);
-% for i=1:length(grid_pts)
-%     obj(i) = objective(grid_pts(i,:));
-% end
-% inp = reshape(grid_pts(:,1),N,N);
-% nois = reshape(grid_pts(:,2),N,N);
-% negloglik = reshape(obj,N,N);
-% contourf(inp,nois,negloglik);
-% xlabel('log input scale')
-% ylabel('log noise sd')
-% [min_negloglik,min_ind] = min(obj);
-% best_a_hypersample = grid_pts(min_ind,:);
-% est_sds = 1/3*a_priorSDs;
+            line([x-scale,x+scale],...
+                [logL-g*scale,logL+g*scale],...
+                'Color',[0 0 0],'LineWidth',1.5);
+        end
+    end
+    
+    if i>1 && logL_mat(i) < backup_logL
+        % the input scale which predicted the largest increase in logL is
+        % likely wrong
+        
+        dist_moved = (a_hs - backup_a_hs).*a_grad_logL;
+        [dummy,max_ind] = max(dist_moved);
 
-opt.showits = min_opt.showits;
-opt.maxevals = min_opt.maxevals;
+        a_quad_input_scales(max_ind) = 0.5*a_quad_input_scales(max_ind);
+        
+%         [~,a_quad_input_scales] = ...
+%             hp_heuristics(a_hps_mat(1:i,:),logL_mat(1:i,:),10);
+%         
+        a_hs = backup_a_hs;
+    else
+        backup_logL = logL;
+        backup_a_hs = a_hs;
+        a_grad_logL = [gp.hypersamples.glogL{active_hp_inds}];
+    end
+    
 
-[neg_logL, best_a_hypersample, history] = Direct(Problem, a_bounds, opt);
+    [a_hs, flag] = simple_zoom_pt(a_hs, a_grad_logL, ...
+                            a_quad_input_scales, 'maximise');
+    gp.hypersamples.hyperparameters(active_hp_inds) = a_hs;
+    
+end
 
-best_a_hypersample = best_a_hypersample';
+if ~broken
+    try
 
-ratio = 1;
-% if size(history,1)>=2
-%     diff_history = diff(history(:,3));
-%     ratio = diff_history(end)/min(diff_history);
-% else
-%     ratio = 1;
-% end
-est_sds =  max(ratio, 1/3) * a_priorSDs;
-if min_opt.print
-fprintf('\n logL = %g\n', -neg_logL)
+    
+    gp = revise_gp(X_data, y_data, gp, 'overwrite');
+    logL = gp.hypersamples.logL;
+    a_hs = gp.hypersamples.hyperparameters(active_hp_inds);
+
+    i = i+1;
+    
+    a_hps_mat(i,:) = a_hs;
+    logL_mat(i) = logL;
+    catch
+    end
+end
+
+a_hps_mat = a_hps_mat(1:i,:);
+logL_mat = logL_mat(1:i,:);
+
+[max_logL,max_ind] = max(logL_mat);
+gp.hypersamples.hyperparameters(active_hp_inds) = a_hps_mat(max_ind,:);
+gp = revise_gp(X_data, y_data, gp, 'overwrite');
+hypersample = gp.hypersamples;
+
+% not_nan = all(~isnan([a_hps_mat,logL_mat]),2);
+% 
+% [quad_noise_sd, a_quad_input_scales] = ...
+%     hp_heuristics(a_hps_mat(not_nan,:), logL_mat(not_nan), 10);
+% quad_input_scales(active_hp_inds) = a_quad_input_scales;
+
+if opt.verbose
+fprintf('LogL: %g -> %g',logL_mat(1), max_logL)
+end
+if opt.verbose && opt.plots
+    %keyboard;
 end

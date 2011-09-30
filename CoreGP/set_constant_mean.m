@@ -13,13 +13,13 @@ function gp = set_constant_mean(gp, XData, YData, num_samples)
 % mean for the prior for the constant mean hyperparameter. The SD
 % taken is also estimated from the least-squares fit.
 
-if nargin == 1 || isempty(YData)
+if nargin == 1 
     num_samples = 1;
     type = 'inactive';
     
     const = 0;
     const_priorSD = 10;
-elseif nargin == 2 
+elseif nargin == 2 || isempty(YData)
     num_samples = XData;
     type = 'real';
     

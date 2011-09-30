@@ -191,7 +191,6 @@ if have_y_data && have_X_data
     
     [est_noise_sd,est_input_scales,est_output_scale] = ...
         hp_heuristics(X_data,y_data_minus_mu);
-    
 
     if create_logNoiseSD
         gp.hyperparams(noise_ind).priorMean = log(est_noise_sd);

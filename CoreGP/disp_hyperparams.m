@@ -1,4 +1,4 @@
-function best_hypersample = disp_hyperparams(gp, best_hypersample)
+function [best_hypersample, best_hypersample_struct] = disp_hyperparams(gp, best_hypersample)
 
 if nargin<2
     if isfield(gp.hypersamples,'logL')
@@ -8,6 +8,17 @@ if nargin<2
         best_hypersample = [gp.hyperparams.priorMean];
     end
 end
+
+hps_struct = set_hps_struct(gp);
+
+
+best_hypersample_struct.output_scale = ...
+    exp(best_hypersample(hps_struct.logOutputScale));
+best_hypersample_struct.input_scales = ...
+    exp(best_hypersample(hps_struct.logInputScales));
+best_hypersample_struct.noise_sd = ...
+    exp(best_hypersample(hps_struct.logNoiseSD));
+
 
 if nargout == 0
 fprintf('Maximum likelihood hyperparameters:\n');

@@ -175,7 +175,7 @@ opt.maxevals_hs = ceil(maxevals_hs * scale_factor);
 opt.maxevals_c = ceil(maxevals_c * scale_factor);
 
 if opt.maxevals_hs == 1
-    warning('insufficient time allowed to train sparse GP');
+    warning('insufficient time allowed to train sparse GP, consider decreasing opt.num_hypersamples or increasing opt.optim_time');
     if opt.force_training
         warning('proceeding with minimum possible likelihood evaluations');
         opt.maxevals_hs = 2;

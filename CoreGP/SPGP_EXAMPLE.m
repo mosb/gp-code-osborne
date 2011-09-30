@@ -43,7 +43,7 @@ X_star = bsxfun(@plus,rand(1000,num_dims)*diag(scales),means);
 real_star = y(X_star);
 
 % test the gp
-[m, sd] = predict(X_star, gp, quad_gp);
+[m, sd] = predict_spgp(X_star, gp, quad_gp);
 [X_c, y_c] = spgp_centres(gp, quad_gp);
 
 % make some plots

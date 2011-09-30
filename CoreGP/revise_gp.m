@@ -1,5 +1,5 @@
 function gp = revise_gp(X_data, y_data, gp, flag, active, samples, grad_hp_inds)
-%  gp = revise_gp(X_data, y_data, gp, flag, active, samples, hps)
+%  gp = revise_gp(X_data, y_data, gp, flag, active, samples, grad_hp_inds)
 % X_data:   (additional) evaluated inputs to condition gp on
 % y_data:   (additional) evaluated outputs to condition gp on
 % gp:       existing gp structure (can be empty)
@@ -15,7 +15,7 @@ function gp = revise_gp(X_data, y_data, gp, flag, active, samples, grad_hp_inds)
 % grad_hp_inds: we compute the derivative of the log likelihood with respect to
 %           these hyperparameters.
 
-if (nargin < 6)
+if (nargin < 6) || strcmpi(samples,'all')
 	samples = 1:numel(gp.hypersamples);
 end
 if isempty(samples)

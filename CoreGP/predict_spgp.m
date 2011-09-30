@@ -26,6 +26,7 @@ r_y_data = vertcat(gp.hypersamples.logL);
 
 X_c = gp.hypersamples(max_ind).X_c;
 num_c = size(X_c, 1);
+num_star = size(XStar, 1);
 XStar = [XStar; X_c];
 
 if nargin<3
@@ -51,7 +52,11 @@ else
     YVar = YVar - YMean.^2;
     YSD = sqrt(YVar); 
 end
-y_c = YMean(end-num_c+1:end);
+
+y_c = YMean((num_star+1):end);
+YMean = YMean(1:num_star);
+YSD = YSD(1:num_star);
+
 
 if params.print
     fprintf('Prediction complete in %g seconds\n', cputime-start_time)

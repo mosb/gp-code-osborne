@@ -17,7 +17,9 @@ X_star = repmat(X_star,1,N);
 optim_time = 60;
 
 % training
+tic
 gp = train_gp('sqdexp', 'constant', [], X_data, y_data, optim_time);
+toc
 
 % testing
 [t_mean,t_sd]=predict_gp(X_star, gp);

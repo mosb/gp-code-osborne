@@ -14,7 +14,7 @@ num_data = size(XData,1);
 
 if num_data == 1
     est_input_scales = ones(1,num_dims);
-    est_output_scale = yData_minus_mu;
+    est_output_scale = max(1,yData_minus_mu);
     est_noise_sd = 0.1*yData_minus_mu;
     return
 elseif num_data > 10000
@@ -123,6 +123,8 @@ problems = or(or(...
 
 est_input_scales(problems) = 1;
 est_output_scale(isnan(est_output_scale)) = max(yData_minus_mu);
+est_output_scale(isinf(est_output_scale)) = max(yData_minus_mu);
+est_output_scale(est_output_scale<eps) = max(yData_minus_mu);
 est_output_scale = max(est_output_scale);
 est_noise_sd = max(eps,min(est_noise_sd));
 

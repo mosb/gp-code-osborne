@@ -48,13 +48,14 @@ create_log_w0s = ~isfield(hps_struct,'log_w0s') ...
                         || isempty(hps_struct.log_w0s);
 create_log_lambda = ~isfield(hps_struct,'log_lambda')...
                         || isempty(hps_struct.log_lambda);
-create_meanfn = ~isempty(meanfn_name) ||...
-                        (~isfield(gp,'meanfn')...
-                        || isempty(gp.meanfn)) && ...
-                (~isfield(gp,'meanPos')...
-                        || isempty(gp.meanPos));
-create_w_c = ~isfield(gp,'w_c');
-create_X_c = ~isfield(gp,'X_c');
+create_meanfn = ~isempty(meanfn_name) && ...
+                        (~isfield(gp,'Mu') || isempty(gp.Mu)) && ...
+                        (~isfield(gp,'meanPos') || isempty(gp.meanPos));
+update_best_hypersample = isfield(gp, 'hypersamples');
+create_w_c = ~update_best_hypersample || ...
+    ~isfield(gp.hypersamples,'log_tw_c');
+create_X_c = ~update_best_hypersample || ...
+    ~isfield(gp.hypersamples,'X_c');
                   
 if nargin<5
     if have_X_data
@@ -124,6 +125,7 @@ if create_log_w0s
     end
 else
     gp.w0_inds = hps_struct.log_w0s;  
+    w0_inds = gp.w0_inds;
 end
 if create_log_lambda
 %     if have_data
@@ -162,7 +164,7 @@ gp.Mu = get_mu(gp, 'plain');
 gp.DMu_inputs = get_mu(gp, 'sp grad inputs');
 gp.diag_sqd_noise = get_diag_sqd_noise(gp, 'plain');
 
-update_best_hypersample = isfield(gp, 'hypersamples');
+
 if update_best_hypersample
     [logL, best_ind] = max([gp.hypersamples.logL]);
     best_hypersample = gp.hypersamples(best_ind).hyperparameters;
@@ -184,11 +186,11 @@ if update_best_hypersample
             best_hypersample(lambda_ind);
         gp.hyperparams(lambda_ind).priorSD = 1.5;
     end
-    if create_X_c
+    if ~create_X_c
         best_X_c = gp.hypersamples(best_ind).X_c;
         num_best_c = size(best_X_c,1);
     end
-    if create_w_c
+    if ~create_w_c
         best_log_tw_c = gp.hypersamples(best_ind).log_tw_c;
         num_best_c = size(best_log_tw_c,1);
     end
@@ -274,21 +276,10 @@ for sample = 1:num_hypersamples
 end
 
 if create_X_c
-    
     if have_X_data 
         if num_c >= num_data
             X_c = X_data;
             num_c = num_data;
-        elseif update_best_hypersample
-            if num_c <= num_best_c
-                X_c = best_X_c(1:num_c, :);
-            else
-                more_X_c = metrickcentres(X_data, num_c-num_best_c);
-
-                X_c = nan(num_best_c + size(more_X_c,1), num_dims);
-                X_c(1:num_best_c, :) = best_X_c;
-                X_c(num_best_c+1:end, :) = more_X_c;
-            end
         else
             X_c = metrickcentres(X_data, num_c);
         end
@@ -299,21 +290,52 @@ if create_X_c
     for sample = 1:num_hypersamples
         gp.hypersamples(sample).X_c = X_c;
     end
-end
+    
+elseif update_best_hypersample
+    if num_c <= num_best_c
+        X_c = best_X_c(1:num_c, :);
+    elseif have_X_data
+        more_X_c = metrickcentres(X_data, num_c-num_best_c);
+
+        X_c = nan(num_best_c + size(more_X_c,1), num_dims);
+        X_c(1:num_best_c, :) = best_X_c;
+        X_c(num_best_c+1:end, :) = more_X_c;
+        
+    end
+
+    num_c = size(X_c,1);
+    
+    for sample = 1:num_hypersamples
+        gp.hypersamples(sample).X_c = X_c;
+    end
+
+end 
+
 if create_w_c
+    
     for sample = 1:num_hypersamples
         w_0 = exp(gp.hypersamples(sample).hyperparameters(w0_inds));
-        
+
         w_c = repmat(w_0, num_c, 1);
-        
+
+        gp.hypersamples(sample).log_tw_c = ...
+            log(bsxfun(@minus, w_c, 0.5 * w_0));   
+    end
+    
+elseif update_best_hypersample
+
+    for sample = 1:num_hypersamples
+        w_0 = exp(gp.hypersamples(sample).hyperparameters(w0_inds));
+
+        w_c = repmat(w_0, num_c, 1);
+
         gp.hypersamples(sample).log_tw_c = ...
             log(bsxfun(@minus, w_c, 0.5 * w_0));
-    end
-    if update_best_hypersample
+
         if num_c <= num_best_c
-            gp.hypersamples(end).log_tw_c = best_log_tw_c(1:num_c,:);
+            gp.hypersamples(sample).log_tw_c = best_log_tw_c(1:num_c,:);
         else
-            gp.hypersamples(end).log_tw_c(1:num_best_c,:) = best_log_tw_c;
+            gp.hypersamples(sample).log_tw_c(1:num_best_c,:) = best_log_tw_c;
         end
     end
 end
