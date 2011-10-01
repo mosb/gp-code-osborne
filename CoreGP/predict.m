@@ -1,6 +1,6 @@
 function [mean_out, sd_out, rhod, rhodd] = ...
-    predict(X_star, gp, q_gp, r_gp, opt)
-% function [mean, sd] = predict(X_star, gp, q_gp, r_gp, opt)
+    predict(X_star, gp, r_gp, qd_gp, qdd_gp, opt)
+% function [mean, sd] = predict(X_star, gp, r_gp, qd_gp, qdd_gp, opt)
 % return the posterior mean and sd by marginalising hyperparameters.
 % - X_star (n by d) is a matrix of the n (d-dimensional) points at which
 % predictions are to be made
@@ -32,9 +32,7 @@ function [mean_out, sd_out, rhod, rhodd] = ...
 % * means
 % * sds
 
-if nargin<4 || isempty(r_gp)
-    r_gp = q_gp;
-end
+
 
 if nargin<5
     opt = struct();
@@ -42,9 +40,10 @@ end
 
 default_opt = struct('num_c', 100,...
                     'gamma_const', 100, ...
-                    'num_box_scales', 3, ...
+                    'num_box_scales', 5, ...
                     'prediction_model', 'spgp', ...
                     'no_adjustment', false, ...
+                    'allowed_cond_error',10^-14,...
                     'print', true);
                 
 names = fieldnames(default_opt);
@@ -170,49 +169,73 @@ mu_qdd = mean(qdd_s);
 qdmm_s = bsxfun(@minus, qd_s, mu_qd);
 qddmm_s = bsxfun(@minus, qdd_s, mu_qdd);
 
-if nargin<3 || isempty(q_gp)
-    [q_noise_sd, q_input_scales, q_output_scale] = ...
-        hp_heuristics(hs_s, qd_s, 10);
 
-    sqd_output_scale = q_output_scale^2;
-    q_input_scales = 10*q_input_scales;
-else
-    sqd_output_scale = q_gp.quad_output_scale^2;
-    q_noise_sd =  q_gp.quad_noise_sd;
-    q_input_scales = q_gp.quad_input_scales;
-end
+% predict(X_star, gp, r_gp, qd_gp, qdd_gp, opt)
 
-if nargin<4 || isempty(r_gp)
+if nargin<3 || isempty(r_gp)
     [r_noise_sd, r_input_scales, r_output_scale] = ...
         hp_heuristics(hs_s, r_s, 10);
 
-    sqd_output_scale = r_output_scale^2;
-    r_input_scales = 10*r_input_scales;
+    r_sqd_output_scale = r_output_scale^2;
+    r_input_scales = r_input_scales;
 else
-    sqd_output_scale = r_gp.quad_output_scale^2;
+    r_sqd_output_scale = r_gp.quad_output_scale^2;
     r_noise_sd =  r_gp.quad_noise_sd;
     r_input_scales = r_gp.quad_input_scales;
 end
 
-% we force GPs for r, qd, qdd, tr, and tqdd to share the same input scales.
-% eps_rr, eps_qdr, eps_rqdd, eps_qddr are assumed to all have input scales
-% equal to half of those for r.
+if nargin<4 || isempty(qd_gp)
+    [qd_noise_sd, qd_input_scales, qd_output_scale] = ...
+        hp_heuristics(hs_s, qd_s, 10);
 
-input_scales = r_input_scales;
-eps_input_scales = 0.5 * input_scales;
+    qd_sqd_output_scale = qd_output_scale^2;
+    qd_input_scales = qd_input_scales;
+else
+    qd_sqd_output_scale = qd_gp.quad_output_scale^2;
+    qd_noise_sd =  qd_gp.quad_noise_sd;
+    qd_input_scales = qd_gp.quad_input_scales;
+end
 
-sqd_lambda = sqd_output_scale* ...
-    prod(2*pi*input_scales.^2)^(-0.5);
-eps_sqd_lambda = sqd_output_scale* ...
+if want_posterior
+    qdd_gp = qd_gp;
+end
+if ~want_posterior && (nargin<5 || isempty(qdd_gp))
+    [qdd_noise_sd, qdd_input_scales, qdd_output_scale] = ...
+        hp_heuristics(hs_s, qdd_s, 10);
+
+    qdd_sqd_output_scale = qdd_output_scale^2;
+    qdd_input_scales = qdd_input_scales;
+else
+    qdd_sqd_output_scale = qdd_gp.quad_output_scale^2;
+    qdd_noise_sd =  qdd_gp.quad_noise_sd;
+    qdd_input_scales = qdd_gp.quad_input_scales;
+end
+
+% we force GPs for r and tr to share hyperparameters; we also assume the
+% gps for qdd and tqdd share hyperparameters. eps_rr, eps_qdr, eps_rqdd,
+% eps_qddr are assumed to all have input scales equal to half of those for
+% r.
+
+r_sqd_lambda = r_sqd_output_scale* ...
+    prod(2*pi*r_input_scales.^2)^(-0.5);
+qd_sqd_lambda = qd_sqd_output_scale* ...
+    prod(2*pi*qd_input_scales.^2)^(-0.5);
+qdd_sqd_lambda = qdd_sqd_output_scale* ...
+    prod(2*pi*qdd_input_scales.^2)^(-0.5);
+
+eps_input_scales = 0.5 * r_input_scales;
+eps_sqd_output_scale = r_sqd_output_scale;
+eps_sqd_lambda = eps_sqd_output_scale* ...
     prod(2*pi*eps_input_scales.^2)^(-0.5);
-r_noise_sd = r_noise_sd / sqrt(sqd_lambda);
 
-lower_bound = min(hs_s) - opt.num_box_scales*input_scales;
-upper_bound = max(hs_s) + opt.num_box_scales*input_scales;
+min_input_scales = min([r_input_scales;qd_input_scales;qdd_input_scales]);
+
+lower_bound = min(hs_s) - opt.num_box_scales*min_input_scales;
+upper_bound = max(hs_s) + opt.num_box_scales*min_input_scales;
 
 % find the candidate points, far removed from existing samples
 hs_c = find_farthest(hs_s, [lower_bound; upper_bound], num_c, ...
-                            input_scales);
+                            min_input_scales);
 
 hs_sc = [hs_s; hs_c];
 num_sc = size(hs_sc, 1);
@@ -224,88 +247,142 @@ sqd_dist_stack_sc = bsxfun(@minus,...
                     .^2;  
 sqd_dist_stack_s = sqd_dist_stack_sc(1:num_s, 1:num_s, :);
 
-sqd_input_scales_stack = reshape(input_scales.^2,1,1,num_hps);
+sqd_r_input_scales_stack = reshape(r_input_scales.^2,1,1,num_hps);
+sqd_qd_input_scales_stack = reshape(qd_input_scales.^2,1,1,num_hps);
+sqd_qdd_input_scales_stack = reshape(qdd_input_scales.^2,1,1,num_hps);
 sqd_eps_input_scales_stack = reshape(eps_input_scales.^2,1,1,num_hps);
                 
-K_s = sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
-                    sqd_dist_stack_s, sqd_input_scales_stack), 3)); 
-K_rs = improve_covariance_conditioning(K_s, r_s, 10^-16);
-R_rs = chol(K_rs);
-K_qds = improve_covariance_conditioning(K_s, qdmm_s, 10^-16);
-R_qds = chol(K_qds);
-K_qdds = improve_covariance_conditioning(K_s, qddmm_s, 10^-16);
-R_qdds = chol(K_qdds);
+K_r_s = r_sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
+                    sqd_dist_stack_s, sqd_r_input_scales_stack), 3)); 
+[K_r_s, jitters_r_s] = improve_covariance_conditioning(K_r_s, r_s, ...
+    opt.allowed_cond_error);
+R_r_s = chol(K_r_s);
+
+K_qd_s = qd_sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
+                    sqd_dist_stack_s, sqd_qd_input_scales_stack), 3)); 
+[K_qd_s, jitters_qd_s] = improve_covariance_conditioning(K_qd_s, abs(qdmm_s), ...
+    opt.allowed_cond_error);
+R_qd_s = chol(K_qd_s);
+
+K_qdd_s = qdd_sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
+                    sqd_dist_stack_s, sqd_qdd_input_scales_stack), 3)); 
+K_qdd_s = improve_covariance_conditioning(K_qdd_s, abs(qddmm_s), ...
+    opt.allowed_cond_error);
+R_qdd_s = chol(K_qdd_s);
 
 K_eps = eps_sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
                     sqd_dist_stack_sc, sqd_eps_input_scales_stack), 3)); 
 importance_sc = ones(num_sc,1);
-importance_sc(num_s + 1 : end) = 10;
-K_eps = improve_covariance_conditioning(K_eps, importance_sc, 10^-16);
+importance_sc(num_s + 1 : end) = 2;
+K_eps = improve_covariance_conditioning(K_eps, importance_sc, ...
+    10^-14);
 R_eps = chol(K_eps);     
 
 sqd_dist_stack_s_sc = sqd_dist_stack_sc(1:num_s, :, :);
-K_s_sc = sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
-                    sqd_dist_stack_s_sc, sqd_input_scales_stack), 3));  
-             
-sum_prior_var_sqd_input_scales_stack = ...
-    prior_var_stack + sqd_input_scales_stack;
-determ = 2*prior_var_stack.*sqd_input_scales_stack + ...
-        sqd_input_scales_stack.^2;
-PrecX = sum_prior_var_sqd_input_scales_stack./determ;
-PrecY = -prior_var_stack./determ;
-const = 1/(2*pi*sqrt(determ));
 
+K_r_s_sc = r_sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
+                    sqd_dist_stack_s_sc, sqd_r_input_scales_stack), 3));  
+K_qd_s_sc = qd_sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
+                    sqd_dist_stack_s_sc, sqd_qd_input_scales_stack), 3)); 
+K_qdd_s_sc = qdd_sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
+                    sqd_dist_stack_s_sc, sqd_qdd_input_scales_stack), 3)); 
+       
+sum_prior_var_sqd_input_scales_stack_r = ...
+    prior_var_stack + sqd_r_input_scales_stack;
 sum_prior_var_sqd_input_scales_stack_eps = ...
     prior_var_stack + sqd_eps_input_scales_stack;
-determ_s_eps = prior_var_stack.*(...
-        sqd_eps_input_scales_stack + sqd_input_scales_stack) + ...
-        sqd_eps_input_scales_stack.*sqd_input_scales_stack;
-% NB: the inversion switches the eps & s for the following two terms
-PrecX_s = sqd_eps_input_scales_stack./determ_s_eps;
-PrecX_eps = sqd_input_scales_stack./determ_s_eps;
-PrecY_s_eps = prior_var_stack./determ_s_eps;
-% 2 pi is outside here because each element of determ_s_eps is actually the
-% determinant of a 2 x 2 matrix
-const_s_eps  = 1/(2*pi*sqrt(determ_s_eps));
+
+opposite_eps = sqd_eps_input_scales_stack;
+opposite_r = sqd_r_input_scales_stack;
+opposite_qd = sqd_qd_input_scales_stack;
+opposite_qdd = sqd_qdd_input_scales_stack;
     
 hs_sc_minus_mean_stack = reshape(bsxfun(@minus, hs_sc, prior_means'),...
                     num_sc, 1, num_hps);
 sqd_hs_sc_minus_mean_stack = ...
     repmat(hs_sc_minus_mean_stack.^2, 1, num_sc, 1);
 tr_sqd_hs_sc_minus_mean_stack = tr(sqd_hs_sc_minus_mean_stack);
-sum_sqd_hs_sc_minus_mean_stack = sqd_hs_sc_minus_mean_stack + ...
-    tr_sqd_hs_sc_minus_mean_stack;
-prod_hs_sc_minus_mean_stack = ...
-    bsxfun(@(x,y) x.*y, ...
-    hs_sc_minus_mean_stack, tr(hs_sc_minus_mean_stack));
 
-yot_s = sqd_output_scale * ...
-    prod(2*pi*sum_prior_var_sqd_input_scales_stack)^(-0.5) * ...
+yot_r = r_sqd_output_scale * ...
+    prod(2*pi*sum_prior_var_sqd_input_scales_stack_r)^(-0.5) * ...
     exp(-0.5 * ...
     sum(bsxfun(@rdivide, hs_sc_minus_mean_stack(1:num_s, :, :).^2, ...
-    sum_prior_var_sqd_input_scales_stack),3));
-yot_eps = sqd_output_scale * ...
+    sum_prior_var_sqd_input_scales_stack_r),3));
+yot_eps = r_sqd_output_scale * ...
     prod(2*pi*sum_prior_var_sqd_input_scales_stack_eps)^(-0.5) * ...
     exp(-0.5 * ...
     sum(bsxfun(@rdivide, hs_sc_minus_mean_stack.^2, ...
     sum_prior_var_sqd_input_scales_stack_eps),3));
 
-yot_inv_K_rs = solve_chol(R_rs, yot_s)';
+yot_inv_K_r = solve_chol(R_r_s, yot_r)';
 yot_inv_K_eps = solve_chol(R_eps, yot_eps)';
+
+prior_var_times_sqd_dist_stack_sc = bsxfun(@times, prior_var_stack, ...
+                    sqd_dist_stack_sc);
                 
-Yot_s = sqd_output_scale.^2 * prod(bsxfun(@times, const, ...
-    exp(-0.5 * bsxfun(@times, PrecX, ...
-                    sum_sqd_hs_sc_minus_mean_stack(1:num_s, 1:num_s, :)) ...
-              -bsxfun(@times, PrecY, ...
-                    prod_hs_sc_minus_mean_stack(1:num_s, 1:num_s, :)))),3);   
-Yot_s_eps = sqd_output_scale.^2 * prod(const_s_eps) * ...
-    exp(-0.5 * sum(bsxfun(@times, PrecX_s, ...
+% 2 pi is outside of sqrt because each element of determ is actually the
+% determinant of a 2 x 2 matrix
+
+inv_determ_qd_r = (prior_var_stack.*(...
+        sqd_r_input_scales_stack + sqd_qd_input_scales_stack) + ...
+        sqd_r_input_scales_stack.*sqd_qd_input_scales_stack).^(-1);
+Yot_qd_r = qd_sqd_output_scale * r_sqd_output_scale * ...
+    prod(1/(2*pi) * sqrt(inv_determ_qd_r)) .* ...
+    exp(-0.5 * sum(bsxfun(@times,inv_determ_qd_r,...
+                bsxfun(@times, opposite_r, ...
+                    sqd_hs_sc_minus_mean_stack(1:num_s, 1:num_s, :)) ...
+                + bsxfun(@times, opposite_qd, ...
+                    tr_sqd_hs_sc_minus_mean_stack(1:num_s, 1:num_s, :)) ...
+                + prior_var_times_sqd_dist_stack_sc(1:num_s, 1:num_s, :)...
+                ),3));
+            
+% some code to test that this construction works          
+% Lambda = diag(prior_sds.^2);
+% W_qd = diag(qd_input_scales.^2);
+% W_r = diag(r_input_scales.^2);
+% mat = kron(ones(2),Lambda)+blkdiag(W_qd,W_r);
+% 
+% Yot_qd_r_test = @(i,j) qd_sqd_output_scale * r_sqd_output_scale *...
+%     mvnpdf([hs_s(i,:)';hs_s(j,:)'],[prior_means';prior_means'],mat);
+            
+inv_determ_qdd_r = (prior_var_stack.*(...
+        sqd_r_input_scales_stack + sqd_qdd_input_scales_stack) + ...
+        sqd_r_input_scales_stack.*sqd_qdd_input_scales_stack).^(-1);
+Yot_qdd_r = qdd_sqd_output_scale * r_sqd_output_scale * ...
+    prod(1/(2*pi) * sqrt(inv_determ_qdd_r)) .* ...
+    exp(-0.5 * sum(bsxfun(@times,inv_determ_qdd_r,...
+                bsxfun(@times, opposite_r, ...
+                    sqd_hs_sc_minus_mean_stack(1:num_s, 1:num_s, :)) ...
+                + bsxfun(@times, opposite_qdd, ...
+                    tr_sqd_hs_sc_minus_mean_stack(1:num_s, 1:num_s, :)) ...
+                + prior_var_times_sqd_dist_stack_sc(1:num_s, 1:num_s, :)...
+                ),3));
+            
+inv_determ_qd_eps = (prior_var_stack.*(...
+        sqd_eps_input_scales_stack + sqd_qd_input_scales_stack) + ...
+        sqd_eps_input_scales_stack.*sqd_qd_input_scales_stack).^(-1);
+Yot_qd_eps = qd_sqd_output_scale * eps_sqd_output_scale * ...
+    prod(1/(2*pi) * sqrt(inv_determ_qd_eps)) .* ...
+    exp(-0.5 * sum(bsxfun(@times,inv_determ_qd_eps,...
+                bsxfun(@times, opposite_eps, ...
                     sqd_hs_sc_minus_mean_stack(1:num_s, :, :)) ...
-                + bsxfun(@times, PrecX_eps, ...
+                + bsxfun(@times, opposite_qd, ...
                     tr_sqd_hs_sc_minus_mean_stack(1:num_s, :, :)) ...
-                + bsxfun(@times, PrecY_s_eps, ...
-                    sqd_dist_stack_sc(1:num_s,:,:))...
-                ,3));
+                + prior_var_times_sqd_dist_stack_sc(1:num_s, :, :)...
+                ),3));
+
+inv_determ_qdd_eps = (prior_var_stack.*(...
+        sqd_eps_input_scales_stack + sqd_qdd_input_scales_stack) + ...
+        sqd_eps_input_scales_stack.*sqd_qdd_input_scales_stack).^(-1);
+Yot_qdd_eps = qdd_sqd_output_scale * eps_sqd_output_scale * ...
+    prod(1/(2*pi) * sqrt(inv_determ_qdd_eps)) .* ...
+    exp(-0.5 * sum(bsxfun(@times,inv_determ_qdd_eps,...
+                bsxfun(@times, opposite_eps, ...
+                    sqd_hs_sc_minus_mean_stack(1:num_s, :, :)) ...
+                + bsxfun(@times, opposite_qdd, ...
+                    tr_sqd_hs_sc_minus_mean_stack(1:num_s, :, :)) ...
+                + prior_var_times_sqd_dist_stack_sc(1:num_s, :, :)...
+                ),3));
           
 
 % As = [hs_sc_minus_mean_stack(3,:);hs_sc_minus_mean_stack(4,:)];
@@ -314,10 +391,14 @@ Yot_s_eps = sqd_output_scale.^2 * prod(const_s_eps) * ...
 % covmat = kron2d(diag(prior_sds.^2), ones(2)) + diag(scalesss(:));
 % sqd_output_scale.^2 * mvnpdf(As(:),Bs(:),covmat);
 
-inv_K_Yot_inv_K_qds = solve_chol(R_qds, solve_chol(R_rs, Yot_s)')';
-inv_K_Yot_inv_K_qdds = solve_chol(R_qdds, solve_chol(R_rs, Yot_s)')';
-inv_K_Yot_inv_K_qds_eps = solve_chol(R_eps, solve_chol(R_qds, Yot_s_eps)')';
-inv_K_Yot_inv_K_qdds_eps = solve_chol(R_eps, solve_chol(R_qdds, Yot_s_eps)')';
+inv_K_Yot_inv_K_qd_r = solve_chol(R_qd_s, ...
+    solve_chol(R_r_s, Yot_qd_r')');
+inv_K_Yot_inv_K_qdd_r = solve_chol(R_qdd_s, ...
+    solve_chol(R_r_s, Yot_qdd_r')');
+inv_K_Yot_inv_K_qd_eps = solve_chol(R_qd_s, ...
+    solve_chol(R_eps, Yot_qd_eps')');
+inv_K_Yot_inv_K_qdd_eps = solve_chol(R_qdd_s, ...
+    solve_chol(R_eps, Yot_qdd_eps')');
           
 
 tilde = @(x, gamma_x) log(bsxfun(@rdivide, x, gamma_x) + 1);
@@ -328,22 +409,24 @@ tr_s = tilde(r_s, gamma_r);
 
 gamma_qdd = opt.gamma_const*max(eps,max(qdd_s));
 tqdd_s = tilde(qdd_s, gamma_qdd);
+mu_tqdd = mean(tqdd_s);
+tqddmm_s = bsxfun(@minus, tqdd_s, mu_tqdd);
 
 
 lowr.UT = true;
 lowr.TRANSA = true;
 uppr.UT = true;
 
-two_thirds_r = linsolve(R_rs,linsolve(R_rs, K_s_sc, lowr), uppr)';
-two_thirds_qd = linsolve(R_qds,linsolve(R_qds, K_s_sc, lowr), uppr)';
-two_thirds_qdd = linsolve(R_qdds,linsolve(R_qdds, K_s_sc, lowr), uppr)';
+two_thirds_r = linsolve(R_r_s,linsolve(R_r_s, K_r_s_sc, lowr), uppr)';
+two_thirds_qd = linsolve(R_qd_s,linsolve(R_qd_s, K_qd_s_sc, lowr), uppr)';
+two_thirds_qdd = linsolve(R_qdd_s,linsolve(R_qdd_s, K_qdd_s_sc, lowr), uppr)';
 
 mean_r_sc =  two_thirds_r * r_s;
 mean_qd_sc = bsxfun(@plus, mu_qd, two_thirds_qd * qdmm_s);
 mean_qdd_sc = bsxfun(@plus, mu_qdd, two_thirds_qdd * qddmm_s);
 
 mean_tr_sc = two_thirds_r * tr_s;
-mean_tqdd_sc = two_thirds_qdd * tqdd_s;
+mean_tqdd_sc = bsxfun(@plus, mu_tqdd, two_thirds_qdd * tqddmm_s);
 
 %c_inds = num_sc - (num_c-1:-1:0);
 
@@ -355,7 +438,7 @@ mean_tqdd_sc = two_thirds_qdd * tqdd_s;
 % eps_qddr_sc = zeros(num_sc, num_star);
 
 % use a crude thresholding here as our tilde transformation will fail if
-% the mean 
+% the mean goes below zero
 mean_r_sc = max(eps, mean_r_sc);
 mean_qdd_sc = max(eps, mean_qdd_sc);
 
@@ -367,7 +450,7 @@ eps_qdr_sc = bsxfun(@times, mean_qd_sc, Delta_tr);
 eps_rqdd_sc = bsxfun(@times, mean_r_sc, Delta_tqdd);
 eps_qddr_sc = bsxfun(@times, mean_qdd_sc, Delta_tr);
 
-minty_r = yot_inv_K_rs * r_s;
+minty_r = yot_inv_K_r * r_s;
 minty_Delta_tr = yot_inv_K_eps * Delta_tr;
 minty_eps_rr = yot_inv_K_eps * eps_rr_sc;
 minty_eps_qdr = (yot_inv_K_eps * eps_qdr_sc)';
@@ -376,22 +459,20 @@ minty_eps_qddr = (yot_inv_K_eps * eps_qddr_sc)';
 
 % all the quantities below need to be adjusted to account for the non-zero
 % prior means of qd and qdd
-minty_qd_r = qdmm_s' * inv_K_Yot_inv_K_qds * r_s + ...
-                mu_qd' * minty_r;
-rhod = minty_qd_r / minty_r;
-minty_qd_eps_rr = qdmm_s' * inv_K_Yot_inv_K_qds_eps * eps_rr_sc + ...
+minty_qd_r = qdmm_s' * inv_K_Yot_inv_K_qd_r * r_s;
+rhod = minty_qd_r / minty_r + mu_qd';
+minty_qd_eps_rr = qdmm_s' * inv_K_Yot_inv_K_qd_eps * eps_rr_sc + ...
                 mu_qd' * minty_eps_rr;
 
 if want_sds               
-minty_qdd_r = qddmm_s' * inv_K_Yot_inv_K_qdds * r_s + ...
-                mu_qdd' * minty_r;
-rhodd = minty_qdd_r / minty_r;
+minty_qdd_r = qddmm_s' * inv_K_Yot_inv_K_qdd_r * r_s;
+rhodd = minty_qdd_r / minty_r + mu_qdd';
 % only need the diagonals of this quantity, the full covariance is not
 % required
 minty_qdd_eps_rqdd = ...
-    sum((qddmm_s' * inv_K_Yot_inv_K_qdds_eps) .* eps_rqdd_sc', 2) + ...
+    sum((qddmm_s' * inv_K_Yot_inv_K_qdd_eps) .* eps_rqdd_sc', 2) + ...
                 mu_qdd' .* minty_eps_rqdd;
-minty_qdd_eps_rr = qddmm_s' * inv_K_Yot_inv_K_qdds_eps * eps_rr_sc + ...
+minty_qdd_eps_rr = qddmm_s' * inv_K_Yot_inv_K_qdd_eps * eps_rr_sc + ...
                 mu_qdd' * minty_eps_rr;
 end
 

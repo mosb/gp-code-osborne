@@ -23,7 +23,7 @@ prior.sds = 1;
 
 q(1).mean = 0.2;
 q(1).cov = 0.5;
-q(1).weight = -0.2;
+q(1).weight = 12;
 
 q(2).mean = 0;
 q(2).cov = 25;
@@ -31,11 +31,11 @@ q(2).weight = 10;
 
 q(3).mean = 0.1;
 q(3).cov = 0.3;
-q(3).weight = -0.5;
+q(3).weight = -5;
 
-q(4).mean = 1.5;
+q(4).mean = 1;
 q(4).cov = 0.1;
-q(4).weight = 0.8;
+q(4).weight = 8;
 
 r(1).mean = -1;
 r(1).cov = 0.25;
@@ -43,11 +43,11 @@ r(1).weight = 0.4;
 
 r(2).mean = 0.5;
 r(2).cov = 25;
-r(2).weight = 0.8;
+r(2).weight = 1;
 
 r(3).mean = 2;
 r(3).cov = 0.5;
-r(3).weight = 0.2;
+r(3).weight = 0.1;
 
 exact = predict_exact(q, r, prior);
 
@@ -64,6 +64,8 @@ d_r_fn = @(x) sum([r(:).weight].*(...
 d_q_fn = @(x) sum([q(:).weight].*(...
                 normpdf(x, [q(:).mean], sqrt([q(:).cov])) ...
                 .* ([q(:).mean] - x)./sqrt([q(:).cov])));
+            
+            ezplot(q_fn);axis tight
             
             
 p_r_fn = @(x) p_fn(x) * r_fn(x);

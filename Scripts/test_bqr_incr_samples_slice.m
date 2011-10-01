@@ -7,8 +7,7 @@ BQR = [];BQ=[];BMC=[];MC=[];
 prob_bqr_incr_samples;
 
         
-% samples = slicesample(prior.means, max_num_samples,...
-%     'pdf', p_r_fn,'width', prior.sds);
+% samples = slicesample(prior.means, max_num_samples,'pdf', p_r_fn,'width', prior.sds);
 % 
 %     clf;hold on;
 % ezplot(@(x) p_r_fn(x));
@@ -75,7 +74,7 @@ for trial = 1:max_trials
         r_gp.quad_noise_sd = best_hypersample_struct.noise_sd;
    
         [BQR(trial,num_sample), dummy, BQ(trial,num_sample)] = ...
-            predict(sample_struct, prior, q_gp, r_gp);
+            predict(sample_struct, prior, r_gp, q_gp);
                 
         BMC(trial,num_sample) = predict_BMC(sample_struct, prior, r_gp);
         

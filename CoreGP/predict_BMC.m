@@ -32,6 +32,8 @@ function [mean_out, sd_out] = predict_BMC(X_star, gp, r_gp, opt)
 % * means
 % * sds
 
+allowed_cond_error = 10^-14;
+
 if nargin<4
     opt = struct();
 end
@@ -172,11 +174,11 @@ sqd_input_scales_stack = reshape(input_scales.^2,1,1,num_hps);
                 
 K_s = sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
                     sqd_dist_stack_s, sqd_input_scales_stack), 3)); 
-K_rs = improve_covariance_conditioning(K_s, r_s, 10^-16);
+[K_rs,jitters_r_s] = improve_covariance_conditioning(K_s, r_s, allowed_cond_error);
 R_rs = chol(K_rs);
-K_qdrs = improve_covariance_conditioning(K_s, qdr_s, 10^-16);
+[K_qdrs,jitters_qdr_s] = improve_covariance_conditioning(K_s, abs(qdr_s), allowed_cond_error);
 R_qdrs = chol(K_qdrs);
-K_qddrs = improve_covariance_conditioning(K_s, qddr_s, 10^-16);
+K_qddrs = improve_covariance_conditioning(K_s, abs(qddr_s), allowed_cond_error);
 R_qddrs = chol(K_qddrs);
    
 sum_prior_var_sqd_input_scales_stack = ...

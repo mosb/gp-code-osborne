@@ -78,20 +78,15 @@ while ~isempty(problem_xinds) % We still have problems
     % remove the sample that lead to the most problems
     
     num_problems = histc([problem_xinds;problem_yinds],1:N);
-    % don't worry about samples that do not give us problems
-    some_problems = find(num_problems>=1);
     
 %     preference_matrix=[importance(some_problems),...
 %         -num_problems(some_problems)];    
-    min_importance = min(importance(some_problems,1));
-    min_inds = find(importance(some_problems,1)==min_importance);
-    [dummy,min_ind] = min(-num_problems(some_problems(min_inds),1));
-    priority_order = min_inds(min_ind);
+    most_problems = max(num_problems);
+    candidates = find(num_problems>=max(1,most_problems-2));
+        
+    [min_importance, min_ind] = min(importance(candidates,1));
 
-%     [dummy,priority_order]=sortrows(preference_matrix,[1 2]); 
-%     %sorts ascending
-
-    current_problem_pt=some_problems(priority_order(1));
+    current_problem_pt=candidates(min_ind);
 
     % The indices of the problems associated with this point.
     left_problems = find(problem_xinds==current_problem_pt);
@@ -116,7 +111,8 @@ while ~isempty(problem_xinds) % We still have problems
         % where all other points will also influence the conditioning.
         sqd_jitters(current_problem_pt) = ...
             max(0,max(-sqd_scales(current_problem_pt) ...
-            +too_similar_fn(num_problems)^(-2) * in(problems_vec).^2./sqd_scales(other_pts)));
+            +too_similar_fn(num_problems)^(-2) * in(problems_vec).^2./...
+            sqd_scales(other_pts)));
     else
         out(current_problem_pt) = true;
     end
