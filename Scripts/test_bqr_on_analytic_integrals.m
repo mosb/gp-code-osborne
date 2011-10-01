@@ -1,6 +1,6 @@
 num_dims = 10;
-num_trials = 100;
-num_samples = 1000;
+num_trials = 10;
+num_samples = 10;
 
 exact = nan(num_dims, num_trials);
 BQR = nan(num_dims, num_trials);
@@ -37,7 +37,7 @@ for dims = 1:num_dims
         q.cov = q_R' * q_R;
         r.cov = r_R' * r_R;
 
-        exact(dims, trial) = predict_exact(q, r, prior);
+        %exact(dims, trial) = predict_exact(q, r, prior);
         
         L = diag(prior.sds);
         R = chol(r.cov + L);

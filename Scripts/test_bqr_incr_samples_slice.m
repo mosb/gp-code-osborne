@@ -1,7 +1,7 @@
 clear;
-cd ~/Code/GP/BQR
-
-load test_bqr_incr_samples_slice
+% cd ~/Code/GP/BQR
+% 
+% load test_bqr_incr_samples_slice
 BQR = [];BQ=[];BMC=[];MC=[];
 
 prob_bqr_incr_samples;

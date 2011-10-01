@@ -1,5 +1,6 @@
-function [mean_out, sd_out, rhod, rhodd] = predict(X_star, gp, q_gp, r_gp, opt)
-% function [mean, sd] = predict(X_star, gp, r_gp, opt)
+function [mean_out, sd_out, rhod, rhodd] = ...
+    predict(X_star, gp, q_gp, r_gp, opt)
+% function [mean, sd] = predict(X_star, gp, q_gp, r_gp, opt)
 % return the posterior mean and sd by marginalising hyperparameters.
 % - X_star (n by d) is a matrix of the n (d-dimensional) points at which
 % predictions are to be made
@@ -31,7 +32,11 @@ function [mean_out, sd_out, rhod, rhodd] = predict(X_star, gp, q_gp, r_gp, opt)
 % * means
 % * sds
 
-if nargin<4
+if nargin<4 || isempty(r_gp)
+    r_gp = q_gp;
+end
+
+if nargin<5
     opt = struct();
 end
 
@@ -208,6 +213,7 @@ upper_bound = max(hs_s) + opt.num_box_scales*input_scales;
 % find the candidate points, far removed from existing samples
 hs_c = find_farthest(hs_s, [lower_bound; upper_bound], num_c, ...
                             input_scales);
+
 hs_sc = [hs_s; hs_c];
 num_sc = size(hs_sc, 1);
 num_c = num_sc - num_s;
