@@ -58,19 +58,28 @@ for trial = 1:max_trials
 %         [r_noise_sd, r_input_scales, r_output_scale] = ...
 %             hp_heuristics(samples, r, 100);
 
-        gp = train_gp('sqdexp', 'constant', gp, samples(1:num_sample,:), r, opt);
-        [best_hypersample, best_hypersample_struct] = disp_hyperparams(gp);
+        gpq = train_gp('sqdexp', 'constant', gpq, ...
+            samples(1:num_sample,:), q, opt);
+        [best_hypersample, best_hypersample_struct] = disp_hyperparams(gpq);
+        
+        q_gp.quad_output_scale = best_hypersample_struct.output_scale;
+        q_gp.quad_input_scales = best_hypersample_struct.input_scales;
+        q_gp.quad_noise_sd = best_hypersample_struct.noise_sd;
+        
+        gpr = train_gp('sqdexp', 'constant', gpr, ...
+            samples(1:num_sample,:), r, opt);
+        [best_hypersample, best_hypersample_struct] = disp_hyperparams(gpr);
         
         r_gp.quad_output_scale = best_hypersample_struct.output_scale;
         r_gp.quad_input_scales = best_hypersample_struct.input_scales;
         r_gp.quad_noise_sd = best_hypersample_struct.noise_sd;
    
         [BQR(trial,num_sample), dummy, BQ(trial,num_sample)] = ...
-            predict(sample_struct, prior, r_gp);
+            predict(sample_struct, prior, r_gp, q_gp);
                 
         BMC(trial,num_sample) = predict_BMC(sample_struct, prior, r_gp);
         
-        MC(trial,num_sample) = predict_MC(sample_struct, prior, r_gp);
+        MC(trial,num_sample) = predict_MC(sample_struct, prior);
         
         
     end
