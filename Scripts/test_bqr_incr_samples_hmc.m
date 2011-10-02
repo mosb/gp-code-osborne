@@ -43,7 +43,8 @@ for trial = 1:max_trials
 
     q= [];
     r= [];
-    gp = [];
+    gpq = [];
+    gpr = [];
     for num_sample = 1:max_num_samples;
         fprintf('%g,',num_sample);
            
