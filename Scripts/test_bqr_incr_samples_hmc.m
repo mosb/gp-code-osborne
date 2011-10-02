@@ -1,5 +1,4 @@
 clear;
-cd ~/Code/GP/BQR
 
 %load test_bqr_incr_samples_hmc
 BQR = [];BQ=[];BMC=[];MC=[];
