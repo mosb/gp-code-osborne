@@ -44,15 +44,14 @@ for i = 1:num_samples
         opt.print = false;
         opt.optim_time = 60;
 
-        gp = train_gp('sqdexp', 'constant', [], samples(, r, opt);
+        gpr = train_gp('sqdexp', 'constant', [], samples(, r, opt);
         [best_hypersample, best_hypersample_struct] = disp_hyperparams(gp);
         
         r_gp.quad_output_scale = best_hypersample_struct.output_scale;
         r_gp.quad_input_scales = best_hypersample_struct.input_scales;
         r_gp.quad_noise_sd = best_hypersample_struct.noise_sd;
    
-        [BQR(dims_ind, trial), BQ(dims_ind, trial)] = ...
-            predict(sample_struct, prior, r_gp);
+        predict(X_star, gpi, r_gp, qd_gp)
                 
  
 end

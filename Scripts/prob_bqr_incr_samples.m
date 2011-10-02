@@ -1,4 +1,4 @@
-max_num_samples = 200;
+max_num_samples = 250;
 max_trials = 100;
 
 
@@ -16,56 +16,56 @@ sample_struct = struct();
 
         opt.print = false;
         opt.optim_time = 20;
-        opt.num_hypersamples = 50;
+        opt.num_hypersamples = 25;
 
 prior.means = 0;
 prior.sds = 1;
 
-q(1).mean = 0.2;
-q(1).cov = 0.5;
-q(1).weight = 12;
+qe(1).mean = 0.2;
+qe(1).cov = 0.1;
+qe(1).weight = -0.4;
 
-q(2).mean = 0;
-q(2).cov = 25;
-q(2).weight = 10;
+qe(2).mean = 0;
+qe(2).cov = 50;
+qe(2).weight = 10;
 
-q(3).mean = 0.1;
-q(3).cov = 0.3;
-q(3).weight = -5;
+qe(3).mean = -0.2;
+qe(3).cov = 0.05;
+qe(3).weight = 0.2;
 
-q(4).mean = 1;
-q(4).cov = 0.1;
-q(4).weight = 8;
+qe(4).mean = 1.2;
+qe(4).cov = 0.05;
+qe(4).weight = 0.3;
 
-r(1).mean = -1;
-r(1).cov = 0.25;
-r(1).weight = 0.4;
+re(1).mean = -1;
+re(1).cov = 0.25;
+re(1).weight = 0.4;
 
-r(2).mean = 0.5;
-r(2).cov = 25;
-r(2).weight = 1;
+re(2).mean = 0.5;
+re(2).cov = 25;
+re(2).weight = 1;
 
-r(3).mean = 2;
-r(3).cov = 0.5;
-r(3).weight = 0.1;
+re(3).mean = 2;
+re(3).cov = 0.5;
+re(3).weight = 0.1;
 
-exact = predict_exact(q, r, prior);
+exact = predict_exact(qe, re, prior);
 
 
 p_fn = @(x) normpdf(x, prior.means, prior.sds);
-r_fn = @(x) sum([r(:).weight].*normpdf(x, [r(:).mean], sqrt([r(:).cov])));
-q_fn = @(x) sum([q(:).weight].*normpdf(x, [q(:).mean], sqrt([q(:).cov])));
+r_fn = @(x) sum([re(:).weight].*normpdf(x, [re(:).mean], sqrt([re(:).cov])));
+q_fn = @(x) sum([qe(:).weight].*normpdf(x, [qe(:).mean], sqrt([qe(:).cov])));
 
 d_p_fn = @(x) normpdf(x, prior.means, prior.sds) ...
             * (prior.means - x)/prior.sds;
-d_r_fn = @(x) sum([r(:).weight].*(...
-                normpdf(x, [r(:).mean], sqrt([r(:).cov])) ...
-                .* ([r(:).mean] - x)./sqrt([r(:).cov])));
-d_q_fn = @(x) sum([q(:).weight].*(...
-                normpdf(x, [q(:).mean], sqrt([q(:).cov])) ...
-                .* ([q(:).mean] - x)./sqrt([q(:).cov])));
+d_r_fn = @(x) sum([re(:).weight].*(...
+                normpdf(x, [re(:).mean], sqrt([re(:).cov])) ...
+                .* ([re(:).mean] - x)./sqrt([re(:).cov])));
+d_q_fn = @(x) sum([qe(:).weight].*(...
+                normpdf(x, [qe(:).mean], sqrt([qe(:).cov])) ...
+                .* ([qe(:).mean] - x)./sqrt([qe(:).cov])));
             
-            ezplot(q_fn);axis tight
+            clf;ezplot(q_fn,[-3,3]);hold on;ezplot(r_fn,[-3,3]);axis tight;
             
             
 p_r_fn = @(x) p_fn(x) * r_fn(x);

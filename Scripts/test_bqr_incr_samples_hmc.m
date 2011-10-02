@@ -1,10 +1,8 @@
 clear;
-%cd ~/Code/GP/BQR
+cd ~/Code/GP/BQR
 
 %load test_bqr_incr_samples_hmc
 BQR = [];BQ=[];BMC=[];MC=[];
-
-max_num_samples = 200;
 
 prob_bqr_incr_samples;
 
