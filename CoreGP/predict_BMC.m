@@ -171,14 +171,20 @@ sqd_dist_stack_s = bsxfun(@minus,...
                     .^2;  
 
 sqd_input_scales_stack = reshape(input_scales.^2,1,1,num_hps);
+
+mu_qdr = mean(qdr_s);
+qdrmm_s = qdr_s - mu_qdr;
+
+mu_qddr = mean(qddr_s);
+qddrmm_s = qddr_s - mu_qddr; 
                 
 K_s = sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
                     sqd_dist_stack_s, sqd_input_scales_stack), 3)); 
 [K_rs,jitters_r_s] = improve_covariance_conditioning(K_s, r_s, allowed_cond_error);
 R_rs = chol(K_rs);
-[K_qdrs,jitters_qdr_s] = improve_covariance_conditioning(K_s, abs(qdr_s), allowed_cond_error);
+[K_qdrs,jitters_qdr_s] = improve_covariance_conditioning(K_s, abs(qdrmm_s), allowed_cond_error);
 R_qdrs = chol(K_qdrs);
-K_qddrs = improve_covariance_conditioning(K_s, abs(qddr_s), allowed_cond_error);
+K_qddrs = improve_covariance_conditioning(K_s, abs(qddrmm_s), allowed_cond_error);
 R_qddrs = chol(K_qddrs);
 
 % R_rs = cholproj(K_s);
@@ -201,11 +207,7 @@ yot_inv_K_qdrs = solve_chol(R_qdrs, yot_s)';
 yot_inv_K_qddrs = solve_chol(R_qddrs, yot_s)';
 yot_inv_K_rs = solve_chol(R_rs, yot_s)';
 
-mu_qdr = mean(qdr_s);
-qdrmm_s = qdr_s - mu_qdr;
 
-mu_qddr = mean(qddr_s);
-qddrmm_s = qddr_s - mu_qddr; 
 
 mean_out = (yot_inv_K_qdrs * qdrmm_s + mu_qdr)/ (yot_inv_K_rs * r_s);
 second_moment = (yot_inv_K_qddrs * qddrmm_s + mu_qddr) / (yot_inv_K_rs * r_s);

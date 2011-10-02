@@ -12,8 +12,8 @@ max_num_samples = 200;
     samples = slicesample(prior.means, max_num_samples,...
         'pdf', p_r_fn,'width', prior.sds);
     
-    samples = (-3:0.1:3)';
-    max_num_samples = length(samples);
+%     samples = (-3:0.1:3)';
+%     max_num_samples = length(samples);
 
     q= [];
     r= [];
