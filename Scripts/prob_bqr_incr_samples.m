@@ -6,7 +6,7 @@ rmpath ~/Code/CoreGP
 rmpath ~/Code/BQR
 
 
-max_num_samples = 250;
+max_num_samples = 200;
 max_trials = 100;
 
 
@@ -23,7 +23,7 @@ sample_struct = struct();
 
 
         opt.print = false;
-        opt.optim_time = 20;
+        opt.optim_time = 10;
         opt.num_hypersamples = 25;
 
 prior.means = 0;
