@@ -32,7 +32,7 @@ function [mean_out, sd_out] = predict_BMC(X_star, gp, r_gp, opt)
 % * means
 % * sds
 
-allowed_cond_error = 10^-16;
+allowed_cond_error = 10^-14;
 
 if nargin<4
     opt = struct();

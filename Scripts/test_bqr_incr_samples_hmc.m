@@ -9,7 +9,7 @@ neg_log_rp = @(x) - log(r_fn(x)) - log(p_fn(x));
 d_neg_log_rp = @(x) - d_r_fn(x)/r_fn(x) - d_p_fn(x)/p_fn(x);
 
 hmc2('state', 0);
-hmc_options = struct('nsamples',max_num_samples,...
+hmc_options = struct('nsamples',max_num_samples*3,...
         'nomit',0,'display',0,'stepadj',prior.sds);
 hmc_options = hmc2_opt(hmc_options);
 
@@ -40,6 +40,9 @@ for trial = 1:max_trials
     
     samples = ...
         hmc2(neg_log_rp, prior.means, hmc_options, d_neg_log_rp);
+    [unique_samples, inds] = unique(samples);
+    samples = samples(sort(inds));
+    samples = samples(1:max_num_samples);
 
     q= [];
     r= [];
