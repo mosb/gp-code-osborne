@@ -139,8 +139,8 @@ prior_var_stack = prior_sds_stack.^2;
 log_r_s = log_r_s - max(log_r_s);
 r_s = exp(log_r_s);
 
-qdr_s = qd_s .* r_s;
-qddr_s = qdd_s .* r_s;
+qdr_s = bsxfun(@times, qd_s, r_s);
+qddr_s = bsxfun(@times, qdd_s, r_s);
 
 
 if nargin<3 || isempty(r_gp)
@@ -172,19 +172,21 @@ sqd_dist_stack_s = bsxfun(@minus,...
 
 sqd_input_scales_stack = reshape(input_scales.^2,1,1,num_hps);
 
-mu_qdr = mean(qdr_s);
-qdrmm_s = qdr_s - mu_qdr;
+mu_qdr = 0;%min(qdr_s, [], 1);
+qdrmm_s = bsxfun(@minus, qdr_s, mu_qdr);
 
-mu_qddr = mean(qddr_s);
-qddrmm_s = qddr_s - mu_qddr; 
+mu_qddr = 0;%min(qddr_s, [], 1);
+qddrmm_s = bsxfun(@minus, qddr_s, mu_qddr); 
                 
 K_s = sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
                     sqd_dist_stack_s, sqd_input_scales_stack), 3)); 
 [K_rs,jitters_r_s] = improve_covariance_conditioning(K_s, r_s, allowed_cond_error);
 R_rs = chol(K_rs);
-[K_qdrs,jitters_qdr_s] = improve_covariance_conditioning(K_s, abs(qdrmm_s), allowed_cond_error);
+[K_qdrs,jitters_qdr_s] = improve_covariance_conditioning(K_s, ...
+    mean(abs(qdrmm_s),2), allowed_cond_error);
 R_qdrs = chol(K_qdrs);
-K_qddrs = improve_covariance_conditioning(K_s, abs(qddrmm_s), allowed_cond_error);
+K_qddrs = improve_covariance_conditioning(K_s, ...
+    mean(abs(qddrmm_s),2), allowed_cond_error);
 R_qddrs = chol(K_qddrs);
 
 % R_rs = cholproj(K_s);

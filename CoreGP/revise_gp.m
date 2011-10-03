@@ -49,7 +49,11 @@ end
 if nargin > 6 && ~isempty(grad_hp_inds)
     gp.grad_hyperparams = true;
 else
-    grad_hp_inds = gp.active_hp_inds;
+    if isfield(gp, 'active_hp_inds')
+        grad_hp_inds = gp.active_hp_inds;
+    else
+        grad_hp_inds = 1:numel(gp, 'hyperparams');
+    end
 end
 
 if isfield(gp, 'grad_hyperparams')
@@ -123,7 +127,7 @@ uppr.UT = true;
 
 
 if NData < NDims
-    warning('make sure each data point is a row of X_data');
+    warning('revise_gp:small_num_data', 'make sure each data point is a row of X_data');
 end
 
 

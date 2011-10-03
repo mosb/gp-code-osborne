@@ -128,5 +128,5 @@ else
 end
 
 mean_out = mean(qd_s);
-sd_out = sqrt(mean(qdd_s) - mean_out^2);
+sd_out = sqrt(mean(qdd_s) - mean_out.^2);
 

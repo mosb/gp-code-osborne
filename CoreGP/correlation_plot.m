@@ -1,4 +1,5 @@
 function [onetooneh,meanh,SDh] = correlation_plot(m, sd, real_y, params)
+% [onetooneh,meanh,SDh] = correlation_plot(m, sd, real_y, params)
 % m is the mean and sd the standard dev for real_y
 
 if nargin<4

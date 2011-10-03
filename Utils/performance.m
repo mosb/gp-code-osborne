@@ -4,19 +4,26 @@ if nargin<6
     burn_in=0;
 end
 
-NStars=size(XStars,1);
-sqd_diffs=nan(NStars-burn_in,1);
-reals=nan(NStars-burn_in,1);
-
-for ind=(burn_in+1):NStars
-    XStar=XStars(ind,:);
+if XStars==XReals
     
-    mat = bsxfun(@minus,XReals,XStar);
-    [a,RightRow] = min(sum(mat.^2,2));
+    sqd_diffs = (YMean - YReals).^2;
+    reals = YReals;
+    
+else
+    NStars=size(XStars,1);
+    sqd_diffs=nan(NStars-burn_in,1);
+    reals=nan(NStars-burn_in,1);
 
-    YReal=YReals(RightRow);
-    sqd_diffs(ind)=(YMean(ind)-YReal)^2;
-    reals(ind)=YReal;
+    for ind=(burn_in+1):NStars
+        XStar=XStars(ind,:);
+
+        mat = bsxfun(@minus,XReals,XStar);
+        [a,RightRow] = min(sum(mat.^2,2));
+
+        YReal=YReals(RightRow);
+        sqd_diffs(ind)=(YMean(ind)-YReal)^2;
+        reals(ind)=YReal;
+    end
 end
 
 mean_sqd_diffs = mean(sqd_diffs(~isnan(sqd_diffs)));

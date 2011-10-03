@@ -1,4 +1,4 @@
-function [mean_out, sd_out, rhod, rhodd] = ...
+function [mean_out, sd_out, unadj_mean_out, unadj_sd_out] = ...
     predict(X_star, gp, r_gp, qd_gp, qdd_gp, opt)
 % function [mean, sd] = predict(X_star, gp, r_gp, qd_gp, qdd_gp, opt)
 % return the posterior mean and sd by marginalising hyperparameters.
@@ -34,7 +34,7 @@ function [mean_out, sd_out, rhod, rhodd] = ...
 
 
 
-if nargin<5
+if nargin<6
     opt = struct();
 end
 
@@ -163,8 +163,8 @@ prior_var_stack = prior_sds_stack.^2;
 log_r_s = log_r_s - max(log_r_s);
 r_s = exp(log_r_s);
 
-mu_qd = mean(qd_s);
-mu_qdd = mean(qdd_s);
+mu_qd = mean(qd_s, 1);
+mu_qdd = mean(qdd_s, 1);
 
 qdmm_s = bsxfun(@minus, qd_s, mu_qd);
 qddmm_s = bsxfun(@minus, qdd_s, mu_qdd);
@@ -254,19 +254,22 @@ sqd_eps_input_scales_stack = reshape(eps_input_scales.^2,1,1,num_hps);
                 
 K_r_s = r_sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
                     sqd_dist_stack_s, sqd_r_input_scales_stack), 3)); 
-[K_r_s, jitters_r_s] = improve_covariance_conditioning(K_r_s, abs(r_s.*qdmm_s), ...
+[K_r_s, jitters_r_s] = improve_covariance_conditioning(K_r_s, ...
+    r_s.*mean(abs(qdmm_s),2), ...
     opt.allowed_cond_error);
 R_r_s = chol(K_r_s);
 
 K_qd_s = qd_sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
                     sqd_dist_stack_s, sqd_qd_input_scales_stack), 3)); 
-[K_qd_s, jitters_qd_s] = improve_covariance_conditioning(K_qd_s, abs(r_s.*qdmm_s), ...
+[K_qd_s, jitters_qd_s] = improve_covariance_conditioning(K_qd_s, ...
+    r_s.*mean(abs(qdmm_s),2), ...
     opt.allowed_cond_error);
 R_qd_s = chol(K_qd_s);
 
 K_qdd_s = qdd_sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
                     sqd_dist_stack_s, sqd_qdd_input_scales_stack), 3)); 
-K_qdd_s = improve_covariance_conditioning(K_qdd_s, abs(r_s.*qddmm_s), ...
+K_qdd_s = improve_covariance_conditioning(K_qdd_s, ...
+    r_s.*mean(abs(qddmm_s),2), ...
     opt.allowed_cond_error);
 R_qdd_s = chol(K_qdd_s);
 
@@ -494,6 +497,7 @@ end
 
 
 mean_out = rhod + adj_rhod_tr;
+unadj_mean_out = mean_out;
 if want_sds
 second_moment = rhodd + adj_rhodd_tq + adj_rhodd_tr;
 if want_posterior
@@ -501,6 +505,7 @@ if want_posterior
     sd_out = nan;
 else
     sd_out = sqrt(second_moment - mean_out.^2);
+    unadj_sd_out = sqrt(rhodd - mean_out.^2);
 end
 end
 
