@@ -21,6 +21,38 @@ if isfield(covvy,'hyperparams')
         hps_struct.logInputScales = input_scale_inds;
     end
     
+    %names={'PeriodInput1', 'Doover','LadidaInput123','badger67','InputScale2', 'InputScale1', 'PeriodInput3','Blah'}
+
+    input_patterns = {'Input','Period','log_w0'};
+    input_inds = [];
+    for i = 1:length(input_patterns)
+        input_inds = [input_inds, ...
+            find(~cellfun(@(x) isempty(x),strfind(names,input_patterns{i})))];        
+    end
+    input_inds = unique(input_inds);
+    input_names = names(input_inds);
+    
+    nums = regexp(input_names,'\d*','match');
+    nums = nums(~cellfun(@isempty, nums));
+    nums = cellfun(@(x) str2num(x{1}), nums);
+    
+    
+    
+    if  nargin<2 && isfield(covvy,'num_dims')
+        num_dims = covvy.num_dims;
+    elseif nargin<2
+        num_dims = max(nums);
+    end
+    hps_struct.num_dims = num_dims;
+    
+    hps_struct.input_inds = cell(num_dims, 1);
+    
+    [unique_nums, dummy, unique_inds] = unique(nums);
+    for i = 1:length(unique_nums)
+        hps_struct.input_inds{unique_nums(i)} = ...
+            input_inds(unique_inds==i);
+    end
+    
 %         is_planar_weight_cell = strfind(names,'PlanarMeanWeight');
 %     planar_weight_inds = find(~cellfun(@(x) isempty(x),is_planar_weight_cell));
 % 
@@ -43,16 +75,7 @@ if isfield(covvy,'hyperparams')
         hps_struct.([name,'s']) = hp_inds;
     end
     
-    if nargin<2 && isfield(hps_struct,'logInputScales')
-        num_dims = length(hps_struct.logInputScales);
-    elseif nargin<2 && isfield(hps_struct,'log_w0s')
-        num_dims = length(hps_struct.log_w0s);
-    elseif  nargin<2 && isfield(covvy,'num_dims')
-        num_dims = covvy.num_dims;
-    elseif nargin<2 && ~isfield(covvy,'num_dims')
-        num_dims = 'unknown';
-    end
-    hps_struct.num_dims = num_dims;
+    
 else
     hps_struct = struct([]);
 end

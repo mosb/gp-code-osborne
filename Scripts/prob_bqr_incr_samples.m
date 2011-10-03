@@ -77,3 +77,5 @@ d_q_fn = @(x) sum([qe(:).weight].*(...
             
             
 p_r_fn = @(x) p_fn(x) * r_fn(x);
+
+

@@ -13,6 +13,7 @@ num_star = 1000;
 opt.print = false;
 opt.optim_time = 30;
 opt.num_hypersamples = 25;
+opt.noiseless = true;
 
 max_num_samples = 500;
 
