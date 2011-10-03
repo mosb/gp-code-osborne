@@ -158,7 +158,7 @@ p_r_fn = @(x) p_fn(x) * r_fn(x);
             i,perf_BQR(i),perf_BQ(i),perf_BMC(i),perf_MC(i));
 
 
-
+        save test_bqr_on_GP_prediction
     end
 %end
 
