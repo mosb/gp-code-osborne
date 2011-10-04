@@ -1,9 +1,9 @@
-% cd ~/Code/gp-code-osborne/
-% addpath(genpath('~/Code/gp-code-osborne/'))
-% addpath ~/Code/lightspeed
-% addpath(genpath('~/Code/Utils/'))
-% rmpath ~/Code/CoreGP
-% rmpath ~/Code/BQR
+cd ~/Code/gp-code-osborne/
+addpath(genpath('~/Code/gp-code-osborne/'))
+addpath ~/Code/lightspeed
+addpath(genpath('~/Code/Utils/'))
+rmpath ~/Code/CoreGP
+rmpath ~/Code/BQR
 
 
 clear

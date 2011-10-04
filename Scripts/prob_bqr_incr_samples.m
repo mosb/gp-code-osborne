@@ -25,6 +25,7 @@ sample_struct = struct();
         opt.print = false;
         opt.optim_time = 10;
         opt.num_hypersamples = 25;
+        opt.noiseless = true;
 
 prior.means = 0;
 prior.sds = 1;

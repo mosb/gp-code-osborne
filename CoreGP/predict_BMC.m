@@ -178,10 +178,10 @@ sqd_dist_stack_s = bsxfun(@minus,...
 sqd_input_scales_stack = reshape(input_scales.^2,1,1,num_hps);
 
 
-mu_qdr = min(r_s)*mean(qd_s, 1);
+mu_qdr = 0;min(r_s)*mean(qd_s, 1);
 qdrmm_s = bsxfun(@minus, qdr_s, mu_qdr);
 
-mu_qddr = min(r_s)*mean(qdd_s, 1);
+mu_qddr = 0;min(r_s)*mean(qdd_s, 1);
 qddrmm_s = bsxfun(@minus, qddr_s, mu_qddr); 
                 
 K_s = sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
