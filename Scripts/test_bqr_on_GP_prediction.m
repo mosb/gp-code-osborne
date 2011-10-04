@@ -137,7 +137,7 @@ p_r_fn = @(x) p_fn(x) * r_fn(x);
         qd_gp.quad_output_scale = best_hypersample_struct.output_scale;
         qd_gp.quad_input_scales = best_hypersample_struct.input_scales;
         qd_gp.quad_noise_sd = best_hypersample_struct.noise_sd;
-        qd_gp.quad_mean = 0.8*mean(qd_i,1);
+        qd_gp.quad_mean = mean(qd_i,1);
 
         opt.prior_mean = 'default';
         gpqdd = train_gp('sqdexp', 'constant', gpqdd, ...
