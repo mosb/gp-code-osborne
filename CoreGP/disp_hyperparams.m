@@ -18,7 +18,8 @@ best_hypersample_struct.input_scales = ...
     exp(best_hypersample(hps_struct.logInputScales));
 best_hypersample_struct.noise_sd = ...
     exp(best_hypersample(hps_struct.logNoiseSD));
-
+best_hypersample_struct.mean = ...
+    best_hypersample(hps_struct.mean_inds);
 
 if nargout == 0
 fprintf('Maximum likelihood hyperparameters:\n');

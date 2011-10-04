@@ -54,7 +54,8 @@ default_opt = struct(...
                     'plots', true, ...
                     'num_passes', 6, ...
                     'force_training', true, ...
-                    'noiseless', false);
+                    'noiseless', false, ...
+                    'prior_mean', 'default');
                            
 names = fieldnames(default_opt);
 for i = 1:length(names);
@@ -117,6 +118,25 @@ if opt.noiseless
     for i = 1:numel(gp.hypersamples)        
         gp.hypersamples(i).hyperparameters(noise_ind) = -inf;        
     end    
+end
+if any(strcmpi(opt.prior_mean, {'optimise','optimize','train'}))
+    gp.active_hp_inds = union(gp.active_hp_inds, hps_struct.mean_inds);
+    for i = 1:length(hps_struct.mean_inds)
+        mean_ind = hps_struct.mean_inds(i);
+        gp.hyperparams(mean_ind).type = 'active';
+    end
+elseif isnumeric(opt.prior_mean)
+    gp.active_hp_inds = setdiff(gp.active_hp_inds, hps_struct.mean_inds);
+    for i = 1:length(hps_struct.mean_inds)
+        mean_ind = hps_struct.mean_inds(i);
+        gp.hyperparams(mean_ind).type = 'inactive';
+        gp.hyperparams(mean_ind).priorMean = opt.prior_mean(i);
+        for j = 1:numel(gp.hypersamples)        
+            gp.hypersamples(j).hyperparameters(mean_ind) = ...
+                opt.prior_mean(i);        
+        end 
+    end
+   
 end
 
 full_active_inds = gp.active_hp_inds;

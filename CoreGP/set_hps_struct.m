@@ -13,6 +13,10 @@ if isfield(covvy,'hyperparams')
     hps_struct = struct(joint{:});
     
     hps_struct.num_hps = num_hps;
+    
+    is_mean_cell = strfind(names,'Mean');
+    mean_inds = find(~cellfun(@(x) isempty(x),is_mean_cell));
+    hps_struct.mean_inds = mean_inds;
 
     is_input_scale_cell = strfind(names,'logInputScale');
     input_scale_inds = find(~cellfun(@(x) isempty(x),is_input_scale_cell));

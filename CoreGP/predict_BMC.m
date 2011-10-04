@@ -1,7 +1,8 @@
-function [mean_out, sd_out] = predict_BMC(X_star, gp, r_gp, opt)
-% function [mean, sd] = predict_BMC(X_star, gp, r_gp, opt) return the
-% posterior mean and sd by marginalising hyperparameters using BMC as per
-% e.g. Rasmussen & Ghahramani `Bayesian Monte Carlo'.
+function [mean_out, sd_out] = ...
+    predict_BMC(X_star, gp, r_gp, qd_gp, qdd_gp, opt)
+% function [mean, sd] = predict_BMC(X_star, gp, r_gp, qd_gp, qdd_gp, opt)
+% return the posterior mean and sd by marginalising hyperparameters using
+% BMC as per e.g. Rasmussen & Ghahramani `Bayesian Monte Carlo'.
 % - X_star (n by d) is a matrix of the n (d-dimensional) points at which
 % predictions are to be made
 % - gp requires fields:
@@ -34,7 +35,7 @@ function [mean_out, sd_out] = predict_BMC(X_star, gp, r_gp, opt)
 
 allowed_cond_error = 10^-14;
 
-if nargin<4
+if nargin<6
     opt = struct();
 end
 % not fully optimised, further operations could be avoided if only the mean
@@ -154,6 +155,10 @@ else
     r_noise_sd =  r_gp.quad_noise_sd;
     r_input_scales = r_gp.quad_input_scales;
 end
+if nargin<4 || isempty(qd_gp)
+end
+if nargin<5 || isempty(qdd_gp)
+end
 
 % we force GPs for r, qd, qdd, tr, and tqdd to share the same input scales.
 % eps_rr, eps_qdr, eps_rqdd, eps_qddr are assumed to all have input scales
@@ -172,10 +177,11 @@ sqd_dist_stack_s = bsxfun(@minus,...
 
 sqd_input_scales_stack = reshape(input_scales.^2,1,1,num_hps);
 
-mu_qdr = 0;mean(qdr_s, 1);
+
+mu_qdr = min(r_s)*mean(qd_s, 1);
 qdrmm_s = bsxfun(@minus, qdr_s, mu_qdr);
 
-mu_qddr = 0;mean(qddr_s, 1);
+mu_qddr = min(r_s)*mean(qdd_s, 1);
 qddrmm_s = bsxfun(@minus, qddr_s, mu_qddr); 
                 
 K_s = sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...

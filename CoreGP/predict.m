@@ -163,11 +163,7 @@ prior_var_stack = prior_sds_stack.^2;
 log_r_s = log_r_s - max(log_r_s);
 r_s = exp(log_r_s);
 
-mu_qd = mean(qd_s, 1);
-mu_qdd = mean(qdd_s, 1);
 
-qdmm_s = bsxfun(@minus, qd_s, mu_qd);
-qddmm_s = bsxfun(@minus, qdd_s, mu_qdd);
 
 
 % predict(X_star, gp, r_gp, qd_gp, qdd_gp, opt)
@@ -177,10 +173,8 @@ if nargin<3 || isempty(r_gp)
         hp_heuristics(hs_s, r_s, 10);
 
     r_sqd_output_scale = r_output_scale^2;
-    r_input_scales = r_input_scales;
 else
     r_sqd_output_scale = r_gp.quad_output_scale^2;
-    r_noise_sd =  r_gp.quad_noise_sd;
     r_input_scales = r_gp.quad_input_scales;
 end
 
@@ -189,11 +183,11 @@ if nargin<4 || isempty(qd_gp)
         hp_heuristics(hs_s, qd_s, 10);
 
     qd_sqd_output_scale = qd_output_scale^2;
-    qd_input_scales = qd_input_scales;
+    mu_qd = mean(qd_s, 1);
 else
     qd_sqd_output_scale = qd_gp.quad_output_scale^2;
-    qd_noise_sd =  qd_gp.quad_noise_sd;
     qd_input_scales = qd_gp.quad_input_scales;
+    mu_qd = qd_gp.quad_mean;
 end
 
 if want_posterior
@@ -204,12 +198,19 @@ if ~want_posterior && (nargin<5 || isempty(qdd_gp))
         hp_heuristics(hs_s, qdd_s, 10);
 
     qdd_sqd_output_scale = qdd_output_scale^2;
-    qdd_input_scales = qdd_input_scales;
+    mu_qdd = mean(qdd_s, 1);
 else
     qdd_sqd_output_scale = qdd_gp.quad_output_scale^2;
-    qdd_noise_sd =  qdd_gp.quad_noise_sd;
     qdd_input_scales = qdd_gp.quad_input_scales;
+    mu_qdd = qdd_gp.quad_mean;
 end
+
+
+
+
+
+qdmm_s = bsxfun(@minus, qd_s, mu_qd);
+qddmm_s = bsxfun(@minus, qdd_s, mu_qdd);
 
 % we force GPs for r and tr to share hyperparameters; we also assume the
 % gps for qdd and tqdd share hyperparameters. eps_rr, eps_qdr, eps_rqdd,
