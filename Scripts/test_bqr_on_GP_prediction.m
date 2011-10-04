@@ -1,9 +1,9 @@
-cd ~/Code/gp-code-osborne/
-addpath(genpath('~/Code/gp-code-osborne/'))
-addpath ~/Code/lightspeed
-addpath(genpath('~/Code/Utils/'))
-rmpath ~/Code/CoreGP
-rmpath ~/Code/BQR
+% cd ~/Code/gp-code-osborne/
+% addpath(genpath('~/Code/gp-code-osborne/'))
+% addpath ~/Code/lightspeed
+% addpath(genpath('~/Code/Utils/'))
+% rmpath ~/Code/CoreGP
+% rmpath ~/Code/BQR
 
 
 clear
@@ -137,7 +137,7 @@ p_r_fn = @(x) p_fn(x) * r_fn(x);
         qd_gp.quad_output_scale = best_hypersample_struct.output_scale;
         qd_gp.quad_input_scales = best_hypersample_struct.input_scales;
         qd_gp.quad_noise_sd = best_hypersample_struct.noise_sd;
-        qd_gp.quad_mean = best_hypersample_struct.mean;
+        qd_gp.quad_mean = mean(qd_i,1);
 
         opt.prior_mean = 'default';
         gpqdd = train_gp('sqdexp', 'constant', gpqdd, ...
@@ -147,7 +147,7 @@ p_r_fn = @(x) p_fn(x) * r_fn(x);
         qdd_gp.quad_output_scale = best_hypersample_struct.output_scale;
         qdd_gp.quad_input_scales = best_hypersample_struct.input_scales;
         qdd_gp.quad_noise_sd = best_hypersample_struct.noise_sd;
-        qdd_gp.quad_mean = best_hypersample_struct.mean;
+        qdd_gp.quad_mean = mean(qdd_i,1);
 
         [BQR_mean(:,i), BQR_sd(:,i), BQ_mean(:,i), BQ_sd(:,i)] = ...
             predict(sample_struct, prior, r_gp, qd_gp, qdd_gp);
