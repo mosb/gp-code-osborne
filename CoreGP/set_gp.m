@@ -54,19 +54,27 @@ hps_struct = set_hps_struct(gp);
 
 have_X_data = nargin >= 4 && ~isempty(X_data);
 have_y_data = nargin >= 5 && ~isempty(y_data);
-create_logNoiseSD = ~isfield(hps_struct,'logNoiseSD') ...
-                        && ~isfield(gp,'noisefn');
+create_logNoiseSD = (~isfield(hps_struct,'logNoiseSD')  ...
+                        || ismember(hps_struct.logNoiseSD, ...
+                                gp.active_hp_inds)) ...
+                            && ~isfield(gp,'noisefn');
 create_logInputScales = ~isfield(hps_struct,'logInputScales') ...
-                        || isempty(hps_struct.logInputScales);
+                        || any(ismember(hps_struct.logInputScales, ...
+                                gp.active_hp_inds));
 create_logOutputScale = ~isfield(hps_struct,'logOutputScale')...
-                        || isempty(hps_struct.logOutputScale);
-create_covfn = ~isempty(covfn_name) ||...
-                        ~isfield(gp,'covfn')...
+                        || ismember(hps_struct.logOutputScale, ...
+                                gp.active_hp_inds);
+% create_meanParams = ~isfield(hps_struct,'mean_inds')...
+%                         || ismember(hps_struct.mean_inds, ...
+%                                 gp.active_hp_inds);
+create_covfn = ~isempty(covfn_name) && (~isfield(gp,'covfn_name')...
+                || ~strcmpi(covfn_name,gp.covfn_name))...
+                        || ~isfield(gp,'covfn')...
                         || isempty(gp.covfn);
-create_meanfn = ~isempty(meanfn_name) ||...
-                        (~isfield(gp,'meanfn')...
-                        || isempty(gp.meanfn)) && ...
-                (~isfield(gp,'meanPos')...
+create_meanfn = ~isempty(meanfn_name) && (~isfield(gp,'meanfn_name')...
+                || ~strcmpi(meanfn_name,gp.meanfn_name))...
+                        ||(~isfield(gp,'meanfn')...
+                        || isempty(gp.meanfn)) && (~isfield(gp,'meanPos')...
                         || isempty(gp.meanPos));
                   
 
@@ -97,32 +105,49 @@ end
 
 if create_logNoiseSD
 %     if have_data
-    noise_ind = incr_num_hps(gp);
-    gp.logNoiseSDPos = noise_ind;
 
-    gp.hyperparams(noise_ind) = orderfields(...
+    if isfield(hps_struct,'logNoiseSD')
+        noise_ind = hps_struct.logNoiseSD;
+    else
+        noise_ind = incr_num_hps(gp);
+        
+        gp.hyperparams(noise_ind) = orderfields(...
         struct('name','logNoiseSD',...
         'priorMean',log(0.1*output_scale),...
         'priorSD',output_SD,...
         'NSamples',num_samples(noise_ind-num_existing_hps),...
         'type','real'),...
         gp.hyperparams);
+    end
+
+    
+    gp.logNoiseSDPos = noise_ind;
+
+
 %     else
 %         disp('Need to specify a prior for logNoiseSD, or include data to create one')
 %     end
 end
-if create_logInputScales
+if create_logInputScales    
     if have_X_data
         inputs_ind = nan(1,num_dims);
         for dim = 1:num_dims   
-            inputs_ind(dim) = incr_num_hps(gp);
             
-            gp.hyperparams(inputs_ind(dim)) = orderfields(...
+            if isfield(hps_struct,'logInputScales')
+                inputs_ind(dim) = hps_struct.logInputScales(dim);
+            else
+                inputs_ind(dim) = incr_num_hps(gp);
+                
+                gp.hyperparams(inputs_ind(dim)) = orderfields(...
                 struct('name',['logInputScale',num2str(dim)],...
                 'priorMean',log(input_scales(dim)),...
                 'priorSD',input_SD,...
                 'NSamples',num_samples(inputs_ind(dim)-num_existing_hps),...
                 'type','real'),gp.hyperparams);
+            end
+
+            
+
         end
         gp.input_scale_inds = inputs_ind;
     else
@@ -133,6 +158,10 @@ else
 end
 if create_logOutputScale
 %     if have_data
+
+    if isfield(hps_struct,'logOutputScale')
+        output_ind = hps_struct.logOutputScale;
+    else
         output_ind = incr_num_hps(gp);
         
         gp.hyperparams(output_ind) = orderfields(...
@@ -142,6 +171,9 @@ if create_logOutputScale
             'NSamples',num_samples(output_ind-num_existing_hps),...
             'type','real'),...
             gp.hyperparams);
+    end
+        
+
 %     else
 %         disp('Need to specify a prior for logOutputScale, or include data to create one')
 %     end
@@ -157,31 +189,39 @@ if create_meanfn
             case 'quadratic'
                 gp = set_quadratic_mean(gp, X_data, y_data);
             otherwise
+                meanfn_name = 'constant';
                 % assume constant.
                 gp = set_constant_mean(gp, X_data, y_data);
         end
     else
+        meanfn_name = 'constant';
         gp = set_constant_mean(gp, 1);
     end
+    
+    gp.meanfn_name = meanfn_name;
 end
 
 hps_struct = set_hps_struct(gp);
 if create_covfn
     % set the covariance function
+    gp.covfn_name = covfn_name;
     gp.covfn = @(flag) hom_cov_fn(hps_struct,covfn_name,flag);
     if ~isfield(gp, 'sqd_diffs_cov')
         gp.sqd_diffs_cov = true;
     end
-elseif nargin(gp.covfn) == 2
-    % we have not initialised the cov fn with hps_struct yet
-    gp.covfn = @(flag) gp.covfn(hps_struct,flag);
+% else %nargin(gp.covfn) == 2
+%     try gp.covfn = @(flag) gp.covfn(hps_struct,flag);
+%     % we have not initialised the cov fn with hps_struct yet   
+%     catch;
+%     end
 end
 
 if ~isfield(gp, 'sqd_diffs_cov')
     gp.sqd_diffs_cov = false;
 end
 
-if have_y_data && have_X_data
+if have_y_data && have_X_data && ...
+        (create_logNoiseSD || create_logInputScales || create_logOutputScale)
     
     gp = set_gp_data(gp, X_data, y_data);
 

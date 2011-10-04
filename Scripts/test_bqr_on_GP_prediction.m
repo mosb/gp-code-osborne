@@ -1,14 +1,14 @@
-% cd ~/Code/gp-code-osborne/
-% addpath(genpath('~/Code/gp-code-osborne/'))
-% addpath ~/Code/lightspeed
-% addpath(genpath('~/Code/Utils/'))
-% rmpath ~/Code/CoreGP
-% rmpath ~/Code/BQR
+cd ~/Code/gp-code-osborne/
+addpath(genpath('~/Code/gp-code-osborne/'))
+addpath ~/Code/lightspeed
+addpath(genpath('~/Code/Utils/'))
+rmpath ~/Code/CoreGP
+rmpath ~/Code/BQR
 
 
 clear
 num_data = 100;
-num_star = 1000;
+num_star = 100;
 
 opt.print = false;
 opt.optim_time = 30;
@@ -118,8 +118,10 @@ p_r_fn = @(x) p_fn(x) * r_fn(x);
         sample_struct.qd = qd_i;
         sample_struct.qdd = qdd_i;     
 
-        
+        opt.optim_time = 30;
+        opt.active_hp_inds = 2:9;
         opt.prior_mean = 0;
+        
         gpr = train_gp('sqdexp', 'constant', gpr, ...
             samples_i, r_i, opt);
         [best_hypersample, best_hypersample_struct] = disp_hyperparams(gpr);
@@ -147,6 +149,20 @@ p_r_fn = @(x) p_fn(x) * r_fn(x);
         qdd_gp.quad_output_scale = best_hypersample_struct.output_scale;
         qdd_gp.quad_input_scales = best_hypersample_struct.input_scales;
         qdd_gp.quad_noise_sd = best_hypersample_struct.noise_sd;
+        
+        opt.optim_time = 2;
+        opt.active_hp_inds = [];
+        opt.prior_mean = 'train';
+        for num_star = 1:num_star
+            gpqdd = train_gp('sqdexp', 'constant', gpqdd, ...
+                samples_i, qdd_i(:,num_star), opt);
+            [best_hypersample, best_hypersample_struct] = ...
+                disp_hyperparams(gpqdd);
+
+            qdd_gp.quad_mean(num_star) = best_hypersample_struct.mean;
+        end
+        
+        
         qdd_gp.quad_mean = mean(qdd_i,1);
 
         [BQR_mean(:,i), BQR_sd(:,i), BQ_mean(:,i), BQ_sd(:,i)] = ...

@@ -72,12 +72,19 @@ fprintf('Beginning training of GP, budgeting for %g seconds\n', ...
 end
 start_time = cputime;
 
-if isfield(gp, 'hypersamples')
-    hypersamples = gp.hypersamples;
-    gp = struct();
-    gp.hypersamples = hypersamples;
-end
 
+
+% if isfield(gp, 'hypersamples')
+%     hypersamples = gp.hypersamples;
+%     hyperparams = gp.hyperparams;
+%     gp = struct();
+%     gp.hypersamples = hypersamples;
+%     gp.hyperparams = hyperparams;
+% end
+
+if isfield(opt, 'active_hp_inds')
+    gp.active_hp_inds = opt.active_hp_inds;
+end
 
 if opt.derivative_observations
     % set_gp assumes a standard homogenous covariance, we don't want to tell
@@ -107,6 +114,9 @@ end
 gp = hyperparams(gp);
 % don't want to use likelihood gradients for BMC purposes
 gp.grad_hyperparams = false;
+
+
+
 hps_struct = set_hps_struct(gp);
 
 noise_ind = hps_struct.logNoiseSD;
@@ -114,7 +124,7 @@ gp.noise_ind = noise_ind;
 if opt.noiseless
     gp.active_hp_inds = setdiff(gp.active_hp_inds, noise_ind);
     gp.hyperparams(noise_ind).type = 'inactive';
-    gp.hyperparams(noise_ind).priorMean = -inf;
+    gp.hyperparams(noise_ind).priorMean = -100;
     for i = 1:numel(gp.hypersamples)        
         gp.hypersamples(i).hyperparameters(noise_ind) = -inf;        
     end    
@@ -140,6 +150,10 @@ elseif isnumeric(opt.prior_mean)
 end
 
 full_active_inds = gp.active_hp_inds;
+if isempty(full_active_inds)
+    warning('no hyperparameters active, no training performed')
+    return
+end
 
 input_scale_inds = hps_struct.logInputScales;
 gp.input_scale_inds = input_scale_inds;
@@ -326,9 +340,9 @@ for num_pass = 1:num_passes
     quad_noise_sds = nan(num_dims+1,1);
     quad_output_scales = nan(num_dims+1,1);
         
-    for d = 1:num_dims
-        a_hps_mat = cat(1, input_scale_compcell{:,d});
-        logL_mat = cat(1,input_scale_logL_compcell{:,d});
+    for d_ind = 1:num_active_dims
+        a_hps_mat = cat(1, input_scale_compcell{:,d_ind});
+        logL_mat = cat(1,input_scale_logL_compcell{:,d_ind});
         
         sorted_logL_mat = sort(logL_mat);
               
@@ -336,10 +350,10 @@ for num_pass = 1:num_passes
         a_hps_mat = a_hps_mat(top_inds,:);
         logL_mat = logL_mat(top_inds,:);
 
-        [quad_noise_sds(d), a_quad_input_scales, quad_output_scales(d)] = ...
+        [quad_noise_sds(d_ind), a_quad_input_scales, quad_output_scales(d_ind)] = ...
             hp_heuristics(a_hps_mat,logL_mat,10);
 
-        quad_input_scales(input_scale_inds(d)) = a_quad_input_scales(1);
+        quad_input_scales(input_scale_inds(d_ind)) = a_quad_input_scales(1);
     end
     
     % now we estimate the scale of variation of the likelihood wrt
@@ -348,7 +362,7 @@ for num_pass = 1:num_passes
     logL_mat = cat(1,other_logL_cell{:});
     
     a_hps_mat = max(a_hps_mat, -100);
-    
+    logL_mat = max(logL_mat,-1e100);
     sorted_logL_mat = sort(logL_mat);
 
     top_inds = logL_mat >= sorted_logL_mat(round(0.9*end));
