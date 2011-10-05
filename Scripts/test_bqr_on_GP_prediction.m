@@ -150,7 +150,7 @@ p_r_fn = @(x) p_fn(x) * r_fn(x);
         qdd_gp.quad_input_scales = best_hypersample_struct.input_scales;
         qdd_gp.quad_noise_sd = best_hypersample_struct.noise_sd;
         
-        opt.optim_time = 2;
+        opt.optim_time = 3;
         opt.active_hp_inds = [];
         opt.prior_mean = 'train';
         for num_star = 1:num_star
