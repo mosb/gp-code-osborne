@@ -154,16 +154,13 @@ p_r_fn = @(x) p_fn(x) * r_fn(x);
         opt.active_hp_inds = [];
         opt.prior_mean = 'train';
         for num_star = 1:num_star
-            gpqdd = train_gp('sqdexp', 'constant', gpqdd, ...
+            gpqdd_star = train_gp('sqdexp', 'constant', gpqdd, ...
                 samples_i, qdd_i(:,num_star), opt);
             [best_hypersample, best_hypersample_struct] = ...
-                disp_hyperparams(gpqdd);
+                disp_hyperparams(gpqdd_star);
 
             qdd_gp.quad_mean(num_star) = best_hypersample_struct.mean;
         end
-        
-        
-        qdd_gp.quad_mean = mean(qdd_i,1);
 
         [BQR_mean(:,i), BQR_sd(:,i), BQ_mean(:,i), BQ_sd(:,i)] = ...
             predict(sample_struct, prior, r_gp, qd_gp, qdd_gp);
