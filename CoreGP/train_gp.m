@@ -111,22 +111,23 @@ if opt.noiseless
     gp.hyperparams(noise_ind).priorMean = ...
        gp.hyperparams(output_scale_ind).priorMean - 14; 
     
-    big_noise_const = 0.1;
+    big_noise_const = -5;
     big_noise_ind = output_scale_ind;
 else
-    big_noise_const = 1;
+    big_noise_const = 0;
     big_noise_ind = noise_ind;
 end
+mean_inds = hps_struct.mean_inds;
 if any(strcmpi(opt.prior_mean, {'optimise','optimize','train'}))
-    gp.active_hp_inds = union(gp.active_hp_inds, hps_struct.mean_inds);
-    for i = 1:length(hps_struct.mean_inds)
-        mean_ind = hps_struct.mean_inds(i);
+    gp.active_hp_inds = union(gp.active_hp_inds, mean_inds);
+    for i = 1:length(mean_inds)
+        mean_ind = mean_inds(i);
         gp.hyperparams(mean_ind).type = 'real';
     end
 elseif isnumeric(opt.prior_mean)
-    gp.active_hp_inds = setdiff(gp.active_hp_inds, hps_struct.mean_inds);
-    for i = 1:length(hps_struct.mean_inds)
-        mean_ind = hps_struct.mean_inds(i);
+    gp.active_hp_inds = setdiff(gp.active_hp_inds, mean_inds);
+    for i = 1:length(mean_inds)
+        mean_ind = mean_inds(i);
         gp.hyperparams(mean_ind).type = 'inactive';
         gp.hyperparams(mean_ind).priorMean = opt.prior_mean(i);
     end
@@ -223,7 +224,7 @@ end
 if opt.verbose
     fprintf(', for ')
     disp_gp_hps(hypersamples, max_ind,'no_logL',...
-        noise_ind, input_scale_inds, output_scale_ind);
+        noise_ind, input_scale_inds, output_scale_ind, mean_inds);
 end
 if opt.print
 fprintf('\n');
@@ -280,7 +281,7 @@ for num_pass = 1:num_passes
             fprintf('Hyperparameter sample %g\n',hypersample_ind)
         end
         
-        big_log_noise_sd = big_noise_const*...
+        big_log_noise_sd = big_noise_const + ...
             hypersamples(hypersample_ind).hyperparameters(big_noise_ind);
         actual_log_noise_sd = ...
             hypersamples(hypersample_ind).hyperparameters(noise_ind);
@@ -358,7 +359,7 @@ for num_pass = 1:num_passes
         if opt.verbose
             fprintf(', \t for ');
             disp_gp_hps(hypersamples(hypersample_ind), [], 'no_logL', ...
-                noise_ind, input_scale_inds, output_scale_ind);
+                noise_ind, input_scale_inds, output_scale_ind, mean_inds);
             fprintf('\n');
         end
 
@@ -450,7 +451,7 @@ for num_pass = 1:num_passes
         if opt.verbose
             fprintf(', \t for ');
             disp_gp_hps(hypersamples(hypersample_ind), [], 'no_logL', ...
-                noise_ind, input_scale_inds, output_scale_ind);
+                noise_ind, input_scale_inds, output_scale_ind, mean_inds);
             fprintf('\n');
         end
 

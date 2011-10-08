@@ -251,7 +251,7 @@ for i = 1:max_num_samples
         
 
              
-        opt.optim_time = 4;
+        opt.optim_time = 2;
         opt.active_hp_inds = [];
         opt.prior_mean = 'train';
         opt.num_hypersamples = 1;

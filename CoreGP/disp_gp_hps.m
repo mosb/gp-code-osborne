@@ -1,5 +1,5 @@
 function [noise, output_scale, input_scales] = disp_gp_hps(gp, best_ind, ...
-    flag, noise_ind, input_scale_inds, output_scale_ind)
+    flag, noise_ind, input_scale_inds, output_scale_ind, mean_inds)
 
 if ~isfield(gp, 'hypersamples') && isfield(gp, 'logL')
     gp1.hypersamples = gp;
@@ -26,16 +26,19 @@ if nargin < 4
         noise_ind = gp.noise_ind;
         output_scale_ind = gp.output_scale_ind;
         input_scale_inds = gp.input_scale_inds;
+        mean_inds = gp.meanPos;
     else
         noise_ind = 1;
         input_scale_inds = 2:(num_hps-2);
         output_scale_ind = num_hps-1;
+        mean_inds = num_hps;
     end
 end
 
 noise = exp(best_hypersample(noise_ind));
 output_scale = exp(best_hypersample(output_scale_ind));
 input_scales = exp(best_hypersample(input_scale_inds));
+means = best_hypersample(mean_inds);
 
 
     
@@ -44,7 +47,8 @@ if nargout == 0
         fprintf('log-likelihood of %g for ', logL);
     end
     fprintf('hyperparameters:\n');
-    
+    fprintf('prior mean:\t%g\n', ...
+        means);
     fprintf('noise SD:\t%g\n', ...
         noise);
     fprintf('output scale:\t%g\n', ...

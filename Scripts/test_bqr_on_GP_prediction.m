@@ -171,7 +171,7 @@ load prob_bqr_on_GP_prediction
         
 
              
-        opt.optim_time = 4;
+        opt.optim_time = 2;
         opt.active_hp_inds = [];
         opt.prior_mean = 'train';
         opt.num_hypersamples = 1;
