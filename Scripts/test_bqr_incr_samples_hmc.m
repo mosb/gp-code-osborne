@@ -130,6 +130,8 @@ for trial = (size(BQR,1)+1):max_trials
     fprintf('\n');
 end
 
+
+load test_bqr_incr_samples_hmc
         perf_BQR = sqrt((mean(BQR(:,end) - exact).^2));
         perf_BQ = sqrt(mean(abs(BQ(:,end) - exact).^2));
         perf_BMC = sqrt(mean(abs(BMC(:,end) - exact).^2));
@@ -140,15 +142,43 @@ end
 %         std_MC = sqrt(mean(std((MC(:,end) - exact).^2)));
         fprintf('Trial %u\n performance\n BQR:\t%g\n BQ:\t%g\n BMC:\t%g\n MC:\t%g\n',...
             i,perf_BQR,perf_BQ,perf_BMC,perf_MC);
+        
+        
 
-colours = colormap('jet'); 
+% colours = colormap('hsv'); 
+% inds = ceil(linspace(3*length(colours)/4,length(colours),4));
 
-% figure;
-% loglog(sqrt(mean(bsxfun(@minus,BQR,exact).^2))
-% hold on;
-% loglog(sqrt(mean(bsxfun(@minus,BQ,exact).^2)),'o')
-% loglog(sqrt(mean(bsxfun(@minus,BMC,exact).^2)),'m')
-% loglog(sqrt(mean(bsxfun(@minus,MC,exact).^2)),'b')
-% axis([0 200 0 0.2])
+load test_bqr_incr_samples_hmc
+fh = figure;
+set(gca, 'FontSize', 24);
+set(gca, 'TickDir', 'out')
+set(gca, 'Box', 'off', 'FontSize', 10); 
+set(fh, 'color', 'white'); 
+
+
+
+loglog(sqrt(mean(bsxfun(@minus,MC,exact).^2)),'--b','LineWidth',1.5);
+hold on;
+loglog(sqrt(mean(bsxfun(@minus,BMC,exact).^2)),'-.r');
+loglog(sqrt(mean(bsxfun(@minus,BQ,exact).^2)),'.r','MarkerSize',4);
+loglog(sqrt(mean(bsxfun(@minus,BQR,exact).^2)),'-k');
+
+axis([0 200 0 0.2])
+set(gca, 'YGrid', 'off','YTick',[0.01,0.1]);
+
+legend('\acro{mc}','\acro{bmc}','\acro{bq}','\acro{bqr}', ...
+    'Location','SouthWest')
+xlabel('number of samples')
+ylabel('\acro{rmse}','Rotation',0)
+legend boxoff
+title '\acro{hmc} sampling'
+
+fh = gcf;
+
+set(fh, 'units', 'centimeters');
+pos = get(fh, 'position'); 
+set(fh, 'position', [pos(1:2), 8, 5]); 
+
+matlabfrag('~/Documents/SBQ/hmc_sampled_simple')
 
 

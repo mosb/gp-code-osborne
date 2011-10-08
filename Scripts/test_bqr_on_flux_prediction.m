@@ -218,7 +218,7 @@ for i = 1:max_num_samples
         opt.prior_mean = 0;
         opt.num_hypersamples = 10;
         
-        gpr = train_gp('sqdexp', 'constant', gpr, ...
+          gpr = train_gp('sqdexp', 'constant', gpr, ...
             samples_i, r_i, opt);
         [best_hypersample, best_hypersample_struct] = disp_hyperparams(gpr);
 
@@ -227,27 +227,30 @@ for i = 1:max_num_samples
         r_gp.quad_noise_sd = best_hypersample_struct.noise_sd;
         r_gp.quad_mean = 0;
         
-        opt.prior_mean = 'default';
-        gpqdd = train_gp('sqdexp', 'constant', gpqdd, ...
-            samples_i, qdd_i(:,1), opt);
-        [best_hypersample, best_hypersample_struct] = disp_hyperparams(gpqdd);
-
-        qdd_gp.quad_output_scale = best_hypersample_struct.output_scale;
-        qdd_gp.quad_input_scales = best_hypersample_struct.input_scales;
-        qdd_gp.quad_noise_sd = best_hypersample_struct.noise_sd;
-        qdd_gp.quad_mean = qdd_gp_mean;
-        
-
-        opt.prior_mean = 'train';
+        % rotate through the columns of qd_i
+         opt.prior_mean = 'train';
         gpqd = train_gp('sqdexp', 'constant', gpqd, ...
-            samples_i, qd_i(:,1), opt);
+            samples_i, qd_i(:,i), opt);
         [best_hypersample, best_hypersample_struct] = disp_hyperparams(gpqd);
 
         qd_gp.quad_output_scale = best_hypersample_struct.output_scale;
         qd_gp.quad_input_scales = best_hypersample_struct.input_scales;
         qd_gp.quad_noise_sd = best_hypersample_struct.noise_sd;
-        qd_gp.quad_mean = qd_gp_mean;
-          
+        %qd_gp.quad_mean = qd_gp_mean;
+
+        
+        opt.prior_mean = 'train';
+        gpqdd = train_gp('sqdexp', 'constant', gpqdd, ...
+            samples_i, qdd_i(:,i), opt);
+        [best_hypersample, best_hypersample_struct] = disp_hyperparams(gpqdd);
+
+        qdd_gp.quad_output_scale = best_hypersample_struct.output_scale;
+        qdd_gp.quad_input_scales = best_hypersample_struct.input_scales;
+        qdd_gp.quad_noise_sd = best_hypersample_struct.noise_sd;
+        %qdd_gp.quad_mean = qdd_gp_mean;
+        
+
+             
         opt.optim_time = 4;
         opt.active_hp_inds = [];
         opt.prior_mean = 'train';
@@ -268,6 +271,9 @@ for i = 1:max_num_samples
 
             qd_gp_mean(star_ind) = best_hypersample_struct.mean;
         end
+        %qd_gp_mean = mean(qd_i,1);
+        
+        qd_gp.quad_mean = qd_gp_mean;
         
         parfor star_ind = 1:num_star
             
@@ -284,7 +290,11 @@ for i = 1:max_num_samples
 
             qdd_gp_mean(star_ind) = best_hypersample_struct.mean;
         end
-       qdd_gp_mean = max(qdd_gp_mean, qd_gp_mean.^2);
+        %qdd_gp_mean = mean(qdd_i,1);
+        qdd_gp_mean = max(qdd_gp_mean, qd_gp_mean.^2);
+
+        
+        qdd_gp.quad_mean = qdd_gp_mean;
 
 
         [BQR_mean(:,i), BQR_sd(:,i), BQ_mean(:,i), BQ_sd(:,i)] = ...

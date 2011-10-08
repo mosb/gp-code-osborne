@@ -56,6 +56,10 @@ default_opt = struct(...
                     'force_training', true, ...
                     'noiseless', false, ...
                     'prior_mean', 'default');
+
+if ~isfield(opt,'parallel') && isfield(opt,'num_hypersamples')
+    opt.parallel = opt.num_hypersamples > 1;
+end
                            
 names = fieldnames(default_opt);
 for i = 1:length(names);
@@ -65,6 +69,7 @@ for i = 1:length(names);
     end
 end
 opt.verbose = opt.verbose && opt.print;
+
 
 if opt.print
 fprintf('Beginning training of GP, budgeting for %g seconds\n', ...
@@ -86,37 +91,15 @@ if isfield(opt, 'active_hp_inds')
     gp.active_hp_inds = opt.active_hp_inds;
 end
 
-if opt.derivative_observations
-    % set_gp assumes a standard homogenous covariance, we don't want to tell
-    % it about derivative observations.
-    plain_obs = X_data(:,end) == 0;
-    
-    set_X_data = X_data(plain_obs,1:end-1);
-    set_y_data = y_data(plain_obs,:);
-    
-    
-    gp = set_gp(opt.cov_fn,opt.mean_fn, gp, set_X_data, set_y_data, ...
-        opt.num_hypersamples);
-    
-    hps_struct = set_hps_struct(gp);
-    gp.covfn = @(flag) derivativise(@gp.covfn,flag);
-    gp.meanfn = @(flag) wderiv_mean_fn(hps_struct,flag);
-    
-    gp.X_data = X_data;
-    gp.y_data = y_data;
 
-    
-else
-    gp = set_gp(opt.cov_fn, opt.mean_fn, gp, X_data, y_data, ...
-        opt.num_hypersamples);
-end
 
 
 % don't want to use likelihood gradients for BMC purposes
 gp.grad_hyperparams = false;
 
 
-
+gp = set_gp(opt.cov_fn, opt.mean_fn, gp, X_data, [], ...
+    opt.num_hypersamples);
 hps_struct = set_hps_struct(gp);
 
 output_scale_ind = hps_struct.logOutputScale;
@@ -149,9 +132,36 @@ elseif isnumeric(opt.prior_mean)
     end
 end
 
-if ~isfield(gp, 'hypersamples')
-gp = create_lhs_hypersamples(gp, opt.num_hypersamples);
+
+
+if opt.derivative_observations
+    % set_gp assumes a standard homogenous covariance, we don't want to tell
+    % it about derivative observations.
+    plain_obs = X_data(:,end) == 0;
+    
+    set_X_data = X_data(plain_obs,1:end-1);
+    set_y_data = y_data(plain_obs,:);
+    
+    
+    gp = set_gp(opt.cov_fn,opt.mean_fn, gp, set_X_data, set_y_data, ...
+        opt.num_hypersamples);
+    
+    hps_struct = set_hps_struct(gp);
+    gp.covfn = @(flag) derivativise(@gp.covfn,flag);
+    gp.meanfn = @(flag) wderiv_mean_fn(hps_struct,flag);
+    
+    gp.X_data = X_data;
+    gp.y_data = y_data;
+
+    
+else
+    gp = set_gp(opt.cov_fn, opt.mean_fn, gp, X_data, y_data, ...
+        opt.num_hypersamples);
 end
+
+% if ~isfield(gp, 'hypersamples')
+% gp = create_lhs_hypersamples(gp, opt.num_hypersamples);
+% end
 
 full_active_inds = gp.active_hp_inds;
 if isempty(full_active_inds)
@@ -261,7 +271,7 @@ for num_pass = 1:num_passes
     other_cell = cell(num_hypersamples,1);
     other_logL_cell = cell(num_hypersamples,1);
     
-    if num_hypersamples>1
+    if opt.parallel
     parfor hypersample_ind = 1:num_hypersamples
         
         warning('off','revise_gp:small_num_data');
@@ -492,7 +502,7 @@ for num_pass = 1:num_passes
     quad_noise_sd = min(quad_noise_sds);
     quad_output_scale = max(quad_output_scales);
     
-    if (cputime-start_time > opt.optim_time) && num_pass > 1 ...
+    if (cputime-start_time > opt.optim_time) && num_pass > 0 ...
         || num_pass == num_passes
         % need to end here so that we have gp that has been trained on the
         % whole dataset, rather than on a `close' subset

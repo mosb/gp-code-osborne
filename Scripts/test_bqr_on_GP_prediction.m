@@ -147,9 +147,10 @@ load prob_bqr_on_GP_prediction
         r_gp.quad_noise_sd = best_hypersample_struct.noise_sd;
         r_gp.quad_mean = 0;
         
-         opt.prior_mean = 'default';
+        % rotate through the columns of qd_i
+         opt.prior_mean = 'train';
         gpqd = train_gp('sqdexp', 'constant', gpqd, ...
-            samples_i, qd_i(:,1), opt);
+            samples_i, qd_i(:,i), opt);
         [best_hypersample, best_hypersample_struct] = disp_hyperparams(gpqd);
 
         qd_gp.quad_output_scale = best_hypersample_struct.output_scale;
@@ -158,9 +159,9 @@ load prob_bqr_on_GP_prediction
         %qd_gp.quad_mean = qd_gp_mean;
 
         
-        opt.prior_mean = 'default';
+        opt.prior_mean = 'train';
         gpqdd = train_gp('sqdexp', 'constant', gpqdd, ...
-            samples_i, qdd_i(:,1), opt);
+            samples_i, qdd_i(:,i), opt);
         [best_hypersample, best_hypersample_struct] = disp_hyperparams(gpqdd);
 
         qdd_gp.quad_output_scale = best_hypersample_struct.output_scale;

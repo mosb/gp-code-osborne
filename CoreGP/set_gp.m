@@ -239,14 +239,15 @@ if ~isfield(gp, 'sqd_diffs_cov')
     gp.sqd_diffs_cov = false;
 end
 
+if have_y_data && have_X_data
 if update_best_hypersample
     % set the worst half of hypersamples to exploratory points centred
     % around the current best.
     split_pt = ceil(num_hypersamples/2);
-    [logLs, sort_inds] = sort([gp.hypersamples.logL]);
+    [logLs, sort_inds] = sort([gp.hypersamples.logL],2,'descend');
     best_hypersamples = vertcat(...
-        gp.hypersamples(sort_inds(split_pt:end)).hyperparameters);
-    best_hypersample = best_hypersamples(end,:);
+        gp.hypersamples(sort_inds(1:split_pt)).hyperparameters);
+    best_hypersample = best_hypersamples(1,:);
     
     for i = 1:length(gp.active_hp_inds);
         ind = gp.active_hp_inds(i);
@@ -254,6 +255,7 @@ if update_best_hypersample
     end
     
     % this actually recreates best_hypersample
+    gp = rmfield(gp,'hypersamples');
     gp = create_lhs_hypersamples(gp, split_pt);
     
     for ind = 1:(size(best_hypersamples,1)-1)
@@ -261,9 +263,7 @@ if update_best_hypersample
             best_hypersamples(ind,:);
     end
     
-    
-elseif have_y_data && have_X_data && ...
-        (create_logNoiseSD || create_logInputScales || create_logOutputScale)
+elseif (create_logNoiseSD || create_logInputScales || create_logOutputScale)
     
     gp = set_gp_data(gp, X_data, y_data);
 
@@ -289,6 +289,9 @@ elseif have_y_data && have_X_data && ...
         gp.hyperparams(output_ind).priorMean = log(est_output_scale);
         gp.hyperparams(output_ind).priorSD = 1.5;
     end
+    
+    gp = create_lhs_hypersamples(gp, num_hypersamples);
+end
 end
 
 function num = incr_num_hps(gp)

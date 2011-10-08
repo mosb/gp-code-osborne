@@ -507,8 +507,17 @@ if want_posterior
     mean_out = second_moment;
     sd_out = nan;
 else
-    sd_out = sqrt(max(eps,second_moment - mean_out.^2));
-    unadj_sd_out = sqrt(max(eps,rhodd - mean_out.^2));
+    var_out = second_moment - mean_out.^2;
+    problems = var_out<0;
+    var_out(problems) = mean(qdd_s(:,problems) - qd_s(:,problems).^2);
+    
+    sd_out = sqrt(var_out);
+    
+    var_out = rhodd - mean_out.^2;
+    problems = var_out<0;
+    var_out(problems) = mean(qdd_s(:,problems) - qd_s(:,problems).^2);
+    
+    unadj_sd_out = sqrt(var_out);
 end
 end
 
