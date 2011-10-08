@@ -25,6 +25,8 @@ if ~isfield(gp,'hyperparams')
         'NSamples',nan,...
         'type',nan);
     
+    grid_num_hypersamples = num_hypersamples;
+    
 else
 
     default_vals = struct('priorSD', 1, ...
@@ -45,11 +47,24 @@ else
     num_existing_samples = prod([gp.hyperparams.NSamples]);
     num_existing_hps = numel(gp.hyperparams);
     
-    num_hypersamples = max(num_existing_samples, num_hypersamples);
+    grid_num_hypersamples = max(num_existing_samples, num_hypersamples);
 end
 hps_struct = set_hps_struct(gp);
 
-
+if ~isfield(gp, 'active_hp_inds')
+    active=[];
+    for hyperparam = 1:numel(gp.hyperparams)
+        if gp.hyperparams(hyperparam).priorSD <=0
+            gp.hyperparams(hyperparam).type = 'inactive';
+        end
+        if ~strcmpi(gp.hyperparams(hyperparam).type,'inactive')
+            active=[active,hyperparam];
+        else
+            gp.hyperparams(hyperparam).NSamples=1;
+        end
+    end
+    gp.active_hp_inds=active;
+end
 
 
 have_X_data = nargin >= 4 && ~isempty(X_data);
@@ -64,9 +79,10 @@ create_logInputScales = ~isfield(hps_struct,'logInputScales') ...
 create_logOutputScale = ~isfield(hps_struct,'logOutputScale')...
                         || ismember(hps_struct.logOutputScale, ...
                                 gp.active_hp_inds);
-% create_meanParams = ~isfield(hps_struct,'mean_inds')...
-%                         || ismember(hps_struct.mean_inds, ...
-%                                 gp.active_hp_inds);
+create_meanParams = ~isfield(hps_struct,'mean_inds')...
+                        || isempty(hps_struct.mean_inds) ...
+                        || ismember(hps_struct.mean_inds, ...
+                                gp.active_hp_inds);
 create_covfn = ~isempty(covfn_name) && (~isfield(gp,'covfn_name')...
                 || ~strcmpi(covfn_name,gp.covfn_name))...
                         || ~isfield(gp,'covfn')...
@@ -76,16 +92,19 @@ create_meanfn = ~isempty(meanfn_name) && (~isfield(gp,'meanfn_name')...
                         ||(~isfield(gp,'meanfn')...
                         || isempty(gp.meanfn)) && (~isfield(gp,'meanPos')...
                         || isempty(gp.meanPos));
-                  
+update_best_hypersample = isfield(gp, 'hypersamples');
 
 
 
 if have_X_data
     num_dims = size(X_data,2);
     num_hps_to_create = ...
-        create_logNoiseSD + num_dims*create_logInputScales + create_logOutputScale;
+        create_logNoiseSD + ...
+        num_dims*create_logInputScales + ...
+        create_logOutputScale + ...
+        create_meanParams;
 
-    num_samples = factor_in_odds(num_hypersamples/num_existing_samples,num_hps_to_create);
+    num_samples = factor_in_odds(grid_num_hypersamples/num_existing_samples,num_hps_to_create);
     if size(X_data,1) == 1
         input_scales = X_data;
         input_SD = 2;
@@ -220,7 +239,30 @@ if ~isfield(gp, 'sqd_diffs_cov')
     gp.sqd_diffs_cov = false;
 end
 
-if have_y_data && have_X_data && ...
+if update_best_hypersample
+    % set the worst half of hypersamples to exploratory points centred
+    % around the current best.
+    split_pt = ceil(num_hypersamples/2);
+    [logLs, sort_inds] = sort([gp.hypersamples.logL]);
+    best_hypersamples = vertcat(...
+        gp.hypersamples(sort_inds(split_pt:end)).hyperparameters);
+    best_hypersample = best_hypersamples(end,:);
+    
+    for i = 1:length(gp.active_hp_inds);
+        ind = gp.active_hp_inds(i);
+        gp.hyperparams(ind).priorMean = best_hypersample(ind);
+    end
+    
+    % this actually recreates best_hypersample
+    gp = create_lhs_hypersamples(gp, split_pt);
+    
+    for ind = 1:(size(best_hypersamples,1)-1)
+        gp.hypersamples(split_pt + ind).hyperparameters = ...
+            best_hypersamples(ind,:);
+    end
+    
+    
+elseif have_y_data && have_X_data && ...
         (create_logNoiseSD || create_logInputScales || create_logOutputScale)
     
     gp = set_gp_data(gp, X_data, y_data);

@@ -127,6 +127,6 @@ else
     
 end
 
-mean_out = mean(qd_s);
-sd_out = sqrt(mean(qdd_s) - mean_out.^2);
+mean_out = mean(qd_s,1);
+sd_out = sqrt(mean(qdd_s,1) - mean_out.^2);
 

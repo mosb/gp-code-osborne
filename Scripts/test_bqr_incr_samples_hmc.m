@@ -1,9 +1,14 @@
 clear;
 
-%load test_bqr_incr_samples_hmc
-BQR = [];BQ=[];BMC=[];MC=[];
+%
+
 
 prob_bqr_incr_samples;
+
+%BQR = [];BQ=[];BMC=[];MC=[];
+load test_bqr_incr_samples_hmc
+f = isnan(prod(MC,2));
+BQR(f,:) = [];BQ(f,:)=[];BMC(f,:)=[];MC(f,:)=[];
 
 neg_log_rp = @(x) - log(r_fn(x)) - log(p_fn(x));
 d_neg_log_rp = @(x) - d_r_fn(x)/r_fn(x) - d_p_fn(x)/p_fn(x);
@@ -30,7 +35,7 @@ hmc_options = hmc2_opt(hmc_options);
 
 q = [];
 r = [];
-for trial = 1:max_trials
+for trial = (size(BQR,1)+1):max_trials
     fprintf('trial = %u\n', trial);
     
     BQR = [BQR;nan(1, max_num_samples)];
@@ -62,6 +67,7 @@ for trial = 1:max_trials
 %         [r_noise_sd, r_input_scales, r_output_scale] = ...
 %             hp_heuristics(samples, r, 100);
 
+  
         gpq = train_gp('sqdexp', 'constant', gpq, ...
             samples(1:num_sample,:), q, opt);
         [best_hypersample, best_hypersample_struct] = disp_hyperparams(gpq);
@@ -69,6 +75,7 @@ for trial = 1:max_trials
         q_gp.quad_output_scale = best_hypersample_struct.output_scale;
         q_gp.quad_input_scales = best_hypersample_struct.input_scales;
         q_gp.quad_noise_sd = best_hypersample_struct.noise_sd;
+        q_gp.quad_mean = best_hypersample_struct.mean;
         
         gpr = train_gp('sqdexp', 'constant', gpr, ...
             samples(1:num_sample,:), r, opt);
@@ -77,20 +84,19 @@ for trial = 1:max_trials
         r_gp.quad_output_scale = best_hypersample_struct.output_scale;
         r_gp.quad_input_scales = best_hypersample_struct.input_scales;
         r_gp.quad_noise_sd = best_hypersample_struct.noise_sd;
+        r_gp.quad_mean = best_hypersample_struct.mean;
    
         [BQR(trial,num_sample), dummy, BQ(trial,num_sample)] = ...
             predict(sample_struct, prior, r_gp, q_gp);
                 
-        BMC(trial,num_sample) = predict_BMC(sample_struct, prior, r_gp);
+        BMC(trial,num_sample) = predict_BMC(sample_struct, prior, r_gp, q_gp);
         
         MC(trial,num_sample) = predict_MC(sample_struct, prior);
-        
         
     end
     save test_bqr_incr_samples_hmc
 
-    
-    for i = 1:size(MC,1);
+            i = trial;
 
         perf_BQR = sqrt(((BQR(i,end) - exact).^2));
         perf_BQ = sqrt((abs(BQ(i,end) - exact).^2));
@@ -100,29 +106,49 @@ for trial = 1:max_trials
         std_BQ = sqrt(std((BQ(i,:) - exact).^2));
         std_BMC = sqrt(std((BMC(i,:) - exact).^2));
         std_MC = sqrt(std((MC(i,:) - exact).^2));
-        fprintf('Dimension %u\n performance\n BQR:\t%g\t+/-%g\n BQ:\t%g\t+/-%g\n BMC:\t%g\t+/-%g\n MC:\t%g\t+/-%g\n',...
+        fprintf('Trial %u\n performance\n BQR:\t%g\t+/-%g\n BQ:\t%g\t+/-%g\n BMC:\t%g\t+/-%g\n MC:\t%g\t+/-%g\n',...
             i,perf_BQR,std_BQR,perf_BQ,std_BQ,perf_BMC,std_BMC,perf_MC,std_MC);
 
-        figure;hold on;
-        plot(exact+0*MC(i,:),'k')
-        plot(BQR(i,:),'r')
-        plot(BMC(i,:),'b')
-        plot(MC(i,:),'m')
+%         figure;hold on;
+%         plot(exact+0*MC(i,:),'k')
+%         plot(BQR(i,:),'r')
+%         plot(BMC(i,:),'b')
+%         plot(MC(i,:),'m')
 
-    end
-    
-          f = all(~isnan(MC'))';
-    
-    
-            figure;hold on;
-        plot(exact+0*MC(1,:),'k')
-        plot(mean(BQR(f,:)),'r')
-        plot(mean(BMC(f,:)),'b')
-        plot(mean(MC(f,:)),'m')
-    
-    
-    
+    %end
+            
+%         f = all(~isnan(MC'))';
+%     
+%     
+%             figure;hold on;
+%         plot(exact+0*MC(1,:),'k')
+%         plot(mean(BQR(f,:)),'r')
+%         plot(mean(BMC(f,:)),'b')
+%         plot(mean(MC(f,:)),'m')
+%     
     
     fprintf('\n');
 end
+
+        perf_BQR = sqrt((mean(BQR(:,end) - exact).^2));
+        perf_BQ = sqrt(mean(abs(BQ(:,end) - exact).^2));
+        perf_BMC = sqrt(mean(abs(BMC(:,end) - exact).^2));
+        perf_MC = sqrt(mean(abs(MC(:,end) - exact).^2));
+%         std_BQR = sqrt(mean(std((BQR(:,end) - exact).^2)));
+%         std_BQ = sqrt(mean(std((BQ(:,end) - exact).^2)));
+%         std_BMC = sqrt(mean(std((BMC(:,end) - exact).^2)));
+%         std_MC = sqrt(mean(std((MC(:,end) - exact).^2)));
+        fprintf('Trial %u\n performance\n BQR:\t%g\n BQ:\t%g\n BMC:\t%g\n MC:\t%g\n',...
+            i,perf_BQR,perf_BQ,perf_BMC,perf_MC);
+
+colours = colormap('jet'); 
+
+% figure;
+% loglog(sqrt(mean(bsxfun(@minus,BQR,exact).^2))
+% hold on;
+% loglog(sqrt(mean(bsxfun(@minus,BQ,exact).^2)),'o')
+% loglog(sqrt(mean(bsxfun(@minus,BMC,exact).^2)),'m')
+% loglog(sqrt(mean(bsxfun(@minus,MC,exact).^2)),'b')
+% axis([0 200 0 0.2])
+
 

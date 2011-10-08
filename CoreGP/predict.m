@@ -168,6 +168,7 @@ r_s = exp(log_r_s);
 
 % predict(X_star, gp, r_gp, qd_gp, qdd_gp, opt)
 
+% r is assumed to have zero mean
 if nargin<3 || isempty(r_gp)
     [r_noise_sd, r_input_scales, r_output_scale] = ...
         hp_heuristics(hs_s, r_s, 10);
@@ -177,6 +178,7 @@ else
     r_sqd_output_scale = r_gp.quad_output_scale^2;
     r_input_scales = r_gp.quad_input_scales;
 end
+
 
 if nargin<4 || isempty(qd_gp)
     [qd_noise_sd, qd_input_scales, qd_output_scale] = ...
@@ -505,8 +507,8 @@ if want_posterior
     mean_out = second_moment;
     sd_out = nan;
 else
-    sd_out = sqrt(second_moment - mean_out.^2);
-    unadj_sd_out = sqrt(rhodd - mean_out.^2);
+    sd_out = sqrt(max(eps,second_moment - mean_out.^2));
+    unadj_sd_out = sqrt(max(eps,rhodd - mean_out.^2));
 end
 end
 

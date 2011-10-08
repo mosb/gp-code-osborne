@@ -1,102 +1,133 @@
-function [YMean,YSD,covvy,closestInd,output]=predict_ML(XStar,XData,YData,covvy,params)
-% [YMean,YSD,covvy,closestInd,output]=predict_ML(XStar,XData,YData,...
-% num_steps,covvy,params)
-% num_steps is the number of iterations allowed to the integration machine
+function [mean_out, sd_out] = predict_ML(X_star, gp, opt)
+% function [mean, sd] = predict_ML(X_star, gp, r_gp, opt)
+% return the posterior mean and sd by marginalising hyperparameters using
+% maximum likelihood. 
+% - X_star (n by d) is a matrix of the n (d-dimensional) points at which
+% predictions are to be made
+% - gp requires fields:
+% * hyperparams(i).priorMean
+% * hyperparams(i).priorSD
+% * hypersamples.logL
+% * hypersamples (if opt.prediction_model is gp or spgp)
+% * hypersamples.hyperparameters (if using a handle for
+% opt.prediction_model)
+% - (optional) r_gp requires fields
+% * quad_output_scale
+% * quad_noise_sd
+% * quad_input_scales
+% alternatively: 
+% [mean, sd] = predict(sample_struct, prior_struct, r_gp, opt)
+% - sample_struct requires fields
+% * samples
+% * log_r
+% and
+% * mean_y
+% * var_y
+% or
+% * qd
+% * qdd
+% or
+% * q (if a posterior is required; returned in mean_out)
+% - prior_struct requires fields
+% * means
+% * sds
 
-if nargin<5
-    params = struct();
-end
-if ~isfield(params,'print')
-    params.print=true;
-end
-if ~isfield(params,'max_fn_evals')
-    params.max_fn_evals = 300;
-end
 
-output=[];
-
-if ~isfield(covvy, 'hypersamples')
-% Initialises hypersamples
-covvy=hyperparams(covvy);
-end
-active_inds = covvy.active_hp_inds;
-
-if ~isempty(YData) && ~isempty(active_inds)
+if isstruct(X_star)
+    sample_struct = X_star;
+    prior_struct = gp;
     
-    if params.max_fn_evals>0
-        priorMeans=[covvy.hyperparams(active_inds).priorMean];
-        priorSDs=[covvy.hyperparams(active_inds).priorSD];
-        lower_bound = priorMeans - 3*priorSDs;
-        upper_bound = priorMeans + 3*priorSDs;
-
-        % starting_pt =
-        % covvy.hypersamples(closestInd).hyperparameters(active_inds);
-        %     options = optimset('GradObj','on', 'OutputFcn',@outfun, 'TolX', eps);
-        %     [best_hypersample, neg_logL] = fmincon(objective,...
-        %         best_hypersample,...
-        %         [],[],[],[],...
-        %         lower_bound, upper_bound,...
-        %         [],options);
-
-        objective = @(a_hypersample) neg_log_likelihood(a_hypersample,...
-            active_inds,XData,YData,covvy,params);
-
-        display('Beginning optimisation of hyperparameters')
-        tic;
-
-        Problem.f = objective;
-
-        opts.maxevals = params.max_fn_evals;
-        opts.showits = params.print;
-        bounds = [lower_bound; upper_bound]';
-
-        [neg_logL, best_a_hypersample] = Direct(Problem, bounds, opts);
-        best_a_hypersample = best_a_hypersample';
-
-        display('Completed optimisation of hyperparameters')
-        toc;
+    hs_s = sample_struct.samples;
+    log_r_s = sample_struct.log_r;
+    
+    [num_s, num_hps] = size(hs_s);
+    if isfield(sample_struct, 'mean_y')
         
-        covvy.hypersamples(1).hyperparameters(active_inds) = best_a_hypersample;
+        mean_y = sample_struct.mean_y;
+        var_y = sample_struct.var_y;
+        
+        % these quantities need to be num_s by num_star matrices
+        if size(mean_y, 1) ~= num_s
+            mean_y = mean_y';
+        end
+        if size(var_y, 1) ~= num_s
+            var_y = var_y';
+        end
+
+        qd_s = mean_y;
+        qdd_s = var_y + mean_y.^2;
+        
+    elseif isfield(sample_struct, 'qd') 
+        
+        qd_s = sample_struct.qd;
+        if isfield(sample_struct, 'qdd')
+            qdd_s = sample_struct.qdd;
+        else
+            qdd_s = sample_struct.qd;
+        end
+        
+    elseif isfield(sample_struct, 'q')
+        % output argument will be 
+        want_sds = true;
+        want_posterior = true;
+        
+        qd_s = sample_struct.q;
+        qdd_s = sample_struct.q;
+        
     end
-
-    covvy = gpparams(XData,YData,covvy,'overwrite',[],1);
-end
-
-[dummyVar,closestInd] = max([covvy.hypersamples.logL]);
-if ~isempty(XStar)
-    display('Beginning prediction')
-    tic;
+        
+    num_star = size(qd_s, 1);
     
-    [YMean,wC] = gpmeancov(XStar,XData,covvy,closestInd,'var_not_cov');
-    YSD=sqrt((wC)); 
+    prior_means = prior_struct.means;
+    prior_sds = prior_struct.sds;
     
-    display('Prediction complete')
-    toc;
+    opt.prediction_model = 'arbitrary';
+    
 else
-    YMean = [];
-    YSD = [];
+    [num_star] = size(X_star, 1);
+    
+    hs_s = vertcat(gp.hypersamples.hyperparameters);
+    log_r_s = vertcat(gp.hypersamples.logL);
+    
+    [num_s, num_hps] = size(hs_s);
+    
+    prior_means = vertcat(gp.hyperparams.priorMean);
+    prior_sds = vertcat(gp.hyperparams.priorSD);
+    
+    mean_y = nan(num_star, num_s);
+    var_y = nan(num_star, num_s);
+
+    if ischar(opt.prediction_model)
+        switch opt.prediction_model
+            case 'spgp'
+                for hs = 1:num_s
+                    [mean_y(:, hs), var_y(:, hs)] = ...
+                        posterior_spgp(X_star,gp,hs,'var_not_cov');
+                end
+            case 'gp'
+                for hs = 1:num_s
+                    [mean_y(:, hs), var_y(:, hs)] = ...
+                        posterior_gp(X_star,gp,hs,'var_not_cov');
+                end
+        end
+    elseif isa(opt.prediction_model, 'function_handle')
+        for hs = 1:num_s
+            sample = gp.hypersamples(hs).hyperparameters;
+            [mean_y(:, hs), var_y(:, hs)] = ...
+                opt.prediction_model(X_star,sample);
+        end
+    end
+    
+    mean_y = mean_y';
+    var_y = var_y';
+
+    qd_s = mean_y;
+    qdd_s = var_y + mean_y.^2;
+    
 end
 
+[max_log_r, max_ind] = max(log_r_s);
 
+mean_out = qd_s(max_ind, :);
+sd_out = sqrt(qdd_s(max_ind, :) - mean_out.^2);
 
-function [neg_logL neg_glogL] = neg_log_likelihood(a_hypersample,...
-    active_inds,XData,YData,covvy,params)
-
-
-want_derivs = nargout>1;
-covvy.use_derivatives = want_derivs;
-
-if size(a_hypersample,1)>1
-    covvy.hypersamples(1).hyperparameters(active_inds) = a_hypersample';
-else
-    covvy.hypersamples(1).hyperparameters(active_inds) = a_hypersample;
-end
-
-covvy = gpparams(XData,YData,covvy,'overwrite',[],1);
-neg_logL = -covvy.hypersamples(1).logL;
-if want_derivs
-neg_glogL = -[covvy.hypersamples(1).glogL{active_inds}];
-end
-if params.print
-    fprintf('.');
-end

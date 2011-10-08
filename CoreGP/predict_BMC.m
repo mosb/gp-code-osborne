@@ -150,14 +150,22 @@ if nargin<3 || isempty(r_gp)
 
     sqd_output_scale = r_output_scale^2;
     r_input_scales = 10*r_input_scales;
+    r_mean = mean(r_s,1);
 else
     sqd_output_scale = r_gp.quad_output_scale^2;
     r_noise_sd =  r_gp.quad_noise_sd;
     r_input_scales = r_gp.quad_input_scales;
+    r_mean = r_gp.quad_mean;
 end
 if nargin<4 || isempty(qd_gp)
+    qd_mean = mean(qd_s,1);
+else
+    qd_mean = qd_gp.quad_mean;
 end
 if nargin<5 || isempty(qdd_gp)
+    qdd_mean = mean(qdd_s,1);
+else
+    qdd_mean = qdd_gp.quad_mean;
 end
 
 % we force GPs for r, qd, qdd, tr, and tqdd to share the same input scales.
@@ -178,10 +186,10 @@ sqd_dist_stack_s = bsxfun(@minus,...
 sqd_input_scales_stack = reshape(input_scales.^2,1,1,num_hps);
 
 
-mu_qdr = 0;min(r_s)*mean(qd_s, 1);
+mu_qdr = r_mean.*qd_mean;
 qdrmm_s = bsxfun(@minus, qdr_s, mu_qdr);
 
-mu_qddr = 0;min(r_s)*mean(qdd_s, 1);
+mu_qddr = r_mean.*qdd_mean;
 qddrmm_s = bsxfun(@minus, qddr_s, mu_qddr); 
                 
 K_s = sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...

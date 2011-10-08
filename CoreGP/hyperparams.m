@@ -52,7 +52,17 @@ if ~isfield(gp,'active_hp_inds')
     end
     gp.active_hp_inds=active;
 end
+inactive_inds = setdiff(1:num_hps, gp.active_hp_inds);
+for active_ind = 1:length(inactive_inds)
+    hyperparam = inactive_inds(active_ind);
+    gp.hyperparams(hyperparam).NSamples=1;
+    gp.hyperparams(hyperparam).type='inactive';
+end
 
+
+if isfield(gp, 'hypersamples')
+    warning('hypersamples already exist')
+end
 % Deal out samples according to priors if it has not already been done
 for hyperparam = 1:num_hps
     type = gp.hyperparams(hyperparam).type;
@@ -67,7 +77,7 @@ for hyperparam = 1:num_hps
                 gp.hyperparams(hyperparam).samples = ...				
                     linspacey(mean - 1 * SD, mean + 1 * SD, ...
 									NSamples)';
-            case 'real'
+            case {'active','real'}
                 gp.hyperparams(hyperparam).samples = ...				
                     norminv(1/(NSamples+1):1/(NSamples+1):NSamples/(NSamples+1),mean,SD)';
             case 'mixture'
@@ -100,12 +110,7 @@ for hyperparam = 1:num_hps
         
         gp.hyperparams(hyperparam).NSamples = NSamples;
     end
-    
-    
-    
-
 end
-
 
 
 samples = allcombs({gp.hyperparams(:).samples});
@@ -113,6 +118,7 @@ num_samples = size(samples,1);
 samples_cell = mat2cell2d(samples,ones(num_samples,1),num_hps);
 [gp.hypersamples(1:num_samples).hyperparameters] = samples_cell{:};
 gp.hyperparams = rmfield(gp.hyperparams,'samples');
+
 
 % for i = 1:num_samples
 % 	gp.hypersamples(i).hyperparameters = samples(i,:);

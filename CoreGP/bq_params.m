@@ -28,7 +28,6 @@ if nargin<2
     if size(hypersamples,1) == 1
         quad_input_scales = ones(1,max(active_hp_inds));
         quad_noise_sd = 0;
-        quad
     elseif ~isfield(gp.hypersamples,'logL')
         quad_noise_sd = 0;
         

@@ -1,10 +1,4 @@
 cd ~/Code/gp-code-osborne/
-addpath(genpath('~/Code/gp-code-osborne/'))
-addpath ~/Code/lightspeed
-addpath(genpath('~/Code/Utils/'))
-rmpath ~/Code/CoreGP
-rmpath ~/Code/BQR
-
 
 max_num_samples = 200;
 max_trials = 100;

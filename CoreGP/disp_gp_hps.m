@@ -1,4 +1,5 @@
-function [noise, output_scale, input_scales] = disp_gp_hps(gp, best_ind, flag)
+function [noise, output_scale, input_scales] = disp_gp_hps(gp, best_ind, ...
+    flag, noise_ind, input_scale_inds, output_scale_ind)
 
 if ~isfield(gp, 'hypersamples') && isfield(gp, 'logL')
     gp1.hypersamples = gp;
@@ -20,15 +21,16 @@ end
 best_hypersample = gp.hypersamples(best_ind).hyperparameters;
 num_hps = length(best_hypersample);
 
-    
-if isfield(gp, 'input_scale_inds')
-    noise_ind = gp.noise_ind;
-    output_scale_ind = gp.output_scale_ind;
-    input_scale_inds = gp.input_scale_inds;
-else
-    noise_ind = 1;
-    input_scale_inds = 2:(num_dims+1);
-    output_scale_ind = num_dims+2;
+if nargin < 4
+    if isfield(gp, 'input_scale_inds')
+        noise_ind = gp.noise_ind;
+        output_scale_ind = gp.output_scale_ind;
+        input_scale_inds = gp.input_scale_inds;
+    else
+        noise_ind = 1;
+        input_scale_inds = 2:(num_hps-2);
+        output_scale_ind = num_hps-1;
+    end
 end
 
 noise = exp(best_hypersample(noise_ind));
@@ -46,9 +48,9 @@ if nargout == 0
     fprintf('noise SD:\t%g\n', ...
         noise);
     fprintf('output scale:\t%g\n', ...
-        output_scale*(prod(2*pi*input_scales))^(-1/4));
+        output_scale);
     fprintf('input_scales:\t[');
-    fprintf(' %f', input_scales);
+    fprintf(' %g\n\t\t', input_scales);
     fprintf(']\n');
     
 end
