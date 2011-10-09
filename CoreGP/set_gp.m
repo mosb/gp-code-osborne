@@ -263,7 +263,7 @@ if update_best_hypersample
             best_hypersamples(ind,:);
     end
     
-elseif (create_logNoiseSD || create_logInputScales || create_logOutputScale)
+else %if (create_logNoiseSD || create_logInputScales || create_logOutputScale)
     
     gp = set_gp_data(gp, X_data, y_data);
 

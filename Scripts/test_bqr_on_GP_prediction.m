@@ -1,4 +1,4 @@
-cd ~/Code/gp-code-osborne/
+%cd ~/Code/gp-code-osborne/
 clear
 % addpath(genpath('~/Code/gp-code-osborne/'))
 % addpath ~/Code/lightspeed
@@ -8,61 +8,60 @@ clear
 
 %matlabpool close
 %matlabpool open
-% clear
-% num_data = 100;
-% num_star = 100;
-% 
-% opt.print = false;
-% opt.optim_time = 30;
-% opt.noiseless = true;
-% opt.verbose = false;
-% 
-% max_num_samples = 500;
-% 
-% 
-% X_data = rand(num_data,5);
-% 
-% y_fn = @(x) 10*sin(pi*x(:,1).*x(:,2)) ...
-%             + 20*(x(:,3)-0.5).^2 ...
-%             + 10*x(:,4) ...
-%             + 5*x(:,5);
-% y_data = y_fn(X_data) + randn(num_data,1);
-% 
-% X_star = rand(num_star, 5);
-% y_star = y_fn(X_star);
-% 
-% save prob_bqr_on_GP_prediction;
-% 
-% gp = set_gp('sqdexp','constant', [], X_data, y_data, ...
-%     1);
-% 
-% % we do not marginalise over priorMean
-% active_hp_inds = 1:7;
-% gp.active_hp_inds = active_hp_inds;
-% 
-% 
-% for i = 1:numel(gp.hyperparams)
-%     gp.hyperparams(i).priorMean = 0;
-%     gp.hyperparams(i).priorSD = 2;
-%     % NB: R&Z put prior on noise and signal VARIANCE; we place prior on
-%     % standard deviation.
-% end
-% 
-% prior_means = vertcat(gp.hyperparams(active_hp_inds).priorMean);
-% prior_sds = vertcat(gp.hyperparams(active_hp_inds).priorSD);
-% prior.means = prior_means;
-% prior.sds = prior_sds;
-% 
-% p_fn = @(x) mvnpdf(x, prior_means', diag(prior_sds.^2));
-% r_fn = @(x) exp(log_gp_lik(x, X_data, y_data, gp));
-% 
-% p_r_fn = @(x) p_fn(x) * r_fn(x);
+clear
+num_data = 100;
+num_star = 100;
+
+opt.print = false;
+opt.optim_time = 30;
+opt.noiseless = true;
+opt.verbose = false;
+
+max_num_samples = 500;
+
+
+X_data = rand(num_data,5);
+
+y_fn = @(x) 10*sin(pi*x(:,1).*x(:,2)) ...
+            + 20*(x(:,3)-0.5).^2 ...
+            + 10*x(:,4) ...
+            + 5*x(:,5);
+y_data = y_fn(X_data) + randn(num_data,1);
+
+X_star = rand(num_star, 5);
+y_star = y_fn(X_star);
+
+save prob_bqr_on_GP_prediction;
+
+gp = set_gp('sqdexp','constant', [], X_data, y_data, ...
+    1);
+
+% we do marginalise over priorMean
+active_hp_inds = 1:numel(gp.hyperparams);
+gp.active_hp_inds = active_hp_inds;
+
+
+for i = 1:numel(gp.hyperparams)
+    gp.hyperparams(i).priorMean = 0;
+    gp.hyperparams(i).priorSD = 2;
+    % NB: R&Z put prior on noise and signal VARIANCE; we place prior on
+    % standard deviation.
+end
+
+prior_means = vertcat(gp.hyperparams(active_hp_inds).priorMean);
+prior_sds = vertcat(gp.hyperparams(active_hp_inds).priorSD);
+prior.means = prior_means;
+prior.sds = prior_sds;
+
+p_fn = @(x) mvnpdf(x, prior_means', diag(prior_sds.^2));
+r_fn = @(x) exp(log_gp_lik(x, X_data, y_data, gp));
+
+p_r_fn = @(x) p_fn(x) * r_fn(x);
         
-%for trial = 1:num_trials
-%     samples = slicesample(prior_means', max_num_samples,...
-%         'pdf', p_r_fn,'width', prior_sds');
+    samples = slicesample(prior_means', max_num_samples,...
+        'pdf', p_r_fn,'width', prior_sds');
  
-load prob_bqr_on_GP_prediction
+save prob_bqr_on_GP_prediction
 
     for i = 1:max_num_samples
         gp.hypersamples(i).hyperparameters(active_hp_inds) = samples(i,:);
@@ -134,7 +133,7 @@ load prob_bqr_on_GP_prediction
         sample_struct.qdd = qdd_i;     
 
         opt.optim_time = 30;
-        opt.active_hp_inds = 2:9;
+        opt.active_hp_inds = 2:10;
         opt.prior_mean = 0;
         opt.num_hypersamples = 10;
         
@@ -150,7 +149,7 @@ load prob_bqr_on_GP_prediction
         % rotate through the columns of qd_i
          opt.prior_mean = 'train';
         gpqd = train_gp('sqdexp', 'constant', gpqd, ...
-            samples_i, qd_i(:,i), opt);
+            samples_i, qd_i(:,mod(i,num_star)), opt);
         [best_hypersample, best_hypersample_struct] = disp_hyperparams(gpqd);
 
         qd_gp.quad_output_scale = best_hypersample_struct.output_scale;
@@ -161,7 +160,7 @@ load prob_bqr_on_GP_prediction
         
         opt.prior_mean = 'train';
         gpqdd = train_gp('sqdexp', 'constant', gpqdd, ...
-            samples_i, qdd_i(:,i), opt);
+            samples_i, qdd_i(:,mod(i,num_star)), opt);
         [best_hypersample, best_hypersample_struct] = disp_hyperparams(gpqdd);
 
         qdd_gp.quad_output_scale = best_hypersample_struct.output_scale;

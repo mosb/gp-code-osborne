@@ -100,8 +100,8 @@ hps_struct = set_hps_struct(gp);
             
 gp.covfn = @(flag) flux_cov_fn(hps_struct,flag);
 
-% we do not marginalise over priorMean
-active_hp_inds = 1:5;
+% we do marginalise over priorMean
+active_hp_inds = 1:numel(gp.hyperparams);
 gp.active_hp_inds = active_hp_inds;
 
 prior_means = vertcat(gp.hyperparams(active_hp_inds).priorMean);
@@ -214,7 +214,7 @@ for i = 1:max_num_samples
         sample_struct.qdd = qdd_i;     
 
         opt.optim_time = 30;
-        opt.active_hp_inds = 2:7;
+        opt.active_hp_inds = 2:8;
         opt.prior_mean = 0;
         opt.num_hypersamples = 10;
         
@@ -230,7 +230,7 @@ for i = 1:max_num_samples
         % rotate through the columns of qd_i
          opt.prior_mean = 'train';
         gpqd = train_gp('sqdexp', 'constant', gpqd, ...
-            samples_i, qd_i(:,i), opt);
+            samples_i, qd_i(:,mod(i,num_star)), opt);
         [best_hypersample, best_hypersample_struct] = disp_hyperparams(gpqd);
 
         qd_gp.quad_output_scale = best_hypersample_struct.output_scale;
@@ -241,7 +241,7 @@ for i = 1:max_num_samples
         
         opt.prior_mean = 'train';
         gpqdd = train_gp('sqdexp', 'constant', gpqdd, ...
-            samples_i, qdd_i(:,i), opt);
+            samples_i, qdd_i(:,mod(i,num_star)), opt);
         [best_hypersample, best_hypersample_struct] = disp_hyperparams(gpqdd);
 
         qdd_gp.quad_output_scale = best_hypersample_struct.output_scale;

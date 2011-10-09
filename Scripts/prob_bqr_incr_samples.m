@@ -1,4 +1,4 @@
-cd ~/Code/gp-code-osborne/
+%cd ~/Code/gp-code-osborne/
 
 max_num_samples = 200;
 max_trials = 100;
