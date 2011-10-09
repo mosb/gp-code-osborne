@@ -185,7 +185,7 @@ if nargin<4 || isempty(qd_gp)
         hp_heuristics(hs_s, qd_s, 10);
 
     qd_sqd_output_scale = qd_output_scale^2;
-    mu_qd = mean(qd_s, 1);
+    mu_qd = sum(bsxfun(@times,qd_s, r_s/sum(r_s)),1);
 else
     qd_sqd_output_scale = qd_gp.quad_output_scale^2;
     qd_input_scales = qd_gp.quad_input_scales;
@@ -200,7 +200,7 @@ if ~want_posterior && (nargin<5 || isempty(qdd_gp))
         hp_heuristics(hs_s, qdd_s, 10);
 
     qdd_sqd_output_scale = qdd_output_scale^2;
-    mu_qdd = mean(qdd_s, 1);
+    mu_qdd = sum(bsxfun(@times,qd_s, r_s/sum(r_s)),1);
 else
     qdd_sqd_output_scale = qdd_gp.quad_output_scale^2;
     qdd_input_scales = qdd_gp.quad_input_scales;

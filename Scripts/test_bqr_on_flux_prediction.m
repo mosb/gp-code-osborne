@@ -218,7 +218,7 @@ for i = 1:max_num_samples
         opt.prior_mean = 0;
         opt.num_hypersamples = 10;
         
-          gpr = train_gp('sqdexp', 'constant', gpr, ...
+        gpr = train_gp('sqdexp', 'constant', gpr, ...
             samples_i, r_i, opt);
         [best_hypersample, best_hypersample_struct] = disp_hyperparams(gpr);
 
@@ -227,74 +227,80 @@ for i = 1:max_num_samples
         r_gp.quad_noise_sd = best_hypersample_struct.noise_sd;
         r_gp.quad_mean = 0;
         
+        qd_gp_mean = sum(bsxfun(@times,qd_i, r_i/sum(r_i)),1);
+        qdd_gp_mean = sum(bsxfun(@times,qdd_i, r_i/sum(r_i)),1);
+
+        
         % rotate through the columns of qd_i
-         opt.prior_mean = 'train';
+        column = mod(i,num_star);
+        
+        opt.prior_mean = qd_gp_mean(column);
         gpqd = train_gp('sqdexp', 'constant', gpqd, ...
-            samples_i, qd_i(:,mod(i,num_star)), opt);
+            samples_i, qd_i(:,column), opt);
         [best_hypersample, best_hypersample_struct] = disp_hyperparams(gpqd);
 
         qd_gp.quad_output_scale = best_hypersample_struct.output_scale;
         qd_gp.quad_input_scales = best_hypersample_struct.input_scales;
         qd_gp.quad_noise_sd = best_hypersample_struct.noise_sd;
-        %qd_gp.quad_mean = qd_gp_mean;
+        qd_gp.quad_mean = qd_gp_mean;
 
         
-        opt.prior_mean = 'train';
+        opt.prior_mean = qdd_gp_mean(column);
         gpqdd = train_gp('sqdexp', 'constant', gpqdd, ...
-            samples_i, qdd_i(:,mod(i,num_star)), opt);
+            samples_i, qdd_i(:,column), opt);
         [best_hypersample, best_hypersample_struct] = disp_hyperparams(gpqdd);
 
         qdd_gp.quad_output_scale = best_hypersample_struct.output_scale;
         qdd_gp.quad_input_scales = best_hypersample_struct.input_scales;
         qdd_gp.quad_noise_sd = best_hypersample_struct.noise_sd;
-        %qdd_gp.quad_mean = qdd_gp_mean;
+        qdd_gp.quad_mean = qdd_gp_mean;
         
 
              
-        opt.optim_time = 2;
-        opt.active_hp_inds = [];
-        opt.prior_mean = 'train';
-        opt.num_hypersamples = 1;
-        
-        parfor star_ind = 1:num_star
-            
-            gpqd_star = gpqd;
-            for sample_ind = 1:numel(gpqd_star.hypersamples)
-                gpqd_star.hypersamples(sample_ind).hyperparameters(end) = ...
-                    qd_gp_mean(star_ind);
-            end
-            
-            gpqd_star = train_gp('sqdexp', 'constant', gpqd_star, ...
-                samples_i, qd_i(:,star_ind), opt);
-            [best_hypersample, best_hypersample_struct] = ...
-                disp_hyperparams(gpqd_star);
+%             opt.optim_time = 2;
+%             opt.active_hp_inds = [];
+%             opt.prior_mean = 'train';
+%             opt.num_hypersamples = 1;
+% 
+%             parfor star_ind = 1:num_star
+% 
+%                 gpqd_star = gpqd;
+%                 for sample_ind = 1:numel(gpqd_star.hypersamples)
+%                     gpqd_star.hypersamples(sample_ind).hyperparameters(end) = ...
+%                         qd_gp_mean(star_ind);
+%                 end
+% 
+%                 gpqd_star = train_gp('sqdexp', 'constant', gpqd_star, ...
+%                     samples_i, qd_i(:,star_ind), opt);
+%                 [best_hypersample, best_hypersample_struct] = ...
+%                     disp_hyperparams(gpqd_star);
+% 
+%                 qd_gp_mean(star_ind) = best_hypersample_struct.mean;
+%             end
+%             %qd_gp_mean = mean(qd_i,1);
+% 
+%             qd_gp.quad_mean = qd_gp_mean;
+% 
+%             parfor star_ind = 1:num_star
+% 
+%                 gpqdd_star = gpqdd;
+%                 for sample_ind = 1:numel(gpqdd_star.hypersamples)
+%                     gpqdd_star.hypersamples(sample_ind).hyperparameters(end) = ...
+%                         qdd_gp_mean(star_ind);
+%                 end
+% 
+%                 gpqdd_star = train_gp('sqdexp', 'constant', gpqdd_star, ...
+%                     samples_i, qdd_i(:,star_ind), opt);
+%                 [best_hypersample, best_hypersample_struct] = ...
+%                     disp_hyperparams(gpqdd_star);
+% 
+%                 qdd_gp_mean(star_ind) = best_hypersample_struct.mean;
+%             end
+%             %qdd_gp_mean = mean(qdd_i,1);
+%             qdd_gp_mean = max(qdd_gp_mean, qd_gp_mean.^2);
 
-            qd_gp_mean(star_ind) = best_hypersample_struct.mean;
-        end
-        %qd_gp_mean = mean(qd_i,1);
         
-        qd_gp.quad_mean = qd_gp_mean;
-        
-        parfor star_ind = 1:num_star
-            
-            gpqdd_star = gpqdd;
-            for sample_ind = 1:numel(gpqdd_star.hypersamples)
-                gpqdd_star.hypersamples(sample_ind).hyperparameters(end) = ...
-                    qdd_gp_mean(star_ind);
-            end
-            
-            gpqdd_star = train_gp('sqdexp', 'constant', gpqdd_star, ...
-                samples_i, qdd_i(:,star_ind), opt);
-            [best_hypersample, best_hypersample_struct] = ...
-                disp_hyperparams(gpqdd_star);
-
-            qdd_gp_mean(star_ind) = best_hypersample_struct.mean;
-        end
-        %qdd_gp_mean = mean(qdd_i,1);
-        qdd_gp_mean = max(qdd_gp_mean, qd_gp_mean.^2);
-
-        
-        qdd_gp.quad_mean = qdd_gp_mean;
+%        qdd_gp.quad_mean = qdd_gp_mean;
 
 
         [BQR_mean(:,i), BQR_sd(:,i), BQ_mean(:,i), BQ_sd(:,i)] = ...
@@ -318,3 +324,14 @@ for i = 1:max_num_samples
     save test_bqr_on_flux_prediction
 end
 %end
+
+err_BQR = sqrt(mean((bsxfun(@minus, BQR_mean(:,1:i), y_star).^2)));
+err_BMC = sqrt(mean((bsxfun(@minus, BMC_mean(:,1:i), y_star).^2)));
+err_MC = sqrt(mean((bsxfun(@minus, MC_mean(:,1:i), y_star).^2)));
+err_ML = sqrt(mean((bsxfun(@minus, ML_mean(:,1:i), y_star).^2)));
+
+loglog(err_BQR, '.k')
+hold on
+loglog(err_BMC, '.r')
+loglog(err_MC, '.m')
+loglog(err_ML, '.b')
