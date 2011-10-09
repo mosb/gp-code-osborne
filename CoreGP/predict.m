@@ -237,8 +237,15 @@ lower_bound = min(hs_s) - opt.num_box_scales*min_input_scales;
 upper_bound = max(hs_s) + opt.num_box_scales*min_input_scales;
 
 % find the candidate points, far removed from existing samples
+try
 hs_c = find_farthest(hs_s, [lower_bound; upper_bound], num_c, ...
                             min_input_scales);
+catch
+    warning('find_farthest failed')
+    hs_c = far_pts(hs_s, [lower_bound; upper_bound], num_c, ...
+                            min_input_scales);
+end
+    
 
 hs_sc = [hs_s; hs_c];
 num_sc = size(hs_sc, 1);
