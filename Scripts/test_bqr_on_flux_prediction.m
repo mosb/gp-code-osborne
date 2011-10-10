@@ -232,7 +232,7 @@ for i = 1:max_num_samples
 
         
         % rotate through the columns of qd_i
-        column = mod(i,num_star);
+        column = mod(i-1,num_star)+1;
         
         opt.prior_mean = qd_gp_mean(column);
         gpqd = train_gp('sqdexp', 'constant', gpqd, ...
