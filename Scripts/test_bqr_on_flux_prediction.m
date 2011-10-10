@@ -7,7 +7,7 @@ cd ~/Code/gp-code-osborne/
 
 
 clear
-series=load('~/Code/gp-code-osborne/ChrisCandidates/599_wo_transits.txt');
+series=load('~/Code/gp-code-osborne/ChrisCandidates/data337.txt');
 
 series(1,:) = series(1,:) - min(series(1,:));
 series = series';
@@ -111,6 +111,17 @@ prior.sds = prior_sds;
 
 log_p_fn = @(x) logmvnpdf(x, prior_means', diag(prior_sds.^2));
 log_r_fn = @(x) log_gp_lik(x, X_data, y_data, gp);
+
+% NN=1000;
+% samples = repmat(prior_means,1,NN);
+% samples(4,:) = linspace(prior_means(4)-3*prior_sds(4),...
+%     prior_means(4)+3*prior_sds(4),NN);
+% plot_log_r = nan(1,NN);
+% for i = 1:NN;
+%     plot_log_r(i) = log_r_fn(samples(:,i));
+% end
+% plot_log_r = plot_log_r - max(plot_log_r);
+% plot(samples(4,:),exp(plot_log_r),'k')
 
 log_p_r_fn = @(x) log_p_fn(x) + log_r_fn(x);
         
@@ -308,7 +319,7 @@ for i = 1:max_num_samples
             predict(sample_struct, prior, r_gp, qd_gp, qdd_gp);
         
         qd_gp.quad_mean = mean(qd_i,1);
-        rd_gp.quad_mean = mean(r_i,1);
+        r_gp.quad_mean = mean(r_i,1);
         [BMC_mean(:,i), BMC_sd(:,i)] = predict_BMC(sample_struct, prior, r_gp, qd_gp);
 
         [MC_mean(:,i), MC_sd(:,i)] = predict_MC(sample_struct, prior);

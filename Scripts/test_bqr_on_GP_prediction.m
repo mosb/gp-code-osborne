@@ -226,7 +226,7 @@ save prob_bqr_on_GP_prediction
             predict(sample_struct, prior, r_gp, qd_gp, qdd_gp);
 
         qd_gp.quad_mean = mean(qd_i,1);
-        rd_gp.quad_mean = mean(r_i,1);
+        r_gp.quad_mean = mean(r_i,1);
         [BMC_mean(:,i), BMC_sd(:,i)] = predict_BMC(sample_struct, prior, r_gp, qd_gp);
 
         [MC_mean(:,i), MC_sd(:,i)] = predict_MC(sample_struct, prior);
