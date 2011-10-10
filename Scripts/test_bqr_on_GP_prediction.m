@@ -144,8 +144,10 @@ save prob_bqr_on_GP_prediction
         r_gp.quad_noise_sd = best_hypersample_struct.noise_sd;
         r_gp.quad_mean = 0;
         
-        qd_gp_mean = sum(bsxfun(@times,qd_i, r_i/sum(r_i)),1);
-        qdd_gp_mean = sum(bsxfun(@times,qdd_i, r_i/sum(r_i)),1);
+        
+        [max_log_r, max_ind] = max(log_r_i);
+        qd_gp_mean = qd_i(max_ind,:);%sum(bsxfun(@times,qd_i, r_i/sum(r_i)),1);
+        qdd_gp_mean = qdd_i(max_ind,:);%sum(bsxfun(@times,qdd_i, r_i/sum(r_i)),1);
 
         
         % rotate through the columns of qd_i
@@ -223,6 +225,8 @@ save prob_bqr_on_GP_prediction
         [BQR_mean(:,i), BQR_sd(:,i), BQ_mean(:,i), BQ_sd(:,i)] = ...
             predict(sample_struct, prior, r_gp, qd_gp, qdd_gp);
 
+        qd_gp.quad_mean = mean(qd_i,1);
+        rd_gp.quad_mean = mean(r_i,1);
         [BMC_mean(:,i), BMC_sd(:,i)] = predict_BMC(sample_struct, prior, r_gp, qd_gp);
 
         [MC_mean(:,i), MC_sd(:,i)] = predict_MC(sample_struct, prior);
@@ -243,8 +247,25 @@ save prob_bqr_on_GP_prediction
 %end
 
 
-clf;
-loglog(perf_BQR,'r')
-hold on;
-loglog(perf_BMC,'m')
-loglog(perf_MC,'b')
+close all
+err_BQR = sqrt(mean((bsxfun(@minus, BQR_mean(:,1:i), y_star).^2)));
+err_BQ = sqrt(mean((bsxfun(@minus, BQ_mean(:,1:i), y_star).^2)));
+err_BMC = sqrt(mean((bsxfun(@minus, BMC_mean(:,1:i), y_star).^2)));
+err_MC = sqrt(mean((bsxfun(@minus, MC_mean(:,1:i), y_star).^2)));
+err_ML = sqrt(mean((bsxfun(@minus, ML_mean(:,1:i), y_star).^2)));
+
+semilogy(err_BQR, '.k')
+hold on
+semilogy(err_BQ, '+k')
+semilogy(err_BMC, '.r')
+semilogy(err_MC, '.m')
+semilogy(err_ML, '.b')
+
+figure
+semilogy(perf_BQR(:,1:i), '.k')
+hold on
+semilogy(perf_BQ(:,1:i), '+k')
+semilogy(perf_BMC(:,1:i), '.r')
+semilogy(perf_MC(:,1:i), '.m')
+semilogy(perf_ML(:,1:i), '.b')
+

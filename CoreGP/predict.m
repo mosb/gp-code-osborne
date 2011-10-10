@@ -242,8 +242,7 @@ hs_c = find_farthest(hs_s, [lower_bound; upper_bound], num_c, ...
                             min_input_scales);
 catch
     warning('find_farthest failed')
-    hs_c = far_pts(hs_s, [lower_bound; upper_bound], num_c, ...
-                            min_input_scales);
+    hs_c = far_pts(hs_s, [lower_bound; upper_bound], num_c);
 end
     
 

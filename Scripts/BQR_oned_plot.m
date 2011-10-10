@@ -1,7 +1,8 @@
-
+prob_bqr_incr_samples
+clf
 figure(2)
-width = 12;
-height = 5;
+width = 9;
+height = 3.8;
 
 fh = gcf;
 
@@ -41,4 +42,4 @@ legend boxoff
 
 set(0, 'defaulttextinterpreter', 'none')
 
-matlabfrag('/Volumes/UNTITLED/Documents/SBQ/BQR_oned_plot')
+matlabfrag('~/Documents/SBQ/BQR_oned_plot')
