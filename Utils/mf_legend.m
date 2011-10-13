@@ -32,8 +32,10 @@ end
 hands_labels = [handles,labels];
 
 hleg = legend(hands_labels{:},'Location',Locn);%,'Orientation','Horizontal')
-legend('boxoff');
+%set(hleg,'XColor',[1 1 1],'YColor',[1 1 1])
+legend boxoff
 hlegc = get(hleg,'children');
+
 
 for i = 1:N
         set( findobj(hlegc,'string',labels{i}), 'userdata',...

@@ -1,208 +1,120 @@
 cd ~/Code/gp-code-osborne/
+clear
 % addpath(genpath('~/Code/gp-code-osborne/'))
 % addpath ~/Code/lightspeed
 % addpath(genpath('~/Code/Utils/'))
 % rmpath ~/Code/CoreGP
 % rmpath ~/Code/BQR
 
-
+matlabpool close
+matlabpool open
 clear
-series=load('~/Code/gp-code-osborne/ChrisCandidates/data337.txt');
-
-series(1,:) = series(1,:) - min(series(1,:));
-series = series';
-num_series = length(series);
-
-X = series(:,1);
-y = series(:,2);
-
-NN = 5;
-%try to get NN points per day
-step = ceil(num_series/range(X)/NN);
-
-f_data = 1:step:num_series;
-f_star = ceil(step/2):step:num_series;
-num_data = length(f_data);
-num_star = length(f_star);
-
-y = fastsmooth(y,step);
-
-X_data = X(f_data);
-y_data = y(f_data);
-
-X_star = X(f_star);
-y_star = y(f_star);
-
+num_data = 100;
+num_star = 100;
 
 opt.print = false;
 opt.optim_time = 30;
-opt.num_hypersamples = 25;
 opt.noiseless = true;
+opt.verbose = false;
 
 max_num_samples = 500;
 
-%load data
 
-%k(t,t') = A * exp[ - sin^2 (pi (t-t') / P) / (2 L1^2) ...
-% - (t-t')^2 / (2 L2^2) ] + sigma^2 * delta (t-t') 
+X_data = rand(num_data,5);
 
-[est_noise_sd,est_input_scales,est_output_scale] = ...
-      hp_heuristics(X_data,y_data-mean(y_data),100);
-mean_y = mean(y_data);
+y_fn = @(x) 10*sin(pi*x(:,1).*x(:,2)) ...
+            + 20*(x(:,3)-0.5).^2 ...
+            + 10*x(:,4) ...
+            + 5*x(:,5);
+y_data = y_fn(X_data) + randn(num_data,1);
 
-gp.hyperparams(1) = ...
-                struct('name','logNoiseSD',...
-                'priorMean',log(est_noise_sd),...
-                'priorSD',0.5);
-gp.hyperparams(2) = ...
-                struct('name','logInputScale',...
-                'priorMean',log(10*est_input_scales),...
-                'priorSD',0.5);
-gp.hyperparams(3) = ...
-                struct('name','logOutputScale',...
-                'priorMean',log(est_output_scale),...
-                'priorSD',0.5);
-gp.hyperparams(4) = ...
-                struct('name','logPeriod',...
-                'priorMean',log(7),...
-                'priorSD',0.5);
-gp.hyperparams(5) = ...
-                struct('name','logRoughness',...
-                'priorMean',log(10*est_input_scales),...
-                'priorSD',0.5);
+X_star = rand(num_star, 5);
+y_star = y_fn(X_star);
 
-% gp.hyperparams(1) = ...
-%                 struct('name','logNoiseSD',...
-%                 'priorMean',0,...
-%                 'priorSD',2);
-% gp.hyperparams(2) = ...
-%                 struct('name','logInputScale',...
-%                 'priorMean',0,...
-%                 'priorSD',2);
-% gp.hyperparams(3) = ...
-%                 struct('name','logOutputScale',...
-%                 'priorMean',0,...
-%                 'priorSD',2);
-% gp.hyperparams(4) = ...
-%                 struct('name','logPeriod',...
-%                 'priorMean',0,...
-%                 'priorSD',2);
-% gp.hyperparams(5) = ...
-%                 struct('name','logRoughness',...
-%                 'priorMean',0,...
-%                 'priorSD',2);
-gp.hyperparams(6) = ...
-                struct('name','MeanConst',...
-                'priorMean',mean_y,...
-                'priorSD',0.5);
-            
-hps_struct = set_hps_struct(gp);
-            
-gp.covfn = @(flag) flux_cov_fn(hps_struct,flag);
+save prob_bqr_on_GP_prediction;
 
-% we do marginalise over priorMean
+gp = set_gp('sqdexp','constant', [], X_data, y_data, ...
+    1);
+
+% we do not marginalise over priorMean
 active_hp_inds = 1:numel(gp.hyperparams);
 gp.active_hp_inds = active_hp_inds;
+
+
+for i = 1:numel(gp.hyperparams)
+    gp.hyperparams(i).priorMean = 0;
+    gp.hyperparams(i).priorSD = 2;
+    % NB: R&Z put prior on noise and signal VARIANCE; we place prior on
+    % standard deviation.
+end
 
 prior_means = vertcat(gp.hyperparams(active_hp_inds).priorMean);
 prior_sds = vertcat(gp.hyperparams(active_hp_inds).priorSD);
 prior.means = prior_means;
 prior.sds = prior_sds;
 
-log_p_fn = @(x) logmvnpdf(x, prior_means', diag(prior_sds.^2));
-log_r_fn = @(x) log_gp_lik(x, X_data, y_data, gp);
+p_fn = @(x) mvnpdf(x, prior_means', diag(prior_sds.^2));
+r_fn = @(x) exp(log_gp_lik(x, X_data, y_data, gp));
 
-
-
-log_p_r_fn = @(x) log_p_fn(x) + log_r_fn(x);
+p_r_fn = @(x) p_fn(x) * r_fn(x);
         
-%for trial = 1:num_trials
-
-% Problem.f = @(x) -log_p_r_fn(x');
-% opts.maxevals = 100;
-% [a,b] = Direct(Problem, [prior_means - prior_sds,prior_means + prior_sds],opts)
-
     samples = slicesample(prior_means', max_num_samples,...
-        'logpdf', log_p_r_fn,'width', prior_sds');
+        'pdf', p_r_fn,'width', prior_sds');
+ 
+load prob_bqr_on_GP_prediction
+
+    for i = 1:max_num_samples
+        gp.hypersamples(i).hyperparameters(active_hp_inds) = samples(i,:);
+        gp.hypersamples(i).hyperparameters(8) = mean(y_data);
+    end
+    gp.grad_hyperparams = false;
+    gp = revise_gp(X_data, y_data, gp, 'overwrite');
+    
+    log_r = vertcat(gp.hypersamples.logL);
+
+    mean_y = nan(num_star, max_num_samples);
+    var_y = nan(num_star, max_num_samples);
+    for hs = 1:max_num_samples
+        [mean_y(:, hs), var_y(:, hs)] = ...
+            posterior_gp(X_star,gp,hs,'var_not_cov');
+    end
+
+    mean_y = mean_y';
+    var_y = var_y';
+
+    qd = mean_y;
+    qdd = var_y + mean_y.^2;
+    
+
+    gpr = [];
+    gpqd = [];
+    gpqdd = [];
+
+    ML_mean = nan(num_star,max_num_samples);
+    MC_mean = nan(num_star,max_num_samples);
+    BMC_mean = nan(num_star,max_num_samples);
+    BQ_mean = nan(num_star,max_num_samples);
+    BQR_mean = nan(num_star,max_num_samples);
+
+    ML_sd = nan(num_star,max_num_samples);
+    MC_sd = nan(num_star,max_num_samples);
+    BMC_sd = nan(num_star,max_num_samples);
+    BQ_sd = nan(num_star,max_num_samples);
+    BQR_sd = nan(num_star,max_num_samples);
+
+    perf_ML = nan(1,max_num_samples);
+    perf_MC = nan(1,max_num_samples);
+    perf_BMC = nan(1,max_num_samples);
+    perf_BQ = nan(1,max_num_samples);
+    perf_BQR = nan(1,max_num_samples);
 
 
+    warning('off','revise_gp:small_num_data');
+     warning('off','train_gp:insuff_time');
 
+    for i = 1:max_num_samples
 
-
-% neg_log_rp = @(x) - log_r_fn(x) - log_p_fn(x);
-% d_neg_log_rp = @(x) - d_r_fn(x)/r_fn(x) - d_p_fn(x)/p_fn(x);
-% 
-% hmc2('state', 0);
-% hmc_options = struct('nsamples',max_num_samples*3,...
-%         'nomit',0,'display',0,'stepadj',prior.sds);
-% hmc_options = hmc2_opt(hmc_options);
-% 
-% samples = ...
-%     hmc2(neg_log_rp, prior.means, hmc_options, d_neg_log_rp);
-% [unique_samples, inds] = unique(samples);
-% samples = samples(sort(inds));
-% samples = samples(1:max_num_samples);
-
-
-for i = 1:max_num_samples
-    gp.hypersamples(i).hyperparameters(active_hp_inds) = samples(i,:);
-    gp.hypersamples(i).hyperparameters(hps_struct.MeanConst) = mean_y;
-end
-gp.grad_hyperparams = false;
-gp = revise_gp(X_data, y_data, gp, 'overwrite');
-
-log_r = vertcat(gp.hypersamples.logL);
-
-% hold on;
-% plot(samples(4,:), exp(log_r-max(log_r)),'.')
-
-mean_y = nan(num_star, max_num_samples);
-var_y = nan(num_star, max_num_samples);
-for hs = 1:max_num_samples
-    [mean_y(:, hs), var_y(:, hs)] = ...
-        posterior_gp(X_star,gp,hs,'var_not_cov');
-end
-
-mean_y = mean_y';
-var_y = var_y';
-
-qd = mean_y;
-qdd = var_y + mean_y.^2;
-
-save prob_bqr_on_flux_prediction
-
-qd_gp_mean = qd(1,:);
-qdd_gp_mean = qdd(1,:);
-
-gpr = [];
-gpqd = [];
-gpqdd = [];
-
-ML_mean = nan(num_star,max_num_samples);
-MC_mean = nan(num_star,max_num_samples);
-BMC_mean = nan(num_star,max_num_samples);
-BQ_mean = nan(num_star,max_num_samples);
-BQR_mean = nan(num_star,max_num_samples);
-
-ML_sd = nan(num_star,max_num_samples);
-MC_sd = nan(num_star,max_num_samples);
-BMC_sd = nan(num_star,max_num_samples);
-BQ_sd = nan(num_star,max_num_samples);
-BQR_sd = nan(num_star,max_num_samples);
-
-perf_ML = nan(1,max_num_samples);
-perf_MC = nan(1,max_num_samples);
-perf_BMC = nan(1,max_num_samples);
-perf_BQ = nan(1,max_num_samples);
-perf_BQR = nan(1,max_num_samples);
-
-
-warning('off','revise_gp:small_num_data');
- warning('off','train_gp:insuff_time');
-
-for i = 1:max_num_samples
-
-      samples_i = samples(1:i, :);
+        samples_i = samples(1:i, :);
         log_r_i = log_r(1:i, :);
         log_r_i = log_r_i - max(log_r_i);
         r_i = exp(log_r_i);
@@ -219,7 +131,7 @@ for i = 1:max_num_samples
         sample_struct.qdd = qdd_i;     
 
         opt.optim_time = 30;
-        opt.active_hp_inds = 2:8;
+        opt.active_hp_inds = 2:10;
         opt.prior_mean = 0;
         opt.num_hypersamples = 10;
         
@@ -231,6 +143,7 @@ for i = 1:max_num_samples
         r_gp.quad_input_scales = best_hypersample_struct.input_scales;
         r_gp.quad_noise_sd = best_hypersample_struct.noise_sd;
         r_gp.quad_mean = 0;
+        
         
         [max_log_r, max_ind] = max(log_r_i);
         qd_gp_mean = qd_i(max_ind,:);%sum(bsxfun(@times,qd_i, r_i/sum(r_i)),1);
@@ -311,7 +224,7 @@ for i = 1:max_num_samples
 
         [BQR_mean(:,i), BQR_sd(:,i), BQ_mean(:,i), BQ_sd(:,i)] = ...
             predict(sample_struct, prior, r_gp, qd_gp, qdd_gp);
-        
+
         [BMC_mean(:,i), BMC_sd(:,i)] = predict_BMC(sample_struct, prior, r_gp, qd_gp);
 
         [MC_mean(:,i), MC_sd(:,i)] = predict_MC(sample_struct, prior);
@@ -326,10 +239,11 @@ for i = 1:max_num_samples
         fprintf('Sample %u\n performance\n BQR:\t%g\n BQ:\t%g\n BMC:\t%g\n MC:\t%g\n ML:\t%g\n',...
             i,perf_BQR(i),perf_BQ(i),perf_BMC(i),perf_MC(i),perf_ML(i));
 
-
-    save test_bqr_on_flux_prediction
-end
+        README = 'q at max logL value for both BMC and BQR';
+        save test_bqr_on_GP_prediction_ML
+    end
 %end
+
 
 close all
 err_BQR = sqrt(mean((bsxfun(@minus, BQR_mean(:,1:i), y_star).^2)));
@@ -341,14 +255,17 @@ err_ML = sqrt(mean((bsxfun(@minus, ML_mean(:,1:i), y_star).^2)));
 semilogy(err_BQR, '.k')
 hold on
 semilogy(err_BQ, '+k')
-semilogy(err_BMC, '.r')
+
 semilogy(err_MC, '.m')
 semilogy(err_ML, '.b')
+semilogy(err_BMC, '.r')
 
 figure
 semilogy(perf_BQR(:,1:i), '.k')
 hold on
-semilogy(perf_BMC(:,1:i), '.r')
+semilogy(perf_BQ(:,1:i), '+k')
+
 semilogy(perf_MC(:,1:i), '.m')
 semilogy(perf_ML(:,1:i), '.b')
+semilogy(perf_BMC(:,1:i), '.r')
 

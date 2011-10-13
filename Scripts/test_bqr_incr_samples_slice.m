@@ -137,6 +137,7 @@ end
 close all
         
         load test_bqr_incr_samples_slice
+clf
 fh = figure;
 set(gca, 'FontSize', 24);
 set(gca, 'TickDir', 'out')
@@ -154,18 +155,21 @@ loglog(sqrt(mean(bsxfun(@minus,BQR,exact).^2)),'-k');
 axis([0 200 0 0.2])
 set(gca, 'YGrid', 'off','YTick',[0.01,0.1]);
 
-legend('\acro{mc}','\acro{bmc}','\acro{bq}','\acro{bqr}', ...
-    'Location','SouthWest')
-xlabel('number of samples')
-ylabel('\acro{rmse}','Rotation',0)
-legend boxoff
-title 'Slice sampling'
-
-fh = gcf;
-
 set(fh, 'units', 'centimeters');
 pos = get(fh, 'position'); 
-set(fh, 'position', [pos(1:2), 8, 5]); 
+set(fh, 'position', [pos(1:2), 9, 4]); 
+
+legend('\acro{mc}','\acro{bmc}','\acro{bq}','\acro{bqr}', ...
+    'Location','SouthWest')
+
+legend boxoff
+title 'Slice sampling'
+xlab = xlabel('\# samples');
+xlabpos = get(xlab,'Position');
+xlabpos(1) = xlabpos(1)+17;
+xlabpos(2) = xlabpos(2)+0.0005;
+set(xlab,'Position',xlabpos);
+ylabel('\acro{rmse}','Rotation',0)
 
 matlabfrag('~/Documents/SBQ/slice_sampled_simple')
 

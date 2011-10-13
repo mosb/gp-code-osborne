@@ -421,7 +421,12 @@ tr_s = tilde(r_s, gamma_r);
 
 gamma_qdd = opt.gamma_const*max(eps,max(qdd_s));
 tqdd_s = tilde(qdd_s, gamma_qdd);
-mu_tqdd = mean(tqdd_s);
+
+[dummy,max_ind] = max(r_s);
+
+% IMPORTANT NOTE: THIS NEEDS TO BE CHANGED TO MATCH WHATEVER MEAN IS USED
+% FOR qdd
+mu_tqdd = tqdd_s(max_ind,:);
 tqddmm_s = bsxfun(@minus, tqdd_s, mu_tqdd);
 
 
@@ -515,13 +520,13 @@ if want_posterior
 else
     var_out = second_moment - mean_out.^2;
     problems = var_out<0;
-    var_out(problems) = mean(qdd_s(:,problems) - qd_s(:,problems).^2);
+    var_out(problems) = qdd_s(max_ind,problems) - qd_s(max_ind,problems).^2;
     
     sd_out = sqrt(var_out);
     
     var_out = rhodd - mean_out.^2;
     problems = var_out<0;
-    var_out(problems) = mean(qdd_s(:,problems) - qd_s(:,problems).^2);
+    var_out(problems) = qdd_s(max_ind,problems) - qd_s(max_ind,problems).^2;
     
     unadj_sd_out = sqrt(var_out);
 end
