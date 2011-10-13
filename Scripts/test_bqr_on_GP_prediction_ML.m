@@ -244,6 +244,18 @@ load prob_bqr_on_GP_prediction
     end
 %end
 
+load test_bqr_on_GP_prediction_ML
+meana = @(x) mean(x(:));
+
+perf_BQR = sqrt(meana((bsxfun(@minus, BQR_mean(:,50:i), y_star).^2)));
+perf_BQ = sqrt(meana((bsxfun(@minus, BQ_mean(:,50:i), y_star).^2)));
+perf_BMC = sqrt(meana((bsxfun(@minus, BMC_mean(:,50:i), y_star).^2)));
+perf_MC = sqrt(meana((bsxfun(@minus, MC_mean(:,50:i), y_star).^2)));
+perf_ML = sqrt(meana((bsxfun(@minus, ML_mean(:,50:i), y_star).^2)));
+
+
+fprintf('Sample %u\n performance\n BQR:\t%g\n BQ:\t%g\n BMC:\t%g\n MC:\t%g\n ML:\t%g\n',...
+            i,perf_BQR,perf_BQ,perf_BMC,perf_MC,perf_ML);
 
 close all
 err_BQR = sqrt(mean((bsxfun(@minus, BQR_mean(:,1:i), y_star).^2)));
@@ -252,20 +264,40 @@ err_BMC = sqrt(mean((bsxfun(@minus, BMC_mean(:,1:i), y_star).^2)));
 err_MC = sqrt(mean((bsxfun(@minus, MC_mean(:,1:i), y_star).^2)));
 err_ML = sqrt(mean((bsxfun(@minus, ML_mean(:,1:i), y_star).^2)));
 
-semilogy(err_BQR, '.k')
+fh = figure;
+set(gca, 'FontSize', 24);
+set(gca, 'TickDir', 'out')
+set(gca, 'Box', 'off', 'FontSize', 10); 
+set(fh, 'color', 'white'); 
+
+pMC = loglog(err_MC, '-m','LineWidth',1)
 hold on
-semilogy(err_BQ, '+k')
+pBMC = loglog(err_BMC, '.b','MarkerSize',3)
+pML = loglog(err_ML, 'xr','MarkerSize',3)
+pBQR = loglog(err_BQR, '.k')
 
-semilogy(err_MC, '.m')
-semilogy(err_ML, '.b')
-semilogy(err_BMC, '.r')
 
-figure
-semilogy(perf_BQR(:,1:i), '.k')
-hold on
-semilogy(perf_BQ(:,1:i), '+k')
+axis tight
+%ylim([-30,-5])
 
-semilogy(perf_MC(:,1:i), '.m')
-semilogy(perf_ML(:,1:i), '.b')
-semilogy(perf_BMC(:,1:i), '.r')
+set(gca, 'YGrid', 'off')%,'YTick',[-30 -20 -10]);
 
+set(fh, 'units', 'centimeters');
+pos = get(fh, 'position'); 
+set(fh, 'position', [pos(1:2), 9, 4]); 
+
+
+xlab = xlabel('\# samples');
+xlabpos = get(xlab,'Position');
+xlabpos(1) = xlabpos(1) + 15;
+xlabpos(2) = xlabpos(2) + 0.25;
+set(xlab,'Position',xlabpos);
+ylab = ylabel('\acro{rmse}','Rotation',0)
+ylabpos = get(ylab,'Position');
+%set(ylab,'Rotation',0);
+
+hleg = mf_legend([pML,pMC,pBMC,pBQR],{'\acro{ml}','\acro{mc}','\acro{bmc}','\acro{bqr}'}, ...
+    'SouthWest',1);
+%set(hleg,'Orientation','Horizontal')
+
+matlabfrag('~/Documents/SBQ/GP_perf')

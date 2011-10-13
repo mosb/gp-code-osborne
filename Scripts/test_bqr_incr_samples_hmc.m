@@ -156,13 +156,11 @@ set(gca, 'TickDir', 'out')
 set(gca, 'Box', 'off', 'FontSize', 10); 
 set(fh, 'color', 'white'); 
 
-
-
-loglog(sqrt(mean(bsxfun(@minus,MC,exact).^2)),'--b','LineWidth',1.5);
+loglog(sqrt(mean(bsxfun(@minus,MC,exact).^2)),'-m','LineWidth',1);
 hold on;
-loglog(sqrt(mean(bsxfun(@minus,BMC,exact).^2)),'-.r');
-loglog(sqrt(mean(bsxfun(@minus,BQ,exact).^2)),'.r','MarkerSize',4);
-loglog(sqrt(mean(bsxfun(@minus,BQR,exact).^2)),'-k');
+loglog(sqrt(mean(bsxfun(@minus,BMC,exact).^2)),'.b','MarkerSize',3);
+loglog(sqrt(mean(bsxfun(@minus,BQ,exact).^2)),'xr','MarkerSize',2);
+loglog(sqrt(mean(bsxfun(@minus,BQR,exact).^2)),'.k','MarkerSize',3);
 
 axis([0 200 0 0.2])
 set(gca, 'YGrid', 'off','YTick',[0.01,0.1]);
@@ -171,7 +169,7 @@ set(fh, 'units', 'centimeters');
 pos = get(fh, 'position'); 
 set(fh, 'position', [pos(1:2), 9, 4]); 
 
-legend('\acro{mc}','\acro{bmc}','\acro{bq}','\acro{bqr}', ...
+legend('\acro{mc}','\acro{bmc}','\acro{bqz}','\acro{bqr}', ...
     'Location','SouthWest')
 
 legend boxoff

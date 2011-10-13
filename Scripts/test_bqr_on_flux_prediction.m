@@ -345,10 +345,85 @@ semilogy(err_BMC, '.r')
 semilogy(err_MC, '.m')
 semilogy(err_ML, '.b')
 
-figure
-semilogy(perf_BQR(:,1:i), '.k')
+load test_bqr_on_flux_prediction
+
+BMC_errs = ~isreal(BMC_sd);
+BMC_sd(BMC_errs) = ML_sd(BMC_errs);
+
+BMC_errs = abs(BMC_mean) > 0.5e4;
+BMC_mean(BMC_errs) = ML_mean(BMC_errs);
+BMC_sd(BMC_errs) = ML_sd(BMC_errs);
+
+BQR_errs = abs(BQR_mean) > 0.5e4;
+BQR_mean(BQR_errs) = ML_mean(BQR_errs);
+BQR_sd(BQR_errs) = ML_sd(BQR_errs);
+
+
+BQ_errs = abs(BQ_mean) > 0.5e4;
+BQ_mean(BQ_errs) = ML_mean(BQ_errs);
+BQ_sd(BQ_errs) = ML_sd(BQ_errs);
+
+
+meana = @(x) mean(x(:));
+rmsne = @(mn,sd) meana(-log(sqrt(2*pi)*sd))-0.5*meana((bsxfun(@minus, mn, y_star)./sd).^2);
+
+     perf_BQR = rmsne(BQR_mean(:,50:i),BQR_sd(:,50:i));
+        perf_BQ = rmsne(BQ_mean(:,50:i),BQ_sd(:,50:i));
+        perf_BMC = rmsne(BMC_mean(:,50:i),BMC_sd(:,50:i));
+        perf_MC = rmsne(MC_mean(:,50:i),MC_sd(:,50:i));
+        perf_ML = rmsne(ML_mean(:,50:i),ML_sd(:,50:i));
+
+fprintf('Sample %u\n performance\n BQR:\t%g\n BQ:\t%g\n BMC:\t%g\n MC:\t%g\n ML:\t%g\n',...
+            i,perf_BQR,perf_BQ,perf_BMC,perf_MC,perf_ML);
+
+for j = 1:i
+     perf_BQR(j) = rmsne(BQR_mean(:,j),BQR_sd(:,j));
+     
+        perf_BQ(j) = rmsne(BQ_mean(:,j),BQ_sd(:,j));
+        perf_BMC(j) = rmsne(BMC_mean(:,j),BMC_sd(:,j));
+        perf_MC(j) = rmsne(MC_mean(:,j),MC_sd(:,j));
+        perf_ML(j) = rmsne(ML_mean(:,j),ML_sd(:,j));
+end
+
+close all
+fh = figure;
+set(gca, 'FontSize', 24);
+set(gca, 'TickDir', 'out')
+set(gca, 'Box', 'off', 'FontSize', 10); 
+set(fh, 'color', 'white'); 
+
+pMC = semilogx(perf_MC, '-m','LineWidth',1)
 hold on
-semilogy(perf_BMC(:,1:i), '.r')
-semilogy(perf_MC(:,1:i), '.m')
-semilogy(perf_ML(:,1:i), '.b')
+pBMC = semilogx(1:i,perf_BMC, '.b','MarkerSize',3)
+pML = semilogx(perf_ML, 'xr','MarkerSize',3)
+pBQR = semilogx(perf_BQR, '.k')
+
+
+axis tight
+ylim([-30,-5])
+
+set(gca, 'YGrid', 'off','YTick',[-30 -20 -10]);
+
+set(fh, 'units', 'centimeters');
+pos = get(fh, 'position'); 
+set(fh, 'position', [pos(1:2), 9, 4]); 
+
+
+xlab = xlabel('\# samples');
+xlabpos = get(xlab,'Position');
+xlabpos(1) = xlabpos(1) + 15;
+xlabpos(2) = xlabpos(2) + 6;
+set(xlab,'Position',xlabpos);
+ylab = ylabel('\acro{ll}','Rotation',0)
+ylabpos = get(ylab,'Position');
+%set(ylab,'Rotation',0);
+
+hleg = mf_legend([pML,pMC,pBMC,pBQR],{'\acro{ml}','\acro{mc}','\acro{bmc}','\acro{bqr}'}, ...
+    'NorthWest',3);
+legend boxon
+set(hleg,'XColor',[1 1 1],'YColor',[1 1 1])
+%set(hleg,'Orientation','Horizontal')
+
+matlabfrag('~/Documents/SBQ/flux_perf')
+
 
