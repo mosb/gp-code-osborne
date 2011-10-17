@@ -124,7 +124,7 @@ for trial = (size(BQR,1)+1):max_trials
     fprintf('\n');
 end
 
-        perf_BQR = sqrt((mean(BQR(:,end) - exact).^2));
+        perf_BQR = sqrt(mean(abs(BQR(:,end) - exact).^2));
         perf_BQ = sqrt(mean(abs(BQ(:,end) - exact).^2));
         perf_BMC = sqrt(mean(abs(BMC(:,end) - exact).^2));
         perf_MC = sqrt(mean(abs(MC(:,end) - exact).^2));
@@ -146,11 +146,12 @@ set(fh, 'color', 'white');
 
 
 
-loglog(sqrt(mean(bsxfun(@minus,MC,exact).^2)),'--b','LineWidth',1.5);
+loglog(sqrt(mean(bsxfun(@minus,MC,exact).^2)),'-m','LineWidth',1);
 hold on;
-loglog(sqrt(mean(bsxfun(@minus,BMC,exact).^2)),'-.r');
-loglog(sqrt(mean(bsxfun(@minus,BQ,exact).^2)),'.r','MarkerSize',4);
-loglog(sqrt(mean(bsxfun(@minus,BQR,exact).^2)),'-k');
+loglog(sqrt(mean(bsxfun(@minus,BMC,exact).^2)),'.b','MarkerSize',3);
+loglog(sqrt(mean(bsxfun(@minus,BQ,exact).^2)),'xr','MarkerSize',2);
+loglog(sqrt(mean(bsxfun(@minus,BQR,exact).^2)),'.k');
+);
 
 axis([0 200 0 0.2])
 set(gca, 'YGrid', 'off','YTick',[0.01,0.1]);
