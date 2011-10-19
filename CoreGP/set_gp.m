@@ -14,7 +14,8 @@ num_hypersamples = max(1, ceil(num_hypersamples));
 if isempty(gp) 
     gp = struct();
 end
-if ~isfield(gp,'hyperparams')
+no_hyperparams = ~isfield(gp,'hyperparams');
+if no_hyperparams
     num_existing_samples = 1;
     num_existing_hps = 0;
     
@@ -293,6 +294,22 @@ else %if (create_logNoiseSD || create_logInputScales || create_logOutputScale)
     gp = create_lhs_hypersamples(gp, num_hypersamples);
 end
 end
+
+if no_hyperparams
+    active=[];
+    for hyperparam = 1:numel(gp.hyperparams)
+        if gp.hyperparams(hyperparam).priorSD <=0
+            gp.hyperparams(hyperparam).type = 'inactive';
+        end
+        if ~strcmpi(gp.hyperparams(hyperparam).type,'inactive')
+            active=[active,hyperparam];
+        else
+            gp.hyperparams(hyperparam).NSamples=1;
+        end
+    end
+    gp.active_hp_inds=active;
+end
+
 
 function num = incr_num_hps(gp)
 if ~isfield(gp,'hyperparams') || ...
