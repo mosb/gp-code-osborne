@@ -1,3 +1,4 @@
+% gp_plot (x, m, sd, obs_x, obs_y, real_x, real_y, params)
 % x - x values where predictions are made
 % m - mean, should be same length as x
 % sd - standard deviation, sould be same length as x
@@ -69,9 +70,10 @@ real_y = real_y(I);
 
 
 hold on;
+trans = 0.9;
 SDh = fill([x; x(end:-1:1)], ...
   [m + 2 * sd; m(end:-1:1) - 2 * sd(end:-1:1)], ...
-  [0.87 0.89 1], 'EdgeColor', 'none');
+  [0.87 0.89 1], 'EdgeColor', 'none', 'FaceAlpha', trans);
 meanh = plot(x, m);
 realh = plot(real_x,real_y);
 observationsh = plot(obs_x, obs_y, '.');

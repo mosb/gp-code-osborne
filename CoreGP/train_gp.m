@@ -1,5 +1,5 @@
 function [gp, quad_gp] = train_gp(cov_fn, mean_fn, gp, X_data, y_data, opt)
-% [gp, quad_gp] = train_spgp(gp, X_data, y_data, opt)
+% [gp, quad_gp] = train_gp(gp, X_data, y_data, opt)
 %OR
 % [gp, quad_gp] = train_gp(cov_fn, mean_fn, gp, X_data, y_data, opt);
 
@@ -170,6 +170,10 @@ if isempty(full_active_inds)
     warning('no hyperparameters active, no training performed')
     return
 end
+if opt.optim_time <= 0
+    warning('no time allowed for training, no training performed')
+    return
+end
 
 input_scale_inds = hps_struct.logInputScales;
 gp.input_scale_inds = input_scale_inds;
@@ -213,9 +217,7 @@ quad_gp.quad_noise_sd = quad_noise_sd;
 quad_gp.quad_input_scales = quad_input_scales;
 quad_gp.quad_output_scale = quad_output_scale;
 
-if opt.optim_time <= 0
-    return
-end
+
 
 [max_logL, max_ind] = max(r_y_data);
 

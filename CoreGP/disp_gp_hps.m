@@ -15,6 +15,7 @@ if nargin<2 || isempty(best_ind)
         [logL, best_ind] = max([gp.hypersamples.logL]);
     else
         best_ind = 1;
+        flag = 'no_logL';
     end
 end
     

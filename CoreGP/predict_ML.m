@@ -32,6 +32,9 @@ function [mean_out, sd_out] = predict_ML(X_star, gp, opt)
 % * means
 % * sds
 
+if nargin<3
+    opt.prediction_model = 'gp';
+end
 
 if isstruct(X_star)
     sample_struct = X_star;
@@ -87,7 +90,12 @@ else
     [num_star] = size(X_star, 1);
     
     hs_s = vertcat(gp.hypersamples.hyperparameters);
-    log_r_s = vertcat(gp.hypersamples.logL);
+    if isfield(gp.hypersamples,'logL')
+        log_r_s = vertcat(gp.hypersamples.logL);
+    else
+        log_r_s = zeros(numel(gp.hypersamples),1);
+    end
+
     
     [num_s, num_hps] = size(hs_s);
     

@@ -70,6 +70,8 @@ if isfield(gp.hypersamples(sample),'cholK')
 else
     yData = gp.y_data;
     gp = revise_gp(XData, yData, gp, 'overwrite', [], sample);
+    cholK=gp.hypersamples(sample).cholK;
+    datatwothirds=gp.hypersamples(sample).datatwothirds;
 end
 
 

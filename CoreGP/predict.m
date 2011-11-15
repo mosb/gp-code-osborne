@@ -43,7 +43,8 @@ default_opt = struct('num_c', 100,...
                     'num_box_scales', 5, ...
                     'prediction_model', 'spgp', ...
                     'no_adjustment', false, ...
-                    'allowed_cond_error',10^-14,...
+                    'allowed_r_cond_error',10^-14,...
+                    'allowed_q_cond_error',10^-16,...
                     'print', true);
                 
 names = fieldnames(default_opt);
@@ -159,8 +160,8 @@ num_c = opt.num_c;
 prior_sds_stack = reshape(prior_sds, 1, 1, num_hps);
 prior_var_stack = prior_sds_stack.^2;
 
-  
-log_r_s = log_r_s - max(log_r_s);
+[max_log_r_s, max_ind] = max(log_r_s);
+log_r_s = log_r_s - max_log_r_s;
 r_s = exp(log_r_s);
 
 
@@ -185,11 +186,15 @@ if nargin<4 || isempty(qd_gp)
         hp_heuristics(hs_s, qd_s, 10);
 
     qd_sqd_output_scale = qd_output_scale^2;
-    mu_qd = sum(bsxfun(@times,qd_s, r_s/sum(r_s)),1);
+    mu_qd = qd_s(max_ind,:);
 else
     qd_sqd_output_scale = qd_gp.quad_output_scale^2;
     qd_input_scales = qd_gp.quad_input_scales;
-    mu_qd = qd_gp.quad_mean;
+    if isfield(qd_gp, 'quad_mean')
+        mu_qd = qd_gp.quad_mean;
+    else
+        mu_qd = qd_s(max_ind,:);
+    end
 end
 
 if want_posterior
@@ -200,11 +205,15 @@ if ~want_posterior && (nargin<5 || isempty(qdd_gp))
         hp_heuristics(hs_s, qdd_s, 10);
 
     qdd_sqd_output_scale = qdd_output_scale^2;
-    mu_qdd = sum(bsxfun(@times,qd_s, r_s/sum(r_s)),1);
+    mu_qdd = qdd_s(max_ind,:);
 else
     qdd_sqd_output_scale = qdd_gp.quad_output_scale^2;
     qdd_input_scales = qdd_gp.quad_input_scales;
-    mu_qdd = qdd_gp.quad_mean;
+    if isfield(qd_gp, 'quad_mean')
+        mu_qdd = qdd_gp.quad_mean;
+    else
+        mu_qdd = qdd_s(max_ind,:);
+    end
 end
 
 
@@ -265,21 +274,21 @@ K_r_s = r_sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
                     sqd_dist_stack_s, sqd_r_input_scales_stack), 3)); 
 [K_r_s, jitters_r_s] = improve_covariance_conditioning(K_r_s, ...
     r_s.*mean(abs(qdmm_s),2), ...
-    opt.allowed_cond_error);
+    opt.allowed_r_cond_error);
 R_r_s = chol(K_r_s);
 
 K_qd_s = qd_sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
                     sqd_dist_stack_s, sqd_qd_input_scales_stack), 3)); 
 [K_qd_s, jitters_qd_s] = improve_covariance_conditioning(K_qd_s, ...
     r_s.*mean(abs(qdmm_s),2), ...
-    opt.allowed_cond_error);
+    opt.allowed_q_cond_error);
 R_qd_s = chol(K_qd_s);
 
 K_qdd_s = qdd_sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
                     sqd_dist_stack_s, sqd_qdd_input_scales_stack), 3)); 
 K_qdd_s = improve_covariance_conditioning(K_qdd_s, ...
     r_s.*mean(abs(qddmm_s),2), ...
-    opt.allowed_cond_error);
+    opt.allowed_q_cond_error);
 R_qdd_s = chol(K_qdd_s);
 
 K_eps = eps_sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
@@ -287,7 +296,7 @@ K_eps = eps_sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
 importance_sc = ones(num_sc,1);
 importance_sc(num_s + 1 : end) = 2;
 K_eps = improve_covariance_conditioning(K_eps, importance_sc, ...
-    opt.allowed_cond_error);
+    opt.allowed_r_cond_error);
 R_eps = chol(K_eps);     
 
 sqd_dist_stack_s_sc = sqd_dist_stack_sc(1:num_s, :, :);

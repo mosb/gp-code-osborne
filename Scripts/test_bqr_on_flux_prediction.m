@@ -1,175 +1,175 @@
 cd ~/Code/gp-code-osborne/
-% addpath(genpath('~/Code/gp-code-osborne/'))
-% addpath ~/Code/lightspeed
-% addpath(genpath('~/Code/Utils/'))
-% rmpath ~/Code/CoreGP
-% rmpath ~/Code/BQR
-
-
-clear
-series=load('~/Code/gp-code-osborne/ChrisCandidates/data337.txt');
-
-series(1,:) = series(1,:) - min(series(1,:));
-series = series';
-num_series = length(series);
-
-X = series(:,1);
-y = series(:,2);
-
-NN = 5;
-%try to get NN points per day
-step = ceil(num_series/range(X)/NN);
-
-f_data = 1:step:num_series;
-f_star = ceil(step/2):step:num_series;
-num_data = length(f_data);
-num_star = length(f_star);
-
-y = fastsmooth(y,step);
-
-X_data = X(f_data);
-y_data = y(f_data);
-
-X_star = X(f_star);
-y_star = y(f_star);
-
-
-opt.print = false;
-opt.optim_time = 30;
-opt.num_hypersamples = 25;
-opt.noiseless = true;
-
-max_num_samples = 500;
-
-%load data
-
-%k(t,t') = A * exp[ - sin^2 (pi (t-t') / P) / (2 L1^2) ...
-% - (t-t')^2 / (2 L2^2) ] + sigma^2 * delta (t-t') 
-
-[est_noise_sd,est_input_scales,est_output_scale] = ...
-      hp_heuristics(X_data,y_data-mean(y_data),100);
-mean_y = mean(y_data);
-
-gp.hyperparams(1) = ...
-                struct('name','logNoiseSD',...
-                'priorMean',log(est_noise_sd),...
-                'priorSD',0.5);
-gp.hyperparams(2) = ...
-                struct('name','logInputScale',...
-                'priorMean',log(10*est_input_scales),...
-                'priorSD',0.5);
-gp.hyperparams(3) = ...
-                struct('name','logOutputScale',...
-                'priorMean',log(est_output_scale),...
-                'priorSD',0.5);
-gp.hyperparams(4) = ...
-                struct('name','logPeriod',...
-                'priorMean',log(7),...
-                'priorSD',0.5);
-gp.hyperparams(5) = ...
-                struct('name','logRoughness',...
-                'priorMean',log(10*est_input_scales),...
-                'priorSD',0.5);
-
+% % addpath(genpath('~/Code/gp-code-osborne/'))
+% % addpath ~/Code/lightspeed
+% % addpath(genpath('~/Code/Utils/'))
+% % rmpath ~/Code/CoreGP
+% % rmpath ~/Code/BQR
+% 
+% 
+% clear
+% series=load('~/Code/gp-code-osborne/ChrisCandidates/data337.txt');
+% 
+% series(1,:) = series(1,:) - min(series(1,:));
+% series = series';
+% num_series = length(series);
+% 
+% X = series(:,1);
+% y = series(:,2);
+% 
+% NN = 5;
+% %try to get NN points per day
+% step = ceil(num_series/range(X)/NN);
+% 
+% f_data = 1:step:num_series;
+% f_star = ceil(step/2):step:num_series;
+% num_data = length(f_data);
+% num_star = length(f_star);
+% 
+% y = fastsmooth(y,step);
+% 
+% X_data = X(f_data);
+% y_data = y(f_data);
+% 
+% X_star = X(f_star);
+% y_star = y(f_star);
+% 
+% 
+% opt.print = false;
+% opt.optim_time = 30;
+% opt.num_hypersamples = 25;
+% opt.noiseless = true;
+% 
+% max_num_samples = 500;
+% 
+% %load data
+% 
+% %k(t,t') = A * exp[ - sin^2 (pi (t-t') / P) / (2 L1^2) ...
+% % - (t-t')^2 / (2 L2^2) ] + sigma^2 * delta (t-t') 
+% 
+% [est_noise_sd,est_input_scales,est_output_scale] = ...
+%       hp_heuristics(X_data,y_data-mean(y_data),100);
+% mean_y = mean(y_data);
+% 
 % gp.hyperparams(1) = ...
 %                 struct('name','logNoiseSD',...
-%                 'priorMean',0,...
-%                 'priorSD',2);
+%                 'priorMean',log(est_noise_sd),...
+%                 'priorSD',0.5);
 % gp.hyperparams(2) = ...
 %                 struct('name','logInputScale',...
-%                 'priorMean',0,...
-%                 'priorSD',2);
+%                 'priorMean',log(10*est_input_scales),...
+%                 'priorSD',0.5);
 % gp.hyperparams(3) = ...
 %                 struct('name','logOutputScale',...
-%                 'priorMean',0,...
-%                 'priorSD',2);
+%                 'priorMean',log(est_output_scale),...
+%                 'priorSD',0.5);
 % gp.hyperparams(4) = ...
 %                 struct('name','logPeriod',...
-%                 'priorMean',0,...
-%                 'priorSD',2);
+%                 'priorMean',log(7),...
+%                 'priorSD',0.5);
 % gp.hyperparams(5) = ...
 %                 struct('name','logRoughness',...
-%                 'priorMean',0,...
-%                 'priorSD',2);
-gp.hyperparams(6) = ...
-                struct('name','MeanConst',...
-                'priorMean',mean_y,...
-                'priorSD',0.5);
-            
-hps_struct = set_hps_struct(gp);
-            
-gp.covfn = @(flag) flux_cov_fn(hps_struct,flag);
-
-% we do marginalise over priorMean
-active_hp_inds = 1:numel(gp.hyperparams);
-gp.active_hp_inds = active_hp_inds;
-
-prior_means = vertcat(gp.hyperparams(active_hp_inds).priorMean);
-prior_sds = vertcat(gp.hyperparams(active_hp_inds).priorSD);
-prior.means = prior_means;
-prior.sds = prior_sds;
-
-log_p_fn = @(x) logmvnpdf(x, prior_means', diag(prior_sds.^2));
-log_r_fn = @(x) log_gp_lik(x, X_data, y_data, gp);
-
-
-
-log_p_r_fn = @(x) log_p_fn(x) + log_r_fn(x);
-        
-%for trial = 1:num_trials
-
-% Problem.f = @(x) -log_p_r_fn(x');
-% opts.maxevals = 100;
-% [a,b] = Direct(Problem, [prior_means - prior_sds,prior_means + prior_sds],opts)
-
-    samples = slicesample(prior_means', max_num_samples,...
-        'logpdf', log_p_r_fn,'width', prior_sds');
-
-
-
-
-
-% neg_log_rp = @(x) - log_r_fn(x) - log_p_fn(x);
-% d_neg_log_rp = @(x) - d_r_fn(x)/r_fn(x) - d_p_fn(x)/p_fn(x);
+%                 'priorMean',log(10*est_input_scales),...
+%                 'priorSD',0.5);
 % 
-% hmc2('state', 0);
-% hmc_options = struct('nsamples',max_num_samples*3,...
-%         'nomit',0,'display',0,'stepadj',prior.sds);
-% hmc_options = hmc2_opt(hmc_options);
+% % gp.hyperparams(1) = ...
+% %                 struct('name','logNoiseSD',...
+% %                 'priorMean',0,...
+% %                 'priorSD',2);
+% % gp.hyperparams(2) = ...
+% %                 struct('name','logInputScale',...
+% %                 'priorMean',0,...
+% %                 'priorSD',2);
+% % gp.hyperparams(3) = ...
+% %                 struct('name','logOutputScale',...
+% %                 'priorMean',0,...
+% %                 'priorSD',2);
+% % gp.hyperparams(4) = ...
+% %                 struct('name','logPeriod',...
+% %                 'priorMean',0,...
+% %                 'priorSD',2);
+% % gp.hyperparams(5) = ...
+% %                 struct('name','logRoughness',...
+% %                 'priorMean',0,...
+% %                 'priorSD',2);
+% gp.hyperparams(6) = ...
+%                 struct('name','MeanConst',...
+%                 'priorMean',mean_y,...
+%                 'priorSD',0.5);
+%             
+% hps_struct = set_hps_struct(gp);
+%             
+% gp.covfn = @(flag) flux_cov_fn(hps_struct,flag);
 % 
-% samples = ...
-%     hmc2(neg_log_rp, prior.means, hmc_options, d_neg_log_rp);
-% [unique_samples, inds] = unique(samples);
-% samples = samples(sort(inds));
-% samples = samples(1:max_num_samples);
+% % we do marginalise over priorMean
+% active_hp_inds = 1:numel(gp.hyperparams);
+% gp.active_hp_inds = active_hp_inds;
+% 
+% prior_means = vertcat(gp.hyperparams(active_hp_inds).priorMean);
+% prior_sds = vertcat(gp.hyperparams(active_hp_inds).priorSD);
+% prior.means = prior_means;
+% prior.sds = prior_sds;
+% 
+% log_p_fn = @(x) logmvnpdf(x, prior_means', diag(prior_sds.^2));
+% log_r_fn = @(x) log_gp_lik(x, X_data, y_data, gp);
+% 
+% 
+% 
+% log_p_r_fn = @(x) log_p_fn(x) + log_r_fn(x);
+%         
+% %for trial = 1:num_trials
+% 
+% % Problem.f = @(x) -log_p_r_fn(x');
+% % opts.maxevals = 100;
+% % [a,b] = Direct(Problem, [prior_means - prior_sds,prior_means + prior_sds],opts)
+% 
+%     samples = slicesample(prior_means', max_num_samples,...
+%         'logpdf', log_p_r_fn,'width', prior_sds');
+% 
+% 
+% 
+% 
+% 
+% % neg_log_rp = @(x) - log_r_fn(x) - log_p_fn(x);
+% % d_neg_log_rp = @(x) - d_r_fn(x)/r_fn(x) - d_p_fn(x)/p_fn(x);
+% % 
+% % hmc2('state', 0);
+% % hmc_options = struct('nsamples',max_num_samples*3,...
+% %         'nomit',0,'display',0,'stepadj',prior.sds);
+% % hmc_options = hmc2_opt(hmc_options);
+% % 
+% % samples = ...
+% %     hmc2(neg_log_rp, prior.means, hmc_options, d_neg_log_rp);
+% % [unique_samples, inds] = unique(samples);
+% % samples = samples(sort(inds));
+% % samples = samples(1:max_num_samples);
+% 
+% 
+% for i = 1:max_num_samples
+%     gp.hypersamples(i).hyperparameters(active_hp_inds) = samples(i,:);
+%     gp.hypersamples(i).hyperparameters(hps_struct.MeanConst) = mean_y;
+% end
+% gp.grad_hyperparams = false;
+% gp = revise_gp(X_data, y_data, gp, 'overwrite');
+% 
+% log_r = vertcat(gp.hypersamples.logL);
+% 
+% % hold on;
+% % plot(samples(4,:), exp(log_r-max(log_r)),'.')
+% 
+% mean_y = nan(num_star, max_num_samples);
+% var_y = nan(num_star, max_num_samples);
+% for hs = 1:max_num_samples
+%     [mean_y(:, hs), var_y(:, hs)] = ...
+%         posterior_gp(X_star,gp,hs,'var_not_cov');
+% end
+% 
+% mean_y = mean_y';
+% var_y = var_y';
+% 
+% qd = mean_y;
+% qdd = var_y + mean_y.^2;
 
-
-for i = 1:max_num_samples
-    gp.hypersamples(i).hyperparameters(active_hp_inds) = samples(i,:);
-    gp.hypersamples(i).hyperparameters(hps_struct.MeanConst) = mean_y;
-end
-gp.grad_hyperparams = false;
-gp = revise_gp(X_data, y_data, gp, 'overwrite');
-
-log_r = vertcat(gp.hypersamples.logL);
-
-% hold on;
-% plot(samples(4,:), exp(log_r-max(log_r)),'.')
-
-mean_y = nan(num_star, max_num_samples);
-var_y = nan(num_star, max_num_samples);
-for hs = 1:max_num_samples
-    [mean_y(:, hs), var_y(:, hs)] = ...
-        posterior_gp(X_star,gp,hs,'var_not_cov');
-end
-
-mean_y = mean_y';
-var_y = var_y';
-
-qd = mean_y;
-qdd = var_y + mean_y.^2;
-
-save prob_bqr_on_flux_prediction
+load prob_bqr_on_flux_prediction
 
 qd_gp_mean = qd(1,:);
 qdd_gp_mean = qdd(1,:);
@@ -327,7 +327,7 @@ for i = 1:max_num_samples
             i,perf_BQR(i),perf_BQ(i),perf_BMC(i),perf_MC(i),perf_ML(i));
 
 
-    save test_bqr_on_flux_prediction
+    %save test_bqr_on_flux_prediction
 end
 %end
 

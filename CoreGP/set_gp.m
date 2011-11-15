@@ -67,6 +67,10 @@ if ~isfield(gp, 'active_hp_inds')
     gp.active_hp_inds=active;
 end
 
+if isfield(gp,'cov_fn')
+    gp.covfn = gp.cov_fn;
+    gp = rmfield(gp, 'cov_fn');
+end
 
 have_X_data = nargin >= 4 && ~isempty(X_data);
 have_y_data = nargin >= 5 && ~isempty(y_data);
@@ -82,14 +86,14 @@ create_logOutputScale = ~isfield(hps_struct,'logOutputScale')...
                                 gp.active_hp_inds);
 create_meanParams = ~isfield(hps_struct,'mean_inds')...
                         || isempty(hps_struct.mean_inds) ...
-                        || ismember(hps_struct.mean_inds, ...
-                                gp.active_hp_inds);
+                        || any(ismember(hps_struct.mean_inds, ...
+                                gp.active_hp_inds));
 create_covfn = ~isempty(covfn_name) && (~isfield(gp,'covfn_name')...
-                || ~strcmpi(covfn_name,gp.covfn_name))...
+                || ~all(strcmpi(covfn_name,gp.covfn_name)))...
                         || ~isfield(gp,'covfn')...
                         || isempty(gp.covfn);
 create_meanfn = ~isempty(meanfn_name) && (~isfield(gp,'meanfn_name')...
-                || ~strcmpi(meanfn_name,gp.meanfn_name))...
+                || ~all(strcmpi(meanfn_name,gp.meanfn_name)))...
                         ||(~isfield(gp,'meanfn')...
                         || isempty(gp.meanfn)) && (~isfield(gp,'meanPos')...
                         || isempty(gp.meanPos));
@@ -169,12 +173,12 @@ if create_logInputScales
             
 
         end
-        gp.input_scale_inds = inputs_ind;
+        
     else
         disp('Need to specify a prior for logInputScales, or include data to create one')
     end
 else
-    gp.input_scale_inds = hps_struct.logInputScales;  
+     
 end
 if create_logOutputScale
 %     if have_data
@@ -222,6 +226,11 @@ if create_meanfn
 end
 
 hps_struct = set_hps_struct(gp);
+gp.input_scale_inds = [hps_struct.input_inds{:}]; 
+gp.output_scale_ind = hps_struct.logOutputScale; 
+noise_ind = hps_struct.logNoiseSD; 
+
+
 if create_covfn
     % set the covariance function
     gp.covfn_name = covfn_name;

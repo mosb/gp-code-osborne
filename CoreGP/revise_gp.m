@@ -15,6 +15,8 @@ function gp = revise_gp(X_data, y_data, gp, flag, active, samples, grad_hp_inds)
 % grad_hp_inds: we compute the derivative of the log likelihood with respect to
 %           these hyperparameters.
 
+
+
 if (nargin < 6) || strcmpi(samples,'all')
 	samples = 1:numel(gp.hypersamples);
 end
@@ -22,7 +24,7 @@ if isempty(samples)
     return
 end
 
-if (nargin < 4)
+if (nargin < 4) || isempty(flag)
 	flag = 'overwrite';
 end
 
@@ -164,7 +166,7 @@ for sample_ind = 1:length(samples)
         end
     
         [Kmat, jitters] = improve_covariance_conditioning(...
-            Kmat + Noise(hs, X_data).^2, abs(y_data_minus_Mu));
+            Kmat + Noise(hs, X_data).^2, abs(y_data_minus_Mu), 1e-16);
 		cholK = chol(Kmat);
 	elseif (downdating)
         
@@ -205,7 +207,7 @@ for sample_ind = 1:length(samples)
         Kmat(active,active) = Kmat(active,active) + ...
             Noise(hs, X_data(active,:));
         [Kmat, new_jitters] = ...
-            improve_covariance_conditioning(Kmat,abs(y_data_minus_Mu));
+            improve_covariance_conditioning(Kmat,abs(y_data_minus_Mu), 1e-16);
         
         jitters = zeros(NData,1);
         jitters(non_active_inds)  = temp_hypersamples(sample).jitters;
