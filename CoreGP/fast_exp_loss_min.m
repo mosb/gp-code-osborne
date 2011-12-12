@@ -1,7 +1,11 @@
 function X_min = fast_exp_loss_min(exp_loss, ...
                 lower_bound, upper_bound, exp_loss_evals, ...
-                X_data, w_0, y_min_ind, opt)
+                X_data, sqd_input_scales, y_min_ind, opt)
 % find the position at which fn exp_loss is minimised.
+
+if nargin<8
+    opt.plots = false;
+end
 
 num_start_pts = 7;
 
@@ -92,11 +96,11 @@ dist_mat = sqrt(...
     sum(...
     bsxfun(@rdivide, ... 
     dist_stack_start_data.^2, ...
-    reshape(w_0, 1, 1, num_dims)), ...
+    reshape(sqd_input_scales, 1, 1, num_dims)), ...
     3));
 closest_dist = min(dist_mat,[],2);
 
-input_scales = bsxfun(@times, max(1,closest_dist), sqrt(w_0));
+input_scales = bsxfun(@times, max(1,closest_dist), sqrt(sqd_input_scales));
 
 [unused_f,g] = exp_loss(start_pts);
 zoomed = simple_zoom_pt(start_pts, g, input_scales, 'minimise');
