@@ -25,6 +25,10 @@ function [log_mean_evidence, r_gp] = ...
 % * hypersamples.logL
 %
 % - output r_gp has the same fields as input r_gp plus
+% * hs_c
+% * R_s
+% * yot_s
+% * Yot_sc_s
 
 
 no_r_gp = nargin<3;
@@ -35,9 +39,8 @@ end
 default_opt = struct('num_c', 100,...
                     'gamma_const', 100, ...
                     'num_box_scales', 5, ...
-                    'prediction_model', 'spgp', ...
-                    'no_adjustment', false, ...
-                    'allowed_cond_error',10^-14,...
+                    'allowed_cond_error',10^-14, ...
+                    'update', false, ...
                     'print', true);
                 
 names = fieldnames(default_opt);
@@ -48,8 +51,9 @@ for i = 1:length(names);
     end
 end
 
-
-
+% we have actually only added a single new sample at position opt.update,
+% can do efficient sequential updates
+updating = isnumeric(opt.update);
 
 if ~isempty(prior_struct)
     % evidence(hs_t, sample_struct, prior_struct, r_gp, opt)
@@ -131,14 +135,12 @@ hs_sc = [hs_s; hs_c];
 num_sc = size(hs_sc, 1);
 num_c = num_sc - num_s;
 
-% if we have stored versions of these quantities, update them
-updating = isfield(r_gp, 'sqd_dist_stack_sc');
-
-if ~updating
 sqd_dist_stack_sc = bsxfun(@minus,...
-                    reshape(hs_sc,num_sc,1,num_hps),...
-                    reshape(hs_sc,1,num_sc,num_hps))...
-                    .^2;  
+                reshape(hs_sc,num_sc,1,num_hps),...
+                reshape(hs_sc,1,num_sc,num_hps))...
+                .^2;  
+
+    
 sqd_dist_stack_s = sqd_dist_stack_sc(1:num_s, 1:num_s, :);
 
 sqd_r_input_scales_stack = reshape(r_input_scales.^2,1,1,num_hps);
@@ -147,7 +149,7 @@ sqd_del_input_scales_stack = reshape(del_input_scales.^2,1,1,num_hps);
 K_r_s = r_sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
                     sqd_dist_stack_s, sqd_r_input_scales_stack), 3)); 
 [K_r_s, jitters_r_s] = improve_covariance_conditioning(K_r_s, ...
-    r_s.*mean(abs(qdmm_s),2), ...
+    r_s, ...
     opt.allowed_cond_error);
 R_r_s = chol(K_r_s);
 
@@ -199,14 +201,13 @@ Yot_del_r = del_sqd_output_scale * r_sqd_output_scale * ...
     prod(1/(2*pi) * sqrt(inv_determ_del_r)) .* ...
     exp(-0.5 * sum(bsxfun(@times,inv_determ_del_r,...
                 bsxfun(@times, opposite_r, ...
-                    sqd_hs_sc_minus_mean_stack(1:num_s, 1:num_s, :)) ...
+                    sqd_hs_sc_minus_mean_stack(1:num_sc, 1:num_s, :)) ...
                 + bsxfun(@times, opposite_del, ...
-                    tr_sqd_hs_sc_minus_mean_stack(1:num_s, 1:num_s, :)) ...
-                + prior_var_times_sqd_dist_stack_sc(1:num_s, 1:num_s, :)...
+                    tr_sqd_hs_sc_minus_mean_stack(1:num_sc, 1:num_s, :)) ...
+                + prior_var_times_sqd_dist_stack_sc(1:num_sc, 1:num_s, :)...
                 ),3));
             
-inv_K_Yot_inv_K_del_r = solve_chol(R_del_sc, ...
-    solve_chol(R_r_s, Yot_del_r')');
+Yot_inv_K_del_r = solve_chol(R_r_s, Yot_del_r')';
             
 % some code to test that this construction works          
 % Lambda = diag(prior_sds.^2);
@@ -244,11 +245,19 @@ mean_tr_sc = two_thirds_r * tr_s;
 mean_r_sc = max(mean_r_sc);
 Delta_tr = mean_tr_sc - tilde(mean_r_sc, gamma_r);
 
+del_inv_K = solve_chol(R_del_sc, Delta_tr)';
+
 minty_r = yot_inv_K_r * r_s;
-minty_del_r = Delta_tr' * inv_K_Yot_inv_K_qd_r * r_s;
+minty_del_r = del_inv_K * Yot_inv_K_del_r * r_s;
 mean_ev = minty_r + minty_del_r;
 
 log_mean_evidence = max_log_r_s + log(mean_ev);
 
-r_gp.cholK = R_r_s;
-r_gp.two_thirds_r = two_thirds_r;
+
+r_gp.hs_c = hs_c;
+r_gp.sqd_dist_stack_s = sqd_dist_stack_s;
+r_gp.R_s = R_r_s;
+r_gp.K_s = K_r_s;
+r_gp.yot_s = yot_r;
+r_gp.del_inv_K = del_inv_K;
+r_gp.Yot_sc_s = Yot_del_r;

@@ -168,10 +168,14 @@ end
 full_active_inds = gp.active_hp_inds;
 if isempty(full_active_inds)
     warning('no hyperparameters active, no training performed')
+    
+    gp = revise_gp(X_data, y_data, gp, 'overwrite', []);
     return
 end
 if opt.optim_time <= 0
     warning('no time allowed for training, no training performed')
+    
+    gp = revise_gp(X_data, y_data, gp, 'overwrite', []);
     return
 end
 

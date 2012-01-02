@@ -53,15 +53,19 @@ inv_scales = sqrt(sqd_scales).^-1;
 inv_scale_mat = repmat(inv_scales,1,N);
 
 upper_inds = triu(true(N),1);
-usable_inds =  and(upper_inds,~isnan(in));
+active_inds = and(upper_inds,~isnan(in));
+% fixed inds are those rows/cols that have already had jitter applied prior
+% to the calling of these functions
+fixed_inds = any(isnan(in));
+importance(fixed_inds) = inf;
+
 mod_in = triu(in,1);
-
-usable_inv_scales = inv_scale_mat(usable_inds);
-usable_in = in(usable_inds);
+usable_inv_scales = inv_scale_mat(active_inds);
+usable_in = in(active_inds);
 usable_inv_scales_t = inv_scale_mat';
-usable_inv_scales_t = usable_inv_scales_t(usable_inds);
+usable_inv_scales_t = usable_inv_scales_t(active_inds);
 
-mod_in(usable_inds) = abs(usable_inv_scales.*usable_in.*usable_inv_scales_t);
+mod_in(active_inds) = abs(usable_inv_scales.*usable_in.*usable_inv_scales_t);
 [problem_xinds,problem_yinds]=find(mod_in>too_similar_num_in);
 
 % a = [];
