@@ -2,7 +2,9 @@ function [gp, quad_gp] = train_gp(cov_fn, mean_fn, gp, X_data, y_data, opt)
 % [gp, quad_gp] = train_gp(gp, X_data, y_data, opt)
 %OR
 % [gp, quad_gp] = train_gp(cov_fn, mean_fn, gp, X_data, y_data, opt);
-
+% quad_gp contains fields quad_noise_sd, quad_input_scales and
+% quad_output_scale; it describes the (quadrature) hyperparameters of the
+% gp fitted to the likelihood as a function of the hyperparameters.
 
 
 if ischar('cov_fn')
@@ -56,7 +58,7 @@ default_opt = struct(...
                     'force_training', true, ...
                     'parallel', true, ...
                     'noiseless', false, ...
-                    'prior_mean', 'default');
+                    'prior_mean', 'default'); % if set to a number, that is taken as the prior mean
 
 if ~isfield(opt,'parallel') && isfield(opt,'num_hypersamples')
     opt.parallel = opt.num_hypersamples > 1;
@@ -78,21 +80,9 @@ fprintf('Beginning training of GP, budgeting for %g seconds\n', ...
 end
 start_time = cputime;
 
-
-
-% if isfield(gp, 'hypersamples')
-%     hypersamples = gp.hypersamples;
-%     hyperparams = gp.hyperparams;
-%     gp = struct();
-%     gp.hypersamples = hypersamples;
-%     gp.hyperparams = hyperparams;
-% end
-
 if isfield(opt, 'active_hp_inds')
     gp.active_hp_inds = opt.active_hp_inds;
 end
-
-
 
 
 % don't want to use likelihood gradients for BMC purposes
@@ -165,25 +155,18 @@ end
 % gp = create_lhs_hypersamples(gp, opt.num_hypersamples);
 % end
 
+
+
+
 full_active_inds = gp.active_hp_inds;
-if isempty(full_active_inds)
-    warning('no hyperparameters active, no training performed')
-    
-    gp = revise_gp(X_data, y_data, gp, 'overwrite', []);
-    return
-end
-if opt.optim_time <= 0
-    warning('no time allowed for training, no training performed')
-    
-    gp = revise_gp(X_data, y_data, gp, 'overwrite', []);
-    return
-end
+
 
 input_scale_inds = hps_struct.logInputScales;
 gp.input_scale_inds = input_scale_inds;
 
 input_inds = hps_struct.input_inds;
-active_input_inds = cellfun(@(x) intersect(x, full_active_inds), input_inds, ...
+active_input_inds = cellfun(@(x) intersect(x, full_active_inds), ...
+    input_inds, ...
     'UniformOutput', false);
 active_dims = find(~cellfun(@(x) isempty(x),active_input_inds));
 num_active_dims = length(active_dims);
@@ -221,6 +204,22 @@ quad_gp.quad_noise_sd = quad_noise_sd;
 quad_gp.quad_input_scales = quad_input_scales;
 quad_gp.quad_output_scale = quad_output_scale;
 
+if isempty(full_active_inds)
+    warning('no hyperparameters active, no training performed')
+    
+    gp.hypersamples = hypersamples;
+    gp = revise_gp(X_data, y_data, gp, 'overwrite', []);
+       
+    return
+end
+if opt.optim_time <= 0
+    warning('no time allowed for training, no training performed')
+    
+    gp.hypersamples = hypersamples;
+    gp = revise_gp(X_data, y_data, gp, 'overwrite', []);
+    
+    return
+end
 
 
 [max_logL, max_ind] = max(r_y_data);
@@ -273,7 +272,7 @@ for num_pass = 1:num_passes
         fprintf('Pass %g\n', num_pass)
     end
     
-    input_scale_cell = cell(num_hypersamples, 1);
+    log_input_scale_cell = cell(num_hypersamples, 1);
     input_scale_logL_cell = cell(num_hypersamples, 1);
     
     other_cell = cell(num_hypersamples,1);
@@ -300,14 +299,14 @@ for num_pass = 1:num_passes
         % optimise input scale
 
 
-        input_scale_cell{hypersample_ind} = cell(1, num_active_dims);
+        log_input_scale_cell{hypersample_ind} = cell(1, num_active_dims);
         input_scale_logL_cell{hypersample_ind} = cell(1, num_active_dims);
         for d_ind = 1:num_active_dims 
             d = active_dims(d_ind);
             active_hp_inds = [input_inds{d}, noise_ind];
             
 
-            [inputscale_hypersample, input_scale_mat, input_scale_logL_mat] = ...
+            [inputscale_hypersample, log_input_scale_mat, input_scale_logL_mat] = ...
                 move_hypersample(...
                 hypersamples(hypersample_ind), gp, quad_input_scales, ...
                 active_hp_inds, ...
@@ -319,7 +318,7 @@ for num_pass = 1:num_passes
             hypersamples(hypersample_ind).hyperparameters(input_inds{d}) = ...
                 log_input_scale_d;
             
-            input_scale_cell{hypersample_ind}{d_ind} = input_scale_mat;
+            log_input_scale_cell{hypersample_ind}{d_ind} = log_input_scale_mat;
             input_scale_logL_cell{hypersample_ind}{d_ind} = input_scale_logL_mat;
             
             
@@ -392,14 +391,14 @@ for num_pass = 1:num_passes
         % optimise input scale
 
 
-        input_scale_cell{hypersample_ind} = cell(1, num_active_dims);
+        log_input_scale_cell{hypersample_ind} = cell(1, num_active_dims);
         input_scale_logL_cell{hypersample_ind} = cell(1, num_active_dims);
         for d_ind = 1:num_active_dims 
             d = active_dims(d_ind);
             active_hp_inds = [input_inds{d}, noise_ind];
             
 
-            [inputscale_hypersample, input_scale_mat, input_scale_logL_mat] = ...
+            [inputscale_hypersample, log_input_scale_mat, input_scale_logL_mat] = ...
                 move_hypersample(...
                 hypersamples(hypersample_ind), gp, quad_input_scales, ...
                 active_hp_inds, ...
@@ -411,7 +410,7 @@ for num_pass = 1:num_passes
             hypersamples(hypersample_ind).hyperparameters(input_inds{d}) = ...
                 log_input_scale_d;
             
-            input_scale_cell{hypersample_ind}{d_ind} = input_scale_mat;
+            log_input_scale_cell{hypersample_ind}{d_ind} = log_input_scale_mat;
             input_scale_logL_cell{hypersample_ind}{d_ind} = input_scale_logL_mat;
             
             
@@ -468,14 +467,14 @@ for num_pass = 1:num_passes
     % now we estimate the scale of variation of the likelihood wrt
     % log input_scale.
     
-    input_scale_compcell = cat(1,input_scale_cell{:});
+    log_input_scale_compcell = cat(1,log_input_scale_cell{:});
     input_scale_logL_compcell = cat(1,input_scale_logL_cell{:});
     quad_noise_sds = nan(num_dims+1,1);
     quad_output_scales = nan(num_dims+1,1);
         
     for d_ind = 1:num_active_dims
-        a_hps_mat = cat(1, input_scale_compcell{:,d_ind});
-        logL_mat = cat(1,input_scale_logL_compcell{:,d_ind});
+        a_hps_mat = cat(1, log_input_scale_compcell{:,d_ind});
+        logL_mat = cat(1, input_scale_logL_compcell{:,d_ind});
         
         sorted_logL_mat = sort(logL_mat);
               
@@ -543,10 +542,9 @@ elseif opt.print
 end
 
 
-
-quad_gp.quad_noise_sd = quad_noise_sd;
-quad_gp.quad_input_scales = quad_input_scales;
-quad_gp.quad_output_scale = quad_output_scale;
+quad_gp.quad_noise_sd = (quad_noise_sd);
+quad_gp.quad_input_scales = (quad_input_scales); 
+quad_gp.quad_output_scale = (quad_output_scale);
 
 if opt.print
     fprintf('Completed retraining of GP in %g seconds\n', cputime-start_time)

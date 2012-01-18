@@ -101,7 +101,7 @@ for i = 1:opt.num_samples
     if i==1 
         
         train_opt.optim_time = 0;
-        r_gp = train_gp('sqdexp', 'constant', [], ...
+        [r_gp, quad_r_gp] = train_gp('sqdexp', 'constant', [], ...
             samples_mat_i, scaled_r_mat_i, train_opt);
         train_opt.optim_time = opt.train_gp_time;
         
@@ -109,7 +109,7 @@ for i = 1:opt.num_samples
         
         % retrain gp
         
-        r_gp = train_gp('sqdexp', 'constant', r_gp, ...
+        [r_gp, quad_r_gp] = train_gp('sqdexp', 'constant', r_gp, ...
             samples_mat_i, scaled_r_mat_i, train_opt);
 
         retrain_inds(1) = [];
@@ -126,6 +126,17 @@ for i = 1:opt.num_samples
             r_gp, 'update', i);
     end
     
+    % we firstly assume that the input scales over the transformed r
+    % surface are the same as for the r surface. We are secondly going to
+    % assume that the posterior for the log-input scales over the
+    % transformed r surface is a Gaussian. We take its mean to be the ML
+    % value and with diagonal covariance, whose diagonal elements are equal
+    % to the squared input scales of a GP (quad_r_gp) fitted to the
+    % likelihood of the transformed r surface as a function of log-input
+    % scales.
+    opt.sds_tr_input_scales = ...
+        quad_r_gp.quad_input_scales(r_gp.input_scale_inds);
+    
     [best_hypersample, best_hypersample_struct] = disp_hyperparams(r_gp);
 
     r_gp.quad_output_scale = best_hypersample_struct.output_scale;
@@ -136,12 +147,16 @@ for i = 1:opt.num_samples
     [log_ev, r_gp] = ...
     log_evidence(sample_struct, prior_struct, r_gp, opt);
 
+    
+
     if i < opt.num_samples
         % minimise the expected uncertainty to find the next sample
             
         Problem.f = @(hs_a) expected_uncertainty_evidence...
                 (hs_a', sample_struct, prior_struct, r_gp, opt);
             
+            
+        % The below needs to be replaced with an optimisation algorithm
         clf
         N = 1000;
         test_pts = linspace(lower_bound, upper_bound, N);

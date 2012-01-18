@@ -44,7 +44,7 @@ end
 default_opt = struct('gamma_const', 100, ...
                     'allowed_cond_error',10^-14, ...
                     'sds_tr_input_scales', false);
-% sds_r_input_scales represents the posterior standard deviations in the
+% sds_tr_input_scales represents the posterior standard deviations in the
 % input scales for tr. If false, a delta function posterior is assumed.
              
 names = fieldnames(default_opt);
@@ -244,8 +244,8 @@ tv_a = r_sqd_lambda - invR_K_s_a' * invR_K_s_a;
 
 if opt.sds_tr_input_scales
     
-    % correct for the impact of learning r_t on our belief about the input
-    % scales
+    % we correct for the impact of learning r_t on our belief about the
+    % input scales
     
     C = opt.sds_tr_input_scales.^2;
     if size(C,1) == 1
@@ -254,23 +254,25 @@ if opt.sds_tr_input_scales
     
     invK_tr_s = solve_chol(R_s, tr_s);
 
-    
     sqd_dist_stack_s = r_gp.sqd_dist_stack_s;
     sqd_dist_stack_s_a = reshape(sqd_dist_s_a', 1, num_s, num_hps);
 
-    %each plate is the derivative with respect to a different input scale
+    %each plate is the derivative with respect to a different log input
+    %scale
     
-    DK_a_s = prod3(K_s_a', bsxfun(@rdivide, ...
+    DK_a_s = bsxfun(@times, K_s_a', ...
+        bsxfun(@rdivide, ...
         sqd_dist_stack_s_a', ...
-        sqd_r_input_scales_stack.^(3/2)));
-    DK_s = prod3(K_s, bsxfun(@rdivide, ...
+        sqd_r_input_scales_stack));
+    DK_s = bsxfun(@times, K_s, ...
+        bsxfun(@rdivide, ...
         sqd_dist_stack_s, ...
-        sqd_r_input_scales_stack.^(3/2)));
+        sqd_r_input_scales_stack));
 
     Dtm_a = prod3(DK_a_s, invK_tr_s) ...
             - prod3(K_invK_a_s, prod3(DK_s, invK_tr_s));
         
-    tv_a = tv_a + bsxfun(@times, Dtm_a.^2, C);
+    tv_a = tv_a + sum(bsxfun(@times, Dtm_a.^2, C));
 end
 
 

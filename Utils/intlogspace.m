@@ -3,7 +3,8 @@ function vec = intlogspace(lo, hi, num)
 % lo and ending with hi, that are logarithmically space (more towards lo).
 
 if hi-lo <= num-1
-    vec = lo:hi;
+    both = [hi,lo];
+    vec = min(both):max(both);
     return;
 end
 

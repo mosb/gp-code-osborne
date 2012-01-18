@@ -1,12 +1,15 @@
 
-r_mean = 1;
-r_sd = 1;
+r_mean1 = 1;
+r_sd1 = 1;
 
-log_r_fn = @(x) log(normpdf(x,r_mean,r_sd));
+r_mean2 = 4;
+r_sd2 = 1;
+
+log_r_fn = @(x) log(normpdf(x,r_mean1,r_sd1)+normpdf(x,r_mean2,r_sd2));
 
 start_pt = -3;
 prior_struct.means = 0;
-prior_struct.sds = 0.5;
+prior_struct.sds = 1;
 
 opt.num_retrains = 3;
 opt.num_samples = 100;
@@ -22,6 +25,9 @@ hold on
 plot(samples_mat, log_r_fn(samples_mat), '.k', 'MarkerSize', 8)
 xlim([-5 5])
 
+% the exact log-evidence
 exact = ...
-    lognormpdf(r_mean, prior_struct.means, sqrt(prior_struct.sds^2 + r_sd^2))
+log(normpdf(r_mean1, prior_struct.means, sqrt(prior_struct.sds^2 + r_sd1^2))...
++normpdf(r_mean2, prior_struct.means, sqrt(prior_struct.sds^2 + r_sd2^2)))
+% estimated log evidence
 log_ev
