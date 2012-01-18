@@ -36,7 +36,8 @@ default_opt = struct('num_samples', 300, ...
                     'train_gp_time', 20, ...
                     'train_gp_num_samples', 10, ...
                     'exp_loss_evals', 50 * num_hps, ...
-                    'print', true);
+                    'print', true, ...
+                    'plots', false);
                 
 names = fieldnames(default_opt);
 for i = 1:length(names);
@@ -156,32 +157,36 @@ for i = 1:opt.num_samples
                 (hs_a', sample_struct, prior_struct, r_gp, opt);
             
             
-        % The below needs to be replaced with an optimisation algorithm
-        clf
-        N = 1000;
-        test_pts = linspace(lower_bound, upper_bound, N);
-        losses = nan(1, N);
-        for loss_i=1:length(test_pts)
-            losses(loss_i) = Problem.f(test_pts(loss_i));
+        if opt.plots && num_hps == 1
+            
+            clf
+            N = 1000;
+            test_pts = linspace(lower_bound, upper_bound, N);
+            losses = nan(1, N);
+            for loss_i=1:length(test_pts)
+                losses(loss_i) = Problem.f(test_pts(loss_i));
+            end
+            plot(test_pts, losses, 'b')
+            hold on
+            [min_loss,min_ind] = min(losses);
+            hs = test_pts(min_ind);
+
+            plot(hs, min_loss, 'r.', 'MarkerSize', 8);
+
+            test_pts = samples_mat_i;
+            losses = nan(1, i);
+            for loss_i=1:length(test_pts)
+                losses(loss_i) = Problem.f(test_pts(loss_i));
+            end
+            plot(test_pts, losses, 'k.', 'MarkerSize', 8)
+
+            drawnow
+            
+        else
+        
+            [exp_loss_min, hs] = Direct(Problem, bounds, direct_opts);
+            hs = hs';
         end
-        plot(test_pts, losses, 'b')
-        hold on
-        [min_loss,min_ind] = min(losses);
-        hs = test_pts(min_ind);
-        
-        plot(hs, min_loss, 'r.', 'MarkerSize', 8);
-        
-        test_pts = samples_mat_i;
-        losses = nan(1, i);
-        for loss_i=1:length(test_pts)
-            losses(loss_i) = Problem.f(test_pts(loss_i));
-        end
-        plot(test_pts, losses, 'k.', 'MarkerSize', 8)
-        
-        drawnow
-        
-        %[exp_loss_min, hs] = Direct(Problem, bounds, direct_opts);
-        %hs = hs';
         
         
     end

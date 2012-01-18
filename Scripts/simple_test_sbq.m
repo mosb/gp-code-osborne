@@ -13,6 +13,7 @@ prior_struct.sds = 1;
 
 opt.num_retrains = 3;
 opt.num_samples = 100;
+opt.plots = true;
 
 [samples_mat, log_ev, r_gp] = ...
     sbq(start_pt, log_r_fn, prior_struct, opt);
