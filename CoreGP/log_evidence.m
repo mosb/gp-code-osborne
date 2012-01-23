@@ -180,13 +180,21 @@ sqd_hs_sc_minus_mean_stack = ...
     repmat(hs_sc_minus_mean_stack.^2, 1, num_sc, 1);
 tr_sqd_hs_sc_minus_mean_stack = tr(sqd_hs_sc_minus_mean_stack);
 
-yot_r = r_sqd_output_scale * ...
+yot_r_s = r_sqd_output_scale * ...
     prod(2*pi*sum_prior_var_sqd_input_scales_stack_r)^(-0.5) * ...
     exp(-0.5 * ...
     sum(bsxfun(@rdivide, hs_sc_minus_mean_stack(1:num_s, :, :).^2, ...
     sum_prior_var_sqd_input_scales_stack_r),3));
 
-yot_inv_K_r = solve_chol(R_r_s, yot_r)';
+yot_inv_K_r = solve_chol(R_r_s, yot_r_s)';
+
+yot_del_sc = del_sqd_output_scale * ...
+    prod(2*pi*sum_prior_var_sqd_input_scales_stack_del)^(-0.5) * ...
+    exp(-0.5 * ...
+    sum(bsxfun(@rdivide, hs_sc_minus_mean_stack(:, :, :).^2, ...
+    sum_prior_var_sqd_input_scales_stack_del),3));
+
+yot_inv_K_del = solve_chol(R_del_sc, yot_del_sc)';
 
 prior_var_times_sqd_dist_stack_sc = bsxfun(@times, prior_var_stack, ...
                     sqd_dist_stack_sc);
@@ -229,6 +237,9 @@ Yot_inv_K_del_r = solve_chol(R_r_s, Yot_del_r')';
 tilde = @(x, gamma_x) log(bsxfun(@rdivide, x, gamma_x) + 1);
 %inv_tilda = @(tx, gamma_x) exp(bsxfun(@plus, tx, log(gamma_x))) - gamma_x;
 
+% this is after r_s has already been divided by exp(max_log_r_s). tr_s is
+% its correct value, but log(gamma) has effectively had max_log_r_s
+% subtracted from it
 gamma_r = opt.gamma_const;
 tr_s = tilde(r_s, gamma_r);
 
@@ -242,22 +253,33 @@ mean_tr_sc = two_thirds_r * tr_s;
 
 % use a crude thresholding here as our tilde transformation will fail if
 % the mean goes below zero
-mean_r_sc = max(mean_r_sc);
-Delta_tr = mean_tr_sc - tilde(mean_r_sc, gamma_r);
+mean_r_sc = max(mean_r_sc, eps);
+Delta_tr_sc = mean_tr_sc - tilde(mean_r_sc, gamma_r);
 
-del_inv_K = solve_chol(R_del_sc, Delta_tr)';
+del_inv_K = solve_chol(R_del_sc, Delta_tr_sc)';
+
 
 minty_r = yot_inv_K_r * r_s;
 minty_del_r = del_inv_K * Yot_inv_K_del_r * r_s;
-mean_ev = minty_r + minty_del_r;
+minty_del = yot_inv_K_del * Delta_tr_sc;
+
+mean_ev = minty_r + minty_del_r + gamma_r * minty_del;
 
 log_mean_evidence = max_log_r_s + log(mean_ev);
 
 
 r_gp.hs_c = hs_c;
 r_gp.sqd_dist_stack_s = sqd_dist_stack_s;
-r_gp.R_s = R_r_s;
-r_gp.K_s = K_r_s;
-r_gp.yot_s = yot_r;
-r_gp.del_inv_K = del_inv_K;
+
+r_gp.R_r_s = R_r_s;
+r_gp.K_r_s = K_r_s;
+r_gp.yot_r_s = yot_r_s;
+
+r_gp.R_del_sc = R_del_sc;
+r_gp.K_del_sc = K_del_sc;
+r_gp.yot_del_sc = yot_del_sc;
+
+r_gp.Delta_tr_sc = Delta_tr_sc;
+
+
 r_gp.Yot_sc_s = Yot_del_r;

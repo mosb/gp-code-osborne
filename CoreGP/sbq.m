@@ -135,8 +135,8 @@ for i = 1:opt.num_samples
     % to the squared input scales of a GP (quad_r_gp) fitted to the
     % likelihood of the transformed r surface as a function of log-input
     % scales.
-    opt.sds_tr_input_scales = ...
-        quad_r_gp.quad_input_scales(r_gp.input_scale_inds);
+%     opt.sds_tr_input_scales = ...
+%         quad_r_gp.quad_input_scales(r_gp.input_scale_inds);
     
     [best_hypersample, best_hypersample_struct] = disp_hyperparams(r_gp);
 

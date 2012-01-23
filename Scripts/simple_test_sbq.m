@@ -11,8 +11,8 @@ start_pt = -3;
 prior_struct.means = 0;
 prior_struct.sds = 1;
 
-opt.num_retrains = 3;
-opt.num_samples = 100;
+opt.num_retrains = 5;
+opt.num_samples = 50;
 opt.plots = true;
 
 [samples_mat, log_ev, r_gp] = ...
