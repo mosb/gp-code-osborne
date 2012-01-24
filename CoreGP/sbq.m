@@ -108,23 +108,22 @@ for i = 1:opt.num_samples
     sample_struct.samples = samples_mat_i;
     sample_struct.log_r = log_r_mat_i;
 
-    retrain_now = i >= retrain_inds(1);   % DD:  Shouldn't the (1) be an index
-                                          % that increments every time we retrain?
+    retrain_now = i >= retrain_inds(1);  % If we've passed the next retraining index.
     
     if i==1  % First iteration.
 
         train_opt.optim_time = 0;
         [r_gp, quad_r_gp] = train_gp('sqdexp', 'constant', [], ...
-            samples_mat_i, scaled_r_mat_i, train_opt);
+                                     samples_mat_i, scaled_r_mat_i, train_opt);
         train_opt.optim_time = opt.train_gp_time;
         
     elseif retrain_now
 
         % Retrain gp.
         [r_gp, quad_r_gp] = train_gp('sqdexp', 'constant', r_gp, ...
-            samples_mat_i, scaled_r_mat_i, train_opt);
+                                     samples_mat_i, scaled_r_mat_i, train_opt);
 
-        retrain_inds(1) = [];
+        retrain_inds(1) = [];   % Move to next retraining index. 
         
         % WARNING: if this is actually necessary, better have a look at
         % spgpgo and gpgo; I don't understand why if overwriting is
@@ -135,7 +134,7 @@ for i = 1:opt.num_samples
     else
         % for hypersamples that haven't been moved, update
         r_gp = revise_gp(samples_mat_i, scaled_r_mat_i, ...
-            r_gp, 'update', i);
+                         r_gp, 'update', i);
     end
     
     % We firstly assume that the input scales over the transformed r
