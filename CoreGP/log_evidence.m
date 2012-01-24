@@ -1,35 +1,33 @@
 function [log_mean_evidence, r_gp] = ...
     log_evidence(sample_struct, prior_struct, r_gp, opt)
-% returns the log-mean-evidence, and a structure r_gp to ease its
+% Returns the log-mean-evidence, and a structure r_gp to ease its
 % future computation.
 %
-% [mean_evidence, scaled_var_evidence] = ...
+% [log_mean_evidence, r_gp] = ...
 % evidence(sample_struct, prior_struct, r_gp, opt)
 % - sample_struct requires fields
-% * samples
-% * log_r
+%     * samples
+%     * log_r
 % - prior_struct requires fields
-% * means
-% * sds
+%     * means
+%     * sds
 % - (optional) input r_gp has fields
-% * quad_output_scale
-% * quad_noise_sd
-% * quad_input_scales
+%     * quad_output_scale
+%     * quad_noise_sd
+%     * quad_input_scales
 %
 % alternatively:
-% [mean_evidence, scaled_var_evidence] = 
-%    evidence(gp, [], r_gp, opt)
+% [log_mean_evidence, r_gp] = evidence(gp, [], r_gp, opt)
 % - gp requires fields:
-% * hyperparams(i).priorMean
-% * hyperparams(i).priorSD
-% * hypersamples.logL
+%     * hyperparams(i).priorMean
+%     * hyperparams(i).priorSD
+%     * hypersamples.logL
 %
 % - output r_gp has the same fields as input r_gp plus
-% * hs_c
-% * R_s
-% * yot_s
-% * Yot_sc_s
-
+%     * hs_c
+%     * R_s
+%     * yot_s
+%     * Yot_sc_s
 
 no_r_gp = nargin<3;
 if nargin<4
@@ -51,9 +49,9 @@ for i = 1:length(names);
     end
 end
 
-% we have actually only added a single new sample at position opt.update,
-% can do efficient sequential updates
-updating = isnumeric(opt.update);
+% If we have actually only added a single new sample at position opt.update,
+% can do efficient sequential updates.
+% updating = isnumeric(opt.update);
 
 if ~isempty(prior_struct)
     % evidence(hs_t, sample_struct, prior_struct, r_gp, opt)
@@ -123,13 +121,12 @@ upper_bound = max(hs_s) + opt.num_box_scales*min_input_scales;
 
 % find the candidate points, far removed from existing samples
 try
-hs_c = find_farthest(hs_s, [lower_bound; upper_bound], num_c, ...
-                            min_input_scales);
+    hs_c = find_farthest(hs_s, [lower_bound; upper_bound], num_c, ...
+                         min_input_scales);
 catch
     warning('find_farthest failed')
     hs_c = far_pts(hs_s, [lower_bound; upper_bound], num_c);
 end
-    
 
 hs_sc = [hs_s; hs_c];
 num_sc = size(hs_sc, 1);
@@ -280,6 +277,5 @@ r_gp.K_del_sc = K_del_sc;
 r_gp.yot_del_sc = yot_del_sc;
 
 r_gp.Delta_tr_sc = Delta_tr_sc;
-
 
 r_gp.Yot_sc_s = Yot_del_r;
