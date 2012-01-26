@@ -77,6 +77,7 @@ bounds = [lower_bound; upper_bound]';
 % Start of actual SBQ algorithm
 % =======================================
 
+
 % todo: get rid of either samples_mat or samples_struct.
 samples_mat = nan(opt.num_samples, num_hps);
 log_r_mat = nan(opt.num_samples, 1);
@@ -137,24 +138,70 @@ for i = 1:opt.num_samples
                          r_gp, 'update', i);
     end
     
+    % Get the values of the best sample into a nice struct.
+    [best_hypersample, best_hypersample_struct] = disp_hyperparams(r_gp);
+    r_gp.quad_output_scale = best_hypersample_struct.output_scale;
+    r_gp.quad_input_scales = best_hypersample_struct.input_scales;
+    r_gp.quad_noise_sd = best_hypersample_struct.noise_sd;
+    r_gp.quad_mean = 0;    
+
+
     % We firstly assume that the input scales over the transformed r
     % surface are the same as for the r surface. We are secondly going to
     % assume that the posterior for the log-input scales over the
     % transformed r surface is a Gaussian. We take its mean to be the ML
-    % value and with diagonal covariance, whose diagonal elements are equal
-    % to the squared input scales of a GP (quad_r_gp) fitted to the
-    % likelihood of the transformed r surface as a function of log-input
-    % scales.
-%     opt.sds_tr_input_scales = ...
-%         quad_r_gp.quad_input_scales(r_gp.input_scale_inds);
-    
-    % Get the values of the best sample into a nice struct.
-    [best_hypersample, best_hypersample_struct] = disp_hyperparams(r_gp);
-
-    r_gp.quad_output_scale = best_hypersample_struct.output_scale;
-    r_gp.quad_input_scales = best_hypersample_struct.input_scales;
-    r_gp.quad_noise_sd = best_hypersample_struct.noise_sd;
-    r_gp.quad_mean = 0;
+    % value.  Its covariance is set immediately brlow:
+    if strcmp(opt.set_ls_var_method, 'lengthscale')
+        % Diagonal covariance whose diagonal elements are equal
+        % to the squared input scales of a GP (quad_r_gp) fitted to the
+        % likelihood of the transformed r surface as a function of log-input
+        % scales.
+        opt.sds_tr_input_scales = ...
+            quad_r_gp.quad_input_scales(r_gp.input_scale_inds);
+    elseif strcmp(opt.set_ls_var_method, 'laplace')
+        % Diagonal covariance whose diagonal elements set by using the laplace
+        % method around the maximum likelihood value.
+        
+        % Assume the mean is the same as the mode.
+        in_scale_means = r_gp.quad_input_scales;
+        
+        % Specify the likelihood function which we'll be taking the hessian of:
+        like_func = @(in_scale) log_gp_lik2( samples_mat_i, scaled_r_mat_i, r_gp, ...
+            r_gp.quad_noise_sd, in_scale, r_gp.quad_output_scale, r_gp.quad_mean);
+        
+        % Find the Hessian
+        scales = Inf;
+        
+        try
+            scales = 1./hessdiag( like_func, in_scale_means);
+        catch e
+            e
+        end
+        
+        % A little sanity checking, since at first the length scale won't matter
+        % much.
+        if any(isinf(scales))
+            warning('Infinite lengthscale, setting to 10');
+            scales(isinf(scales)) = 10;
+        end
+        
+        opt.sds_tr_input_scales = scales;
+        
+        % Plot the log-likelihood surface.
+        if opt.plots && num_hps == 1
+            figure(11); clf;
+            hrange = linspace(-10, 40, 100 );
+            for t = 1:length(hrange)
+                vals(t) = like_func(hrange(t));
+            end
+            plot(hrange, vals); hold on;
+            y=get(gca,'ylim');
+            h=plot([in_scale_means in_scale_means],y);
+            xlabel('input scale');
+            ylabel('log likelihood');
+            legend(h, {'current mean of lengthscale'})
+        end
+    end
     
     [log_ev, r_gp] = log_evidence(sample_struct, prior_struct, r_gp, opt);
 
@@ -167,7 +214,7 @@ for i = 1:opt.num_samples
         if opt.plots && num_hps == 1
 
             % If we have a 1-dimensional function, optimize it by exhaustive
-            % evaluation.            
+            % evaluation.
             N = 1000;
             test_pts = linspace(lower_bound, upper_bound, N);
             losses = nan(1, N);
@@ -200,4 +247,24 @@ for i = 1:opt.num_samples
             hs = hs';
         end
     end
+end
+end
+
+function log_l = log_gp_lik2(X_data, y_data, gp, noise_hypers, ...
+                             in_scale_hypers, out_scale_hypers, mean_hypers)
+    % Evaluates the log_likelihood of a hyperparameter sample at a certain
+    % set of hyperparameters, given by sample.
+    gp.grad_hyperparams = false;
+    
+    % Todo:  Make a function to package a hyperparameter sample into an array,
+    % like the opposite of disp_hyperparams.  Use it to replace this next part,
+    % and part of train_gp.m
+    sample(gp.meanPos) = mean_hypers;
+    sample(gp.noise_ind) = noise_hypers;
+    sample(gp.input_scale_inds) = in_scale_hypers;
+    sample(gp.output_scale_ind) = out_scale_hypers;
+    gp.hypersamples(1).hyperparameters = sample;
+    
+    gp = revise_gp(X_data, y_data, gp, 'overwrite', [], 1);
+    log_l = gp.hypersamples(1).logL;
 end

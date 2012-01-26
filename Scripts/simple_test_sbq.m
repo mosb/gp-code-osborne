@@ -14,6 +14,8 @@ prior_struct.sds = 1;
 opt.num_retrains = 5;
 opt.num_samples = 50;
 opt.plots = true;
+opt.set_ls_var_method = 'none'; %'laplace';
+
 
 [samples_mat, log_ev, r_gp] = ...
     sbq(start_pt, log_r_fn, prior_struct, opt);
