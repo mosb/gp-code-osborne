@@ -1,4 +1,4 @@
-function [samples_mat, log_ev, r_gp] = ...
+function [all_sample_locations, log_ev, r_gp] = ...
     sbq(start_pt, log_r_fn, prior_struct, opt)
 % Take samples samples_mat so as to best estimate the
 % evidence, an integral over exp(log_r_fn) against the prior in prior_struct.
@@ -20,6 +20,11 @@ function [samples_mat, log_ev, r_gp] = ...
 %          than a structure, it's assumed opt = num_samples.
 %        * print: print reassuring dots.
 %        * plots: Whether to plot the expected variance surface (only works in 1d)
+%        * set_ls_var_method:  How to estimate the variance of lengthscale
+%                              parameters.  Can be: one of:
+%            + 'lengthscale':  Use the squared lengthscale from quadrature params.
+%            + 'laplace': Compute the Hessian of the log-likelihood surface.
+%            + 'none': Assume zero variance in the lengthscales.
 
 
 % Initialize options.
@@ -33,8 +38,9 @@ elseif ~isstruct(opt)
 end
 
 next_sample_point = start_pt;
-sample_dimension = size(next_sample_point,2);  % num_hyps is the dimension of a single sample.
+sample_dimension = size(next_sample_point,2);
 
+% Set unspecified fields to default values.
 default_opt = struct('num_samples', 300, ...
                      'num_retrains', 5, ...
                      'train_gp_time', 20, ...
@@ -42,7 +48,6 @@ default_opt = struct('num_samples', 300, ...
                      'exp_loss_evals', 50 * sample_dimension, ...
                      'print', true, ...
                      'plots', false);
-                
 names = fieldnames(default_opt);
 for i = 1:length(names);
     name = names{i};
@@ -51,24 +56,21 @@ for i = 1:length(names);
     end
 end
 
-% train_opt defines the options for the training of the gp
-% this will be temporarily overwritten below, but this is its usual value
-train_opt.optim_time = opt.train_gp_time;
-%train_opt.active_hp_inds = 2:8;
-train_opt.prior_mean = 0;
-train_opt.print = false;
-train_opt.num_hypersamples = opt.train_gp_num_samples;
+% GP training options.
+gp_train_opt.optim_time = opt.train_gp_time;
+gp_train_opt.prior_mean = 0;
+gp_train_opt.print = false;
+gp_train_opt.num_hypersamples = opt.train_gp_num_samples;
 
-% Indices specifying when to retrain the GP on r.
+% Specify iterations when we will retrain the GP on r.
 retrain_inds = intlogspace(ceil(opt.num_samples/10), ...
                                 opt.num_samples, ...
                                 opt.num_retrains+1);
 retrain_inds(end) = inf;
 
-% define the box with which to bound the selection of samples
+% Define the box with which to bound the selection of samples.
 lower_bound = prior_struct.means - 5*prior_struct.sds;
 upper_bound = prior_struct.means + 5*prior_struct.sds;
-
 direct_opts.maxevals = opt.exp_loss_evals;
 direct_opts.showits = 0;
 bounds = [lower_bound; upper_bound]';
@@ -77,52 +79,35 @@ bounds = [lower_bound; upper_bound]';
 % Start of actual SBQ algorithm
 % =======================================
 
-
-% todo: get rid of either samples_mat or samples_struct.
-samples_mat = nan(opt.num_samples, sample_dimension);
-log_r_mat = nan(opt.num_samples, 1);
+all_sample_locations = nan(opt.num_samples, sample_dimension);
+all_sample_values = nan(opt.num_samples, 1);
 
 for i = 1:opt.num_samples
-    
-    % Print progress dots.
-    if opt.print
-        if rem(i, 50) == 0
-            fprintf('\n%g',i);
-        else
-            fprintf('.');
-        end
-    end
-    
-    samples_mat(i,:) = next_sample_point;           % Record the current sample location.
-    log_r_mat(i,:) = log_r_fn(next_sample_point);   % Sample the integrand at the new point.
-    
-    % Grab all existing function samples.
-    samples_mat_i = samples_mat(1:i, :);
-    log_r_mat_i = log_r_mat(1:i,:);
-    [max_log_r_mat_i, max_r_ind] = max(log_r_mat_i);
-    scaled_r_mat_i = exp(log_r_mat_i - max_log_r_mat_i);
-    
-    % - sample_struct requires fields:
-    %   * samples
-    %   * log_r    
-    sample_struct = struct();
-    sample_struct.samples = samples_mat_i;
-    sample_struct.log_r = log_r_mat_i;
+
+    all_sample_locations(i,:) = next_sample_point;          % Record the current sample location.
+    all_sample_values(i,:) = log_r_fn(next_sample_point);   % Sample the integrand at the new point.
+
+    % Grab all existing function samples and put them in a struct.
+    samples = struct();
+    samples.samples = all_sample_locations(1:i, :);
+    samples.log_r = all_sample_values(1:i,:);
+    samples.scaled_r = exp(samples.log_r - max(samples.log_r));
 
     retrain_now = i >= retrain_inds(1);  % If we've passed the next retraining index.
     
     if i==1  % First iteration.
 
-        train_opt.optim_time = 0;
+        % Set up GP without training it, because there's not enough data.
+        gp_train_opt.optim_time = 0;
         [r_gp, quad_r_gp] = train_gp('sqdexp', 'constant', [], ...
-                                     samples_mat_i, scaled_r_mat_i, train_opt);
-        train_opt.optim_time = opt.train_gp_time;
+                                     samples.samples, samples.scaled_r, gp_train_opt);
+        gp_train_opt.optim_time = opt.train_gp_time;
         
     elseif retrain_now
 
         % Retrain gp.
         [r_gp, quad_r_gp] = train_gp('sqdexp', 'constant', r_gp, ...
-                                     samples_mat_i, scaled_r_mat_i, train_opt);
+                                     samples.samples, samples.scaled_r, gp_train_opt);
 
         retrain_inds(1) = [];   % Move to next retraining index. 
         
@@ -134,7 +119,7 @@ for i = 1:opt.num_samples
 
     else
         % for hypersamples that haven't been moved, update
-        r_gp = revise_gp(samples_mat_i, scaled_r_mat_i, ...
+        r_gp = revise_gp(samples.samples, samples.scaled_r, ...
                          r_gp, 'update', i);
     end
     
@@ -144,7 +129,6 @@ for i = 1:opt.num_samples
     r_gp.quad_input_scales = best_hypersample_struct.input_scales;
     r_gp.quad_noise_sd = best_hypersample_struct.noise_sd;
     r_gp.quad_mean = 0;    
-
 
     % We firstly assume that the input scales over the transformed r
     % surface are the same as for the r surface. We are secondly going to
@@ -166,12 +150,11 @@ for i = 1:opt.num_samples
         in_scale_means = r_gp.quad_input_scales;
         
         % Specify the likelihood function which we'll be taking the hessian of:
-        like_func = @(in_scale) log_gp_lik2( samples_mat_i, scaled_r_mat_i, r_gp, ...
+        like_func = @(in_scale) log_gp_lik2( samples.samples, samples.scaled_r, r_gp, ...
             r_gp.quad_noise_sd, in_scale, r_gp.quad_output_scale, r_gp.quad_mean);
         
         % Find the Hessian
         scales = Inf;
-        
         try
             scales = 1./hessdiag( like_func, in_scale_means);
         catch e
@@ -203,13 +186,13 @@ for i = 1:opt.num_samples
         end
     end
     
-    [log_ev, r_gp] = log_evidence(sample_struct, prior_struct, r_gp, opt);
+    [log_ev, r_gp] = log_evidence(samples, prior_struct, r_gp, opt);
 
     if i < opt.num_samples  % Except for the last iteration,
         
         % Define the criterion to be optimized.
         Problem.f = @(hs_a) expected_uncertainty_evidence...
-                (hs_a', sample_struct, prior_struct, r_gp, opt);
+                (hs_a', samples, prior_struct, r_gp, opt);
             
         if opt.plots && sample_dimension == 1
 
@@ -230,7 +213,7 @@ for i = 1:opt.num_samples
             h_surface = plot(test_pts, losses, 'b'); hold on;           
             h_best = plot(next_sample_point, min_loss, 'rd', 'MarkerSize', 4); hold on;
             % Also plot previously chosen points.
-            test_pts = samples_mat_i;
+            test_pts = samples.samples;
             losses = nan(1, i);
             for loss_i=1:length(test_pts)
                 losses(loss_i) = Problem.f(test_pts(loss_i));
@@ -245,6 +228,15 @@ for i = 1:opt.num_samples
             % Call DIRECT to hopefully optimize faster than by exhaustive search.
             [exp_loss_min, next_sample_point] = Direct(Problem, bounds, direct_opts);
             next_sample_point = next_sample_point';
+        end
+    end
+    
+    % Print progress dots.
+    if opt.print
+        if rem(i, 50) == 0
+            fprintf('\n%g',i);
+        else
+            fprintf('.');
         end
     end
 end

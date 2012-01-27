@@ -56,10 +56,10 @@ end
 if ~isempty(prior_struct)
     % evidence(hs_t, sample_struct, prior_struct, r_gp, opt)
     
-    hs_s = sample_struct.samples;
-    log_r_s = sample_struct.log_r;
+    sample_locations = sample_struct.samples;
+    log_sample_values = sample_struct.log_r;
     
-    [num_s, num_hps] = size(hs_s);
+    [num_samples, sample_dimension] = size(sample_locations);
     
     prior_means = prior_struct.means;
     prior_sds = prior_struct.sds;
@@ -68,10 +68,10 @@ else
     % evidence(hs_t, gp, [], r_gp, opt)
     gp = sample_struct;
     
-    hs_s = vertcat(gp.hypersamples.hyperparameters);
-    log_r_s = vertcat(gp.hypersamples.logL);
+    sample_locations = vertcat(gp.hypersamples.hyperparameters);
+    log_sample_values = vertcat(gp.hypersamples.logL);
     
-    [num_s, num_hps] = size(hs_s);
+    [num_samples, sample_dimension] = size(sample_locations);
     
     prior_means = vertcat(gp.hyperparams.priorMean);
     prior_sds = vertcat(gp.hyperparams.priorSD);
@@ -79,21 +79,21 @@ else
 end
 
 
-opt.num_c = min(opt.num_c, num_s);
+opt.num_c = min(opt.num_c, num_samples);
 num_c = opt.num_c;
 
-prior_sds_stack = reshape(prior_sds, 1, 1, num_hps);
+prior_sds_stack = reshape(prior_sds, 1, 1, sample_dimension);
 prior_var_stack = prior_sds_stack.^2;
 
-[max_log_r_s, max_ind] = max(log_r_s);
-log_r_s = log_r_s - max_log_r_s;
-r_s = exp(log_r_s);
+[max_log_r_s, max_ind] = max(log_sample_values);
+log_sample_values = log_sample_values - max_log_r_s;
+r_s = exp(log_sample_values);
 
 
 % r is assumed to have zero mean
 if no_r_gp || isempty(r_gp)
     [r_noise_sd, r_input_scales, r_output_scale] = ...
-        hp_heuristics(hs_s, r_s, 10);
+        hp_heuristics(sample_locations, r_s, 10);
 
     r_sqd_output_scale = r_output_scale^2;
     
@@ -116,32 +116,31 @@ del_sqd_output_scale = r_sqd_output_scale;
 del_sqd_lambda = del_sqd_output_scale* ...
     prod(2*pi*del_input_scales.^2)^(-0.5);
 
-lower_bound = min(hs_s) - opt.num_box_scales*min_input_scales;
-upper_bound = max(hs_s) + opt.num_box_scales*min_input_scales;
+lower_bound = min(sample_locations) - opt.num_box_scales*min_input_scales;
+upper_bound = max(sample_locations) + opt.num_box_scales*min_input_scales;
 
 % find the candidate points, far removed from existing samples
 try
-    hs_c = find_farthest(hs_s, [lower_bound; upper_bound], num_c, ...
+    candidate_locations = find_farthest(sample_locations, [lower_bound; upper_bound], num_c, ...
                          min_input_scales);
 catch
     warning('find_farthest failed')
-    hs_c = far_pts(hs_s, [lower_bound; upper_bound], num_c);
+    candidate_locations = far_pts(sample_locations, [lower_bound; upper_bound], num_c);
 end
 
-hs_sc = [hs_s; hs_c];
-num_sc = size(hs_sc, 1);
-num_c = num_sc - num_s;
+sample_locs_combined = [sample_locations; candidate_locations];
+num_samples_combined = size(sample_locs_combined, 1);
 
 sqd_dist_stack_sc = bsxfun(@minus,...
-                reshape(hs_sc,num_sc,1,num_hps),...
-                reshape(hs_sc,1,num_sc,num_hps))...
+                reshape(sample_locs_combined,num_samples_combined,1,sample_dimension),...
+                reshape(sample_locs_combined,1,num_samples_combined,sample_dimension))...
                 .^2;  
 
     
-sqd_dist_stack_s = sqd_dist_stack_sc(1:num_s, 1:num_s, :);
+sqd_dist_stack_s = sqd_dist_stack_sc(1:num_samples, 1:num_samples, :);
 
-sqd_r_input_scales_stack = reshape(r_input_scales.^2,1,1,num_hps);
-sqd_del_input_scales_stack = reshape(del_input_scales.^2,1,1,num_hps);
+sqd_r_input_scales_stack = reshape(r_input_scales.^2,1,1,sample_dimension);
+sqd_del_input_scales_stack = reshape(del_input_scales.^2,1,1,sample_dimension);
                 
 K_r_s = r_sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
                     sqd_dist_stack_s, sqd_r_input_scales_stack), 3)); 
@@ -152,13 +151,13 @@ R_r_s = chol(K_r_s);
 
 K_del_sc = del_sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
                     sqd_dist_stack_sc, sqd_del_input_scales_stack), 3)); 
-importance_sc = ones(num_sc,1);
-importance_sc(num_s + 1 : end) = 2;
+importance_sc = ones(num_samples_combined,1);
+importance_sc(num_samples + 1 : end) = 2;
 K_del_sc = improve_covariance_conditioning(K_del_sc, importance_sc, ...
     opt.allowed_cond_error);
 R_del_sc = chol(K_del_sc);     
 
-sqd_dist_stack_s_sc = sqd_dist_stack_sc(1:num_s, :, :);
+sqd_dist_stack_s_sc = sqd_dist_stack_sc(1:num_samples, :, :);
 
 K_r_s_sc = r_sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
                     sqd_dist_stack_s_sc, sqd_r_input_scales_stack), 3));   
@@ -171,16 +170,16 @@ sum_prior_var_sqd_input_scales_stack_del = ...
 opposite_del = sqd_del_input_scales_stack;
 opposite_r = sqd_r_input_scales_stack;
     
-hs_sc_minus_mean_stack = reshape(bsxfun(@minus, hs_sc, prior_means'),...
-                    num_sc, 1, num_hps);
+hs_sc_minus_mean_stack = reshape(bsxfun(@minus, sample_locs_combined, prior_means'),...
+                    num_samples_combined, 1, sample_dimension);
 sqd_hs_sc_minus_mean_stack = ...
-    repmat(hs_sc_minus_mean_stack.^2, [1, num_sc, 1]);
+    repmat(hs_sc_minus_mean_stack.^2, [1, num_samples_combined, 1]);
 tr_sqd_hs_sc_minus_mean_stack = tr(sqd_hs_sc_minus_mean_stack);
 
 yot_r_s = r_sqd_output_scale * ...
     prod(2*pi*sum_prior_var_sqd_input_scales_stack_r)^(-0.5) * ...
     exp(-0.5 * ...
-    sum(bsxfun(@rdivide, hs_sc_minus_mean_stack(1:num_s, :, :).^2, ...
+    sum(bsxfun(@rdivide, hs_sc_minus_mean_stack(1:num_samples, :, :).^2, ...
     sum_prior_var_sqd_input_scales_stack_r),3));
 
 yot_inv_K_r = solve_chol(R_r_s, yot_r_s)';
@@ -206,10 +205,10 @@ Yot_del_r = del_sqd_output_scale * r_sqd_output_scale * ...
     prod(1/(2*pi) * sqrt(inv_determ_del_r)) .* ...
     exp(-0.5 * sum(bsxfun(@times,inv_determ_del_r,...
                 bsxfun(@times, opposite_r, ...
-                    sqd_hs_sc_minus_mean_stack(1:num_sc, 1:num_s, :)) ...
+                    sqd_hs_sc_minus_mean_stack(1:num_samples_combined, 1:num_samples, :)) ...
                 + bsxfun(@times, opposite_del, ...
-                    tr_sqd_hs_sc_minus_mean_stack(1:num_sc, 1:num_s, :)) ...
-                + prior_var_times_sqd_dist_stack_sc(1:num_sc, 1:num_s, :)...
+                    tr_sqd_hs_sc_minus_mean_stack(1:num_samples_combined, 1:num_samples, :)) ...
+                + prior_var_times_sqd_dist_stack_sc(1:num_samples_combined, 1:num_samples, :)...
                 ),3));
             
 Yot_inv_K_del_r = solve_chol(R_r_s, Yot_del_r')';
@@ -265,7 +264,7 @@ mean_ev = minty_r + minty_del_r + gamma_r * minty_del;
 log_mean_evidence = max_log_r_s + log(mean_ev);
 
 
-r_gp.hs_c = hs_c;
+r_gp.hs_c = candidate_locations;
 r_gp.sqd_dist_stack_s = sqd_dist_stack_s;
 
 r_gp.R_r_s = R_r_s;

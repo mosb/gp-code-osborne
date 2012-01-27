@@ -7,24 +7,24 @@ function [xpc_unc] = expected_uncertainty_evidence...
 % [exp_log_unc] = ...
 %   expected_uncertainty_evidence(hs_a, sample_struct, prior_struct, r_gp, widths_quad_input_scales, opt)
 % - hs_a (1 by the number of hyperparameters) is a row vector expressing
-% the relevant trial hyperparameters. If hs_a is empty or omitted, then the
-% returned mean and variance are the non-expected qantities for the
-% evidence.
+%   the relevant trial hyperparameters. If hs_a is empty or omitted, then the
+%   returned mean and variance are the non-expected qantities for the
+%   evidence.
 % - evidence: the current evidence
 % - sample_struct requires fields
-% * samples
-% * log_r
+%   * samples
+%   * log_r
 % - prior_struct requires fields
-% * means
-% * sds
+%   * means
+%   * sds
 % - (optional) input r_gp has fields
-% * quad_output_scale
-% * quad_noise_sd
-% * quad_input_scales
-% * hs_c
-% * R_r_s
-% * yot_r_s
-% * Yot_sc_s
+%   * quad_output_scale
+%   * quad_noise_sd
+%   * quad_input_scales
+%   * hs_c
+%   * R_r_s
+%   * yot_r_s
+%   * Yot_sc_s
 %
 % alternatively:
 % [exp_log_unc] = 
