@@ -1,44 +1,44 @@
-function [log_mean_evidence, r_gp] = ...
-    log_evidence(sample_struct, prior_struct, r_gp, opt)
-% Returns the log-mean-evidence, and a structure r_gp to ease its
+function [log_mean_evidence, r_gp_params] = ...
+    log_evidence(sample_struct, prior_struct, r_gp_params, opt)
+% Returns the log-mean-evidence, and a structure r_gp_params to ease its
 % future computation.
 %
-% [log_mean_evidence, r_gp] = ...
-% evidence(sample_struct, prior_struct, r_gp, opt)
+% [log_mean_evidence, r_gp_params] = ...
+% evidence(sample_struct, prior_struct, r_gp_params, opt)
 % - sample_struct requires fields
 %     * samples
 %     * log_r
 % - prior_struct requires fields
 %     * means
 %     * sds
-% - (optional) input r_gp has fields
+% - (optional) input r_gp_params has fields
 %     * quad_output_scale
 %     * quad_noise_sd
 %     * quad_input_scales
 %
 % alternatively:
-% [log_mean_evidence, r_gp] = evidence(gp, [], r_gp, opt)
+% [log_mean_evidence, r_gp_params] = evidence(gp, [], r_gp_params, opt)
 % - gp requires fields:
 %     * hyperparams(i).priorMean
 %     * hyperparams(i).priorSD
 %     * hypersamples.logL
 %
-% - output r_gp has the same fields as input r_gp plus
+% - output r_gp_params has the same fields as input r_gp_params plus
 %     * hs_c
 %     * R_s
 %     * yot_s
 %     * Yot_sc_s
 
-no_r_gp = nargin<3;
+no_r_gp_params = nargin<3;
 if nargin<4
     opt = struct();
 end
 
-default_opt = struct('num_c', 100,...
-                    'gamma_const', 100, ...
-                    'num_box_scales', 5, ...
-                    'allowed_cond_error',10^-14, ...
-                    'update', false, ...
+default_opt = struct('num_c', 100,... % number of candidate points
+                    'gamma_const', 100, ... % numerical scaling factor
+                    'num_box_scales', 5, ... % defines the box over which to take candidates
+                    'allowed_cond_error',10^-14, ... % allowed conditioning error
+                    'update', false, ... % update log_evidence with a single new point
                     'print', true);
                 
 names = fieldnames(default_opt);
@@ -52,9 +52,11 @@ end
 % If we have actually only added a single new sample at position opt.update,
 % can do efficient sequential updates.
 % updating = isnumeric(opt.update);
+% for now, we recompute evidence from scratch each time
 
 if ~isempty(prior_struct)
-    % evidence(hs_t, sample_struct, prior_struct, r_gp, opt)
+    % function called as
+    % evidence(sample_struct, prior_struct, r_gp_params, opt)
     
     sample_locations = sample_struct.samples;
     log_sample_values = sample_struct.log_r;
@@ -65,7 +67,11 @@ if ~isempty(prior_struct)
     prior_sds = prior_struct.sds;
     
 else
-    % evidence(hs_t, gp, [], r_gp, opt)
+    % function called as
+    % evidence(gp, [], r_gp_params, opt)
+    % rather than as advertised:
+    % evidence(sample_struct, prior_struct, r_gp_params, opt)
+    
     gp = sample_struct;
     
     sample_locations = vertcat(gp.hypersamples.hyperparameters);
@@ -76,11 +82,9 @@ else
     prior_means = vertcat(gp.hyperparams.priorMean);
     prior_sds = vertcat(gp.hyperparams.priorSD);
     
+    clear gp;
+    
 end
-
-
-opt.num_c = min(opt.num_c, num_samples);
-num_c = opt.num_c;
 
 prior_sds_stack = reshape(prior_sds, 1, 1, sample_dimension);
 prior_var_stack = prior_sds_stack.^2;
@@ -90,22 +94,22 @@ log_sample_values = log_sample_values - max_log_r_s;
 r_s = exp(log_sample_values);
 
 
-% r is assumed to have zero mean
-if no_r_gp || isempty(r_gp)
+% hyperparameters for gp over the log-likelihood, r, assumed to have zero
+% mean
+if no_r_gp_params || isempty(r_gp_params)
     [r_noise_sd, r_input_scales, r_output_scale] = ...
         hp_heuristics(sample_locations, r_s, 10);
 
     r_sqd_output_scale = r_output_scale^2;
     
-    r_gp = struct();
+    r_gp_params = struct();
 else
-    r_sqd_output_scale = r_gp.quad_output_scale^2;
-    r_input_scales = r_gp.quad_input_scales;
+    r_sqd_output_scale = r_gp_params.quad_output_scale^2;
+    r_input_scales = r_gp_params.quad_input_scales;
 end
 
-% we force GPs for r and tr to share hyperparameters. del_rr are assumed to
-% all have input scales equal to half of those for r.
-
+% hyperparameters for gp over delta, the difference between log-gp-mean-r and
+% gp-mean-log-r
 min_input_scales = r_input_scales;
 
 r_sqd_lambda = r_sqd_output_scale* ...
@@ -118,6 +122,9 @@ del_sqd_lambda = del_sqd_output_scale* ...
 
 lower_bound = min(sample_locations) - opt.num_box_scales*min_input_scales;
 upper_bound = max(sample_locations) + opt.num_box_scales*min_input_scales;
+
+opt.num_c = min(opt.num_c, num_samples);
+num_c = opt.num_c;
 
 % find the candidate points, far removed from existing samples
 try
@@ -264,17 +271,17 @@ mean_ev = minty_r + minty_del_r + gamma_r * minty_del;
 log_mean_evidence = max_log_r_s + log(mean_ev);
 
 
-r_gp.hs_c = candidate_locations;
-r_gp.sqd_dist_stack_s = sqd_dist_stack_s;
+r_gp_params.hs_c = candidate_locations;
+r_gp_params.sqd_dist_stack_s = sqd_dist_stack_s;
 
-r_gp.R_r_s = R_r_s;
-r_gp.K_r_s = K_r_s;
-r_gp.yot_r_s = yot_r_s;
+r_gp_params.R_r_s = R_r_s;
+r_gp_params.K_r_s = K_r_s;
+r_gp_params.yot_r_s = yot_r_s;
 
-r_gp.R_del_sc = R_del_sc;
-r_gp.K_del_sc = K_del_sc;
-r_gp.yot_del_sc = yot_del_sc;
+r_gp_params.R_del_sc = R_del_sc;
+r_gp_params.K_del_sc = K_del_sc;
+r_gp_params.yot_del_sc = yot_del_sc;
 
-r_gp.Delta_tr_sc = Delta_tr_sc;
+r_gp_params.Delta_tr_sc = Delta_tr_sc;
 
-r_gp.Yot_sc_s = Yot_del_r;
+r_gp_params.Yot_sc_s = Yot_del_r;

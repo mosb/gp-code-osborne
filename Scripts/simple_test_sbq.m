@@ -4,7 +4,8 @@ r_mean1 = 1;
 r_sd1 = 1;
 r_mean2 = 4;
 r_sd2 = 1;
-log_r_fn = @(x) log(normpdf(x,r_mean1,r_sd1)+normpdf(x,r_mean2,r_sd2));
+normf = @(x,m,sd) (2*pi*sd^2)^(-0.5)*exp(-0.5*(x-m).^2/sd^2);
+log_r_fn = @(x) log(normf(x,r_mean1,r_sd1)+normf(x,r_mean2,r_sd2));
 
 % Set parameters of SBQ
 start_pt = -3;
@@ -14,7 +15,9 @@ prior_struct.sds = 1;
 opt.num_retrains = 5;
 opt.num_samples = 50;
 opt.plots = true;
-opt.set_ls_var_method = 'none'; %'laplace';
+opt.set_ls_var_method = 'laplace'; %'laplace';
+
+
 
 
 [samples_mat, log_ev, r_gp] = ...

@@ -118,8 +118,8 @@ hypersamples(max_ind).hyperparameters(w0_inds)));
 quad_X_c_scales = 10 * input_scales;
 quad_log_tw_c_scales = quad_input_scales;
 
-
-fprintf('Initial best log-likelihood: \t%g',max_logL);
+init_max_logL = max_logL;
+fprintf('Initial best log-likelihood: \t%g',init_max_logL);
 if opt.verbose
     fprintf(', for ')
     disp_spgp_hps(hypersamples, max_ind,'no_logL');
@@ -530,8 +530,8 @@ gp.w0_inds = w0_inds;
 
 [max_logL, max_ind] = max([gp.hypersamples.logL]);
 
-
-fprintf('Final best log-likelihood: \t%g',max_logL);
+fprintf('\n Initial best log-likelihood: \t%g',init_max_logL);
+fprintf('\n Final best log-likelihood: \t%g',max_logL);
 if opt.verbose
     fprintf(', for ')
     disp_spgp_hps(gp, max_ind, 'no_logL');

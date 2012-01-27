@@ -43,7 +43,7 @@ sample_dimension = size(next_sample_point,2);
 % Set unspecified fields to default values.
 default_opt = struct('num_samples', 300, ...
                      'num_retrains', 5, ...
-                     'train_gp_time', 20, ...
+                     'train_gp_time', 60, ...
                      'train_gp_num_samples', 10, ...
                      'exp_loss_evals', 50 * sample_dimension, ...
                      'print', true, ...
@@ -58,9 +58,17 @@ end
 
 % GP training options.
 gp_train_opt.optim_time = opt.train_gp_time;
+gp_train_opt.noiseless = true;
 gp_train_opt.prior_mean = 0;
-gp_train_opt.print = false;
+% print to screen diagnostic information about gp training
+gp_train_opt.verbose = false;
+% plot diagnostic information about gp training
+gp_train_opt.plots = false;
+% temporarily revoked parallelising training as Mike's parallel toolbox
+% isn't working
+gp_train_opt.parallel = false;
 gp_train_opt.num_hypersamples = opt.train_gp_num_samples;
+
 
 % Specify iterations when we will retrain the GP on r.
 retrain_inds = intlogspace(ceil(opt.num_samples/10), ...
@@ -125,10 +133,10 @@ for i = 1:opt.num_samples
     
     % Put the values of the best quadrature parameters into the current GP.
     [best_hypersample, best_hypersample_struct] = disp_hyperparams(r_gp);
-    r_gp.quad_output_scale = best_hypersample_struct.output_scale;
-    r_gp.quad_input_scales = best_hypersample_struct.input_scales;
-    r_gp.quad_noise_sd = best_hypersample_struct.noise_sd;
-    r_gp.quad_mean = 0;    
+    r_gp_params.quad_output_scale = best_hypersample_struct.output_scale;
+    r_gp_params.quad_input_scales = best_hypersample_struct.input_scales;
+    r_gp_params.quad_noise_sd = best_hypersample_struct.noise_sd;
+    r_gp_params.quad_mean = 0;    
 
     % We firstly assume that the input scales over the transformed r
     % surface are the same as for the r surface. We are secondly going to
@@ -141,17 +149,17 @@ for i = 1:opt.num_samples
         % likelihood of the transformed r surface as a function of log-input
         % scales.
         opt.sds_tr_input_scales = ...
-            quad_r_gp.quad_input_scales(r_gp.input_scale_inds);
+            quad_r_gp.quad_input_scales(r_gp_params.input_scale_inds);
     elseif strcmp(opt.set_ls_var_method, 'laplace')
         % Diagonal covariance whose diagonal elements set by using the laplace
         % method around the maximum likelihood value.
         
         % Assume the mean is the same as the mode.
-        in_scale_means = r_gp.quad_input_scales;
+        log_in_scale_means = log(r_gp_params.quad_input_scales);
         
         % Specify the likelihood function which we'll be taking the hessian of:
         like_func = @(in_scale) log_gp_lik2( samples.samples, samples.scaled_r, r_gp, ...
-            r_gp.quad_noise_sd, in_scale, r_gp.quad_output_scale, r_gp.quad_mean);
+            r_gp_params.quad_noise_sd, in_scale, r_gp_params.quad_output_scale, r_gp_params.quad_mean);
         
         % Find the Hessian
         scales = Inf;
@@ -179,20 +187,20 @@ for i = 1:opt.num_samples
             end
             plot(hrange, vals); hold on;
             y=get(gca,'ylim');
-            h=plot([in_scale_means in_scale_means],y);
-            xlabel('input scale');
+            h=plot([log_in_scale_means log_in_scale_means],y);
+            xlabel('log input scale');
             ylabel('log likelihood');
-            legend(h, {'current mean of lengthscale'})
+            legend(h, {'current mean of log input scale'})
         end
     end
     
-    [log_ev, r_gp] = log_evidence(samples, prior_struct, r_gp, opt);
+    [log_ev, r_gp_params] = log_evidence(samples, prior_struct, r_gp_params, opt);
 
     if i < opt.num_samples  % Except for the last iteration,
         
         % Define the criterion to be optimized.
         Problem.f = @(hs_a) expected_uncertainty_evidence...
-                (hs_a', samples, prior_struct, r_gp, opt);
+                (hs_a', samples, prior_struct, r_gp_params, opt);
             
         if opt.plots && sample_dimension == 1
 

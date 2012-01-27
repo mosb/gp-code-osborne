@@ -1,11 +1,11 @@
 function [xpc_unc] = expected_uncertainty_evidence...
-      (hs_a, sample_struct, prior_struct, r_gp, opt)
+      (hs_a, sample_struct, prior_struct, r_gp_params, opt)
 % returns the expected negative-squared-mean-evidence after adding a
 % hyperparameter sample hs_a. This quantity is a scaled version of the
 % expected variance in the evidence.
 %
 % [exp_log_unc] = ...
-%   expected_uncertainty_evidence(hs_a, sample_struct, prior_struct, r_gp, widths_quad_input_scales, opt)
+%   expected_uncertainty_evidence(hs_a, sample_struct, prior_struct, r_gp_params, widths_quad_input_scales, opt)
 % - hs_a (1 by the number of hyperparameters) is a row vector expressing
 %   the relevant trial hyperparameters. If hs_a is empty or omitted, then the
 %   returned mean and variance are the non-expected qantities for the
@@ -17,7 +17,7 @@ function [xpc_unc] = expected_uncertainty_evidence...
 % - prior_struct requires fields
 %   * means
 %   * sds
-% - (optional) input r_gp has fields
+% - (optional) input r_gp_params has fields
 %   * quad_output_scale
 %   * quad_noise_sd
 %   * quad_input_scales
@@ -28,21 +28,21 @@ function [xpc_unc] = expected_uncertainty_evidence...
 %
 % alternatively:
 % [exp_log_unc] = 
-%    expected_uncertainty_evidence(hs_a, gp, [], r_gp, opt)
+%    expected_uncertainty_evidence(hs_a, gp, [], r_gp_params, opt)
 % - gp requires fields:
 % * hyperparams(i).priorMean
 % * hyperparams(i).priorSD
 % * hypersamples.logL
 %
-% - output r_gp has the same fields as input r_gp plus
+% - output r_gp_params has the same fields as input r_gp_params plus
                         
-no_r_gp = nargin<4;
+no_r_gp_params = nargin<4;
 if nargin<5
     opt = struct();
 end
 
-default_opt = struct('gamma_r_const', 100, ...
-                    'allowed_cond_error',10^-14, ...
+default_opt = struct('gamma_const', 100, ... % numerical scaling factor
+                    'allowed_cond_error',10^-14, ... % allowed conditioning error
                     'sds_tr_input_scales', false);
 % sds_tr_input_scales represents the posterior standard deviations in the
 % input scales for tr. If false, a delta function posterior is assumed.
@@ -56,7 +56,9 @@ for i = 1:length(names);
 end
 
 if ~isempty(prior_struct)
-    % evidence(hs_a, sample_struct, prior_struct, r_gp, opt)
+    % function called as
+    % expected_uncertainty_evidence(hs_a, sample_struct, prior_struct,
+    % r_gp_params, widths_quad_input_scales, opt)
     
     hs_s = sample_struct.samples;
     log_r_s = sample_struct.log_r;
@@ -67,7 +69,12 @@ if ~isempty(prior_struct)
     prior_sds = prior_struct.sds;
     
 else
-    % evidence(hs_a, gp, [], r_gp, opt)
+    % function called as
+    % expected_uncertainty_evidence(hs_a, gp, [], r_gp_params, opt)
+    % rather than as advertised:
+    % expected_uncertainty_evidence(hs_a, sample_struct, prior_struct,
+    % r_gp_params, widths_quad_input_scales, opt)
+    
     gp = sample_struct;
     
     hs_s = vertcat(gp.hypersamples.hyperparameters);
@@ -78,9 +85,11 @@ else
     prior_means = vertcat(gp.hyperparams.priorMean);
     prior_sds = vertcat(gp.hyperparams.priorSD);
     
+    clear gp
+    
 end
 
-hs_c = r_gp.hs_c;
+hs_c = r_gp_params.hs_c;
 hs_sc = [hs_s; hs_c];
 hs_sca = [hs_sc; hs_a];
 hs_sa = [hs_s; hs_a];
@@ -105,33 +114,40 @@ tilde = @(x, gamma_r_x) log(bsxfun(@rdivide, x, gamma_r_x) + 1);
 % this is after r_s has already been divided by exp(max_log_r_s). tr_s is
 % its correct value, but log(gamma_r) has effectively had max_log_r_s
 % subtracted from it
-gamma_r = opt.gamma_r_const; 
+gamma_r = opt.gamma_const; 
 tr_s = tilde(r_s, gamma_r);
 
 
-% r is assumed to have zero mean
-if no_r_gp || isempty(r_gp)
+% hyperparameters for gp over the log-likelihood, r, assumed to have zero mean
+if no_r_gp_params || isempty(r_gp_params)
     [r_noise_sd, r_input_scales, r_output_scale] = ...
         hp_heuristics(hs_s, r_s, 10);
 
     r_sqd_output_scale = r_output_scale^2;
 else
-    r_sqd_output_scale = r_gp.quad_output_scale^2;
-    r_input_scales = r_gp.quad_input_scales;
+    r_sqd_output_scale = r_gp_params.quad_output_scale^2;
+    r_input_scales = r_gp_params.quad_input_scales;
 end
 r_sqd_lambda = r_sqd_output_scale* ...
     prod(2*pi*r_input_scales.^2)^(-0.5);
 
+sqd_r_input_scales = r_input_scales.^2;
+sqd_r_input_scales_stack = reshape(sqd_r_input_scales,1,1,num_hps);
+
+
+% hyperparameters for gp over delta, the difference between log-gp-mean-r and
+% gp-mean-log-r
 del_input_scales = 0.5 * r_input_scales;
 del_sqd_output_scale = r_sqd_output_scale;
 del_sqd_lambda = del_sqd_output_scale* ...
     prod(2*pi*del_input_scales.^2)^(-0.5);
 
-sqd_r_input_scales = r_input_scales.^2;
-sqd_r_input_scales_stack = reshape(sqd_r_input_scales,1,1,num_hps);
-
 sqd_del_input_scales = del_input_scales.^2;
 sqd_del_input_scales_stack = reshape(del_input_scales.^2,1,1,num_hps);
+
+
+
+
 
 hs_a_minus_mean = hs_a - prior_means';
 
@@ -150,11 +166,11 @@ sqd_dist_stack_sca_a = reshape(bsxfun(@minus, hs_sca, hs_a).^2, ...
 sqd_dist_stack_sa_a = reshape(bsxfun(@minus, hs_sa, hs_a).^2, ...
                     num_sa, 1, num_hps);
 
-R_r_s = r_gp.R_r_s ;
-K_r_s = r_gp.K_r_s;
+R_r_s = r_gp_params.R_r_s ;
+K_r_s = r_gp_params.K_r_s;
 
-R_del_sc = r_gp.R_del_sc;
-K_del_sc = r_gp.K_del_sc;
+R_del_sc = r_gp_params.R_del_sc;
+K_del_sc = r_gp_params.K_del_sc;
 
 % we update the covariance matrix over r. We consider all old jitters fixed
 % and add in jitter at hs_a sufficient to render the matrix
@@ -186,6 +202,8 @@ K_r_sa = improve_covariance_conditioning(K_r_sa, ...
     importances, opt.allowed_cond_error);
 R_r_sa = updatechol(K_r_sa, R_r_s, num_sa);
 
+% try not to add jitter to important points. In this case, we've already
+% added jitter to existing points, we don't want to add further jitter.
 importances = [inf(num_sc,1);0];
 K_del_sca = improve_covariance_conditioning(K_del_sca, ...
     importances, opt.allowed_cond_error);
@@ -206,11 +224,11 @@ yot_del_a = del_sqd_output_scale * ...
     exp(-0.5 * ...
     sum(hs_a_minus_mean.^2./sum_prior_var_sqd_input_scales_del));
 
-yot_r_s = r_gp.yot_r_s;
+yot_r_s = r_gp_params.yot_r_s;
 yot_r_sa = [yot_r_s; yot_r_a];
 yot_inv_K_r_sa = solve_chol(R_r_sa, yot_r_sa)';
 
-yot_del_sc = r_gp.yot_del_sc;
+yot_del_sc = r_gp_params.yot_del_sc;
 yot_del_sca = [yot_del_sc; yot_del_a];
 yot_inv_K_del_sca = solve_chol(R_del_sca, yot_del_sca)';  
 
@@ -248,12 +266,12 @@ Yot_sca_a = del_sqd_output_scale * r_sqd_output_scale * ...
 
 range_sa = [1:num_s,num_sca];
 
-Yot_sc_s = r_gp.Yot_sc_s;
+Yot_sc_s = r_gp_params.Yot_sc_s;
 Yot_sc_sa = [Yot_sc_s, Yot_sca_a(1:num_sc,:);
                 Yot_sca_a(range_sa,:)'];
 
 
-Delta_tr_sc = r_gp.Delta_tr_sc;
+Delta_tr_sc = r_gp_params.Delta_tr_sc;
 Delta_tr_sca = [Delta_tr_sc;0];
 del_inv_K = solve_chol(R_del_sca, Delta_tr_sca)';
 del_inv_K_Yot_inv_K_r_sa = del_inv_K * solve_chol(R_r_sa, Yot_sc_sa')';
@@ -280,9 +298,8 @@ tm_a = K_invK_a_s * tr_s;
 tv_a = r_sqd_lambda - invR_K_r_s_a' * invR_K_r_s_a;
 
 if opt.sds_tr_input_scales
-    
-    % we correct for the impact of learning r_t on our belief about the
-    % input scales
+    % we correct for the impact of learning this new hyperparameter sample,
+    % r_a, on our belief about the input scales
     
     C = opt.sds_tr_input_scales.^2;
     if size(C,1) == 1
@@ -291,7 +308,7 @@ if opt.sds_tr_input_scales
     
     invK_tr_s = solve_chol(R_r_s, tr_s);
 
-    sqd_dist_stack_s = r_gp.sqd_dist_stack_s;
+    sqd_dist_stack_s = r_gp_params.sqd_dist_stack_s;
     sqd_dist_stack_s_a = reshape(sqd_dist_s_a', 1, num_s, num_hps);
 
     %each plate is the derivative with respect to a different log input
