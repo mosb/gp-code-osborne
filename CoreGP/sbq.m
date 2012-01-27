@@ -1,7 +1,7 @@
 function [samples_mat, log_ev, r_gp] = ...
     sbq(start_pt, log_r_fn, prior_struct, opt)
-% Take hyperparameter samples samples_mat so as to best estimate the
-% evidence, an integral over hyperparameter space of exp(log_r_fn).
+% Take samples samples_mat so as to best estimate the
+% evidence, an integral over exp(log_r_fn) against the prior in prior_struct.
 % 
 % OUTPUTS
 % - samples_mat: m*n matrix of hyperparameter samples
@@ -32,14 +32,14 @@ elseif ~isstruct(opt)
     opt.num_samples = num_samples;
 end
 
-hs = start_pt;
-num_hps = size(hs,2);  % num_hyps is the dimension of a single sample.
+next_sample_point = start_pt;
+sample_dimension = size(next_sample_point,2);  % num_hyps is the dimension of a single sample.
 
 default_opt = struct('num_samples', 300, ...
                      'num_retrains', 5, ...
                      'train_gp_time', 20, ...
                      'train_gp_num_samples', 10, ...
-                     'exp_loss_evals', 50 * num_hps, ...
+                     'exp_loss_evals', 50 * sample_dimension, ...
                      'print', true, ...
                      'plots', false);
                 
@@ -79,7 +79,7 @@ bounds = [lower_bound; upper_bound]';
 
 
 % todo: get rid of either samples_mat or samples_struct.
-samples_mat = nan(opt.num_samples, num_hps);
+samples_mat = nan(opt.num_samples, sample_dimension);
 log_r_mat = nan(opt.num_samples, 1);
 
 for i = 1:opt.num_samples
@@ -93,10 +93,10 @@ for i = 1:opt.num_samples
         end
     end
     
-    samples_mat(i,:) = hs;           % Record the current sample location.
-    log_r_mat(i,:) = log_r_fn(hs);   % Sample the integrand at the new point.
+    samples_mat(i,:) = next_sample_point;           % Record the current sample location.
+    log_r_mat(i,:) = log_r_fn(next_sample_point);   % Sample the integrand at the new point.
     
-    % Grab all existing hyperparam samples.
+    % Grab all existing function samples.
     samples_mat_i = samples_mat(1:i, :);
     log_r_mat_i = log_r_mat(1:i,:);
     [max_log_r_mat_i, max_r_ind] = max(log_r_mat_i);
@@ -138,7 +138,7 @@ for i = 1:opt.num_samples
                          r_gp, 'update', i);
     end
     
-    % Get the values of the best sample into a nice struct.
+    % Put the values of the best quadrature parameters into the current GP.
     [best_hypersample, best_hypersample_struct] = disp_hyperparams(r_gp);
     r_gp.quad_output_scale = best_hypersample_struct.output_scale;
     r_gp.quad_input_scales = best_hypersample_struct.input_scales;
@@ -188,7 +188,7 @@ for i = 1:opt.num_samples
         opt.sds_tr_input_scales = scales;
         
         % Plot the log-likelihood surface.
-        if opt.plots && num_hps == 1
+        if opt.plots && sample_dimension == 1
             figure(11); clf;
             hrange = linspace(-10, 40, 100 );
             for t = 1:length(hrange)
@@ -211,7 +211,7 @@ for i = 1:opt.num_samples
         Problem.f = @(hs_a) expected_uncertainty_evidence...
                 (hs_a', sample_struct, prior_struct, r_gp, opt);
             
-        if opt.plots && num_hps == 1
+        if opt.plots && sample_dimension == 1
 
             % If we have a 1-dimensional function, optimize it by exhaustive
             % evaluation.
@@ -223,12 +223,12 @@ for i = 1:opt.num_samples
             end
             % Choose the best point.
             [min_loss,min_ind] = min(losses);
-            hs = test_pts(min_ind);
+            next_sample_point = test_pts(min_ind);
             
             % Plot the expected uncertainty surface.
             figure(1234); clf;
             h_surface = plot(test_pts, losses, 'b'); hold on;           
-            h_best = plot(hs, min_loss, 'rd', 'MarkerSize', 4); hold on;
+            h_best = plot(next_sample_point, min_loss, 'rd', 'MarkerSize', 4); hold on;
             % Also plot previously chosen points.
             test_pts = samples_mat_i;
             losses = nan(1, i);
@@ -243,8 +243,8 @@ for i = 1:opt.num_samples
             drawnow;
         else
             % Call DIRECT to hopefully optimize faster than by exhaustive search.
-            [exp_loss_min, hs] = Direct(Problem, bounds, direct_opts);
-            hs = hs';
+            [exp_loss_min, next_sample_point] = Direct(Problem, bounds, direct_opts);
+            next_sample_point = next_sample_point';
         end
     end
 end
