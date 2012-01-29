@@ -23,7 +23,7 @@ if ischar('cov_fn')
     opt.cov_fn = cov_fn;
     opt.mean_fn = mean_fn;
 else
-    % [gp, quad_gp] = train_spgp(gp, X_data, y_data, opt);
+    % [gp, quad_gp] = train_gp(gp, X_data, y_data, opt);
     
     gp = cov_fn;
     X_data = mean_fn;
@@ -102,8 +102,12 @@ if opt.noiseless
     gp.hyperparams(noise_ind).priorMean = ...
        gp.hyperparams(output_scale_ind).priorMean - 14; 
     
-    big_noise_const = -5;
-    big_noise_ind = output_scale_ind;
+   
+    % we optimise each input scale independently by also allowing the noise to
+    % vary when performing each optimisation; such that the noise can soak
+    % up variation due to incorrect input scales in other dimensions.
+    big_noise_const = +9;
+    big_noise_ind = noise_ind;
 else
     big_noise_const = 0;
     big_noise_ind = noise_ind;
@@ -260,11 +264,9 @@ if opt.maxevals_hs == 1
         gp.hypersamples = hypersamples;
         return
     end
+elseif opt.verbose
+    fprintf('Using %g likelihood evals per pass, per input\n', opt.maxevals_hs)
 end
-
-% if opt.verbose
-%     fprintf('%g evals to train input_scale, other and sigma, %g to train X_c and w_c\n', opt.maxevals_hs, opt.maxevals_c);
-% end   
 
 for num_pass = 1:num_passes
     
@@ -375,11 +377,11 @@ for num_pass = 1:num_passes
         
         warning('off','revise_gp:small_num_data');
         
-        if opt.verbose
+         if opt.verbose
             fprintf('Hyperparameter sample %g\n',hypersample_ind)
         end
         
-        big_log_noise_sd = big_noise_const*...
+        big_log_noise_sd = big_noise_const + ...
             hypersamples(hypersample_ind).hyperparameters(big_noise_ind);
         actual_log_noise_sd = ...
             hypersamples(hypersample_ind).hyperparameters(noise_ind);

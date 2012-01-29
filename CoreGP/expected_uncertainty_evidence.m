@@ -285,6 +285,8 @@ uppr.UT = true;
 sqd_dist_s_a = bsxfun(@minus, hs_s, hs_a').^2;  
 K_r_s_a = r_sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
                     sqd_dist_s_a, sqd_r_input_scales), 2));
+K_r_s_a = r_sqd_lambda * exp(-0.5*...
+                    sqd_dist_s_a/sqd_r_input_scales);
 
 invR_K_r_s_a = linsolve(R_r_s, K_r_s_a, lowr);                
 K_invK_a_s = linsolve(R_r_s, invR_K_r_s_a, uppr)';

@@ -8,4 +8,4 @@ r_y_data = vertcat(gp.hypersamples.logL);
 
 X_c = gp.hypersamples(max_ind).X_c;
 opt.sparse = true;
-y_c = predict(X_c, gp, r_gp, opt);
+y_c = predict_spgp(X_c, gp, r_gp, opt);

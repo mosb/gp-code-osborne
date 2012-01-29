@@ -13,9 +13,11 @@ prior_struct.means = 0;
 prior_struct.sds = 1;
 
 opt.num_retrains = 5;
+opt.train_gp_time = 20;
 opt.num_samples = 50;
 opt.plots = true;
-opt.set_ls_var_method = 'laplace'; %'laplace';
+opt.parallel = false;
+opt.set_ls_var_method = 'none'; %'laplace';
 
 
 

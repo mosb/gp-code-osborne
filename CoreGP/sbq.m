@@ -19,6 +19,17 @@ function [all_sample_locations, log_ev, r_gp] = ...
 %        * num_samples: the number of samples to draw. If opt is a number rather
 %          than a structure, it's assumed opt = num_samples.
 %        * print: print reassuring dots.
+%        * num_retrains: how many times to retrain the gp throughout the
+%          procedure. These are logarithmically spaced: early retrains are
+%          more useful. 
+%        * parallel: whether to use the parallel computing toolbox to make
+%          training more efficient.
+%        * train_gp_time: the amount of time in seconds to spend
+%          (re)training the gp each time. The longer allowed, the more
+%          local exploitation around each hyperparameter sample.
+%        * train_gp_num_samples: how many hyperparameter samples to use for
+%          the multi-start gradient descent procedure used for training.
+%          The more, the more exploration.
 %        * plots: Whether to plot the expected variance surface (only works in 1d)
 %        * set_ls_var_method:  How to estimate the variance of lengthscale
 %                              parameters.  Can be: one of:
@@ -44,10 +55,13 @@ sample_dimension = size(next_sample_point,2);
 default_opt = struct('num_samples', 300, ...
                      'num_retrains', 5, ...
                      'train_gp_time', 60, ...
+                     'parallel', true, ...
                      'train_gp_num_samples', 10, ...
+                     'train_gp_print', false, ...
                      'exp_loss_evals', 50 * sample_dimension, ...
                      'print', true, ...
-                     'plots', false);
+                     'plots', false, ...
+                     'set_ls_var_method', 'lengthscale');
 names = fieldnames(default_opt);
 for i = 1:length(names);
     name = names{i};
@@ -61,12 +75,10 @@ gp_train_opt.optim_time = opt.train_gp_time;
 gp_train_opt.noiseless = true;
 gp_train_opt.prior_mean = 0;
 % print to screen diagnostic information about gp training
-gp_train_opt.verbose = false;
+gp_train_opt.print = opt.train_gp_print;
 % plot diagnostic information about gp training
 gp_train_opt.plots = false;
-% temporarily revoked parallelising training as Mike's parallel toolbox
-% isn't working
-gp_train_opt.parallel = false;
+gp_train_opt.parallel = opt.parallel;
 gp_train_opt.num_hypersamples = opt.train_gp_num_samples;
 
 
@@ -132,6 +144,8 @@ for i = 1:opt.num_samples
     end
     
     % Put the values of the best quadrature parameters into the current GP.
+    % NB: disp_hyperparams exponentiates the actual hyperparameters e.g.
+    % the log-input-scales. 
     [best_hypersample, best_hypersample_struct] = disp_hyperparams(r_gp);
     r_gp_params.quad_output_scale = best_hypersample_struct.output_scale;
     r_gp_params.quad_input_scales = best_hypersample_struct.input_scales;
@@ -149,7 +163,7 @@ for i = 1:opt.num_samples
         % likelihood of the transformed r surface as a function of log-input
         % scales.
         opt.sds_tr_input_scales = ...
-            quad_r_gp.quad_input_scales(r_gp_params.input_scale_inds);
+            quad_r_gp.quad_input_scales(r_gp.input_scale_inds);
     elseif strcmp(opt.set_ls_var_method, 'laplace')
         % Diagonal covariance whose diagonal elements set by using the laplace
         % method around the maximum likelihood value.
@@ -158,8 +172,13 @@ for i = 1:opt.num_samples
         log_in_scale_means = log(r_gp_params.quad_input_scales);
         
         % Specify the likelihood function which we'll be taking the hessian of:
-        like_func = @(in_scale) log_gp_lik2( samples.samples, samples.scaled_r, r_gp, ...
-            r_gp_params.quad_noise_sd, in_scale, r_gp_params.quad_output_scale, r_gp_params.quad_mean);
+        like_func = @(in_scale) log_gp_lik2( samples.samples, ...
+            samples.scaled_r, ...
+            r_gp, ...
+            log(r_gp_params.quad_noise_sd), ...
+            in_scale, ...
+            log(r_gp_params.quad_output_scale), ...
+            r_gp_params.quad_mean);
         
         % Find the Hessian
         scales = Inf;
@@ -219,7 +238,6 @@ for i = 1:opt.num_samples
             % Plot the expected uncertainty surface.
             figure(1234); clf;
             h_surface = plot(test_pts, losses, 'b'); hold on;           
-            h_best = plot(next_sample_point, min_loss, 'rd', 'MarkerSize', 4); hold on;
             % Also plot previously chosen points.
             test_pts = samples.samples;
             losses = nan(1, i);
@@ -227,6 +245,7 @@ for i = 1:opt.num_samples
                 losses(loss_i) = Problem.f(test_pts(loss_i));
             end
             h_points = plot(test_pts, losses, 'kd', 'MarkerSize', 4); hold on;
+            h_best = plot(next_sample_point, min_loss, 'rd', 'MarkerSize', 4); hold on;
             xlabel('Sample location');
             ylabel('Expected uncertainty after adding a new sample');
             legend( [h_surface, h_points, h_best], {'Expected uncertainty', 'Previously Sampled Points', 'Best new sample'}, 'Location', 'Best');
@@ -250,8 +269,8 @@ for i = 1:opt.num_samples
 end
 end
 
-function log_l = log_gp_lik2(X_data, y_data, gp, noise_hypers, ...
-                             in_scale_hypers, out_scale_hypers, mean_hypers)
+function log_l = log_gp_lik2(X_data, y_data, gp, log_noise, ...
+                             log_in_scale, log_out_scale, mean)
     % Evaluates the log_likelihood of a hyperparameter sample at a certain
     % set of hyperparameters, given by sample.
     gp.grad_hyperparams = false;
@@ -259,10 +278,10 @@ function log_l = log_gp_lik2(X_data, y_data, gp, noise_hypers, ...
     % Todo:  Make a function to package a hyperparameter sample into an array,
     % like the opposite of disp_hyperparams.  Use it to replace this next part,
     % and part of train_gp.m
-    sample(gp.meanPos) = mean_hypers;
-    sample(gp.noise_ind) = noise_hypers;
-    sample(gp.input_scale_inds) = in_scale_hypers;
-    sample(gp.output_scale_ind) = out_scale_hypers;
+    sample(gp.meanPos) = mean;
+    sample(gp.noise_ind) = log_noise;
+    sample(gp.input_scale_inds) = log_in_scale;
+    sample(gp.output_scale_ind) = log_out_scale;
     gp.hypersamples(1).hyperparameters = sample;
     
     gp = revise_gp(X_data, y_data, gp, 'overwrite', [], 1);

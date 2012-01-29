@@ -7,7 +7,7 @@ num_dims = 2;
 scales = ones(1,num_dims);
 means = zeros(1,num_dims);
 X_data = bsxfun(@plus,rand(num_data, num_dims)*diag(scales),means);
-y = @(X) sinc(5*X(:,1)) + 0.4*X(:,2);
+y = @(X) sin(5*X(:,1))./X(:,1) + 0.4*X(:,2);
 y_data = y(X_data);
 
 % the number of basis functions to use
