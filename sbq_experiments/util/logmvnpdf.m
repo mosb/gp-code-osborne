@@ -1,4 +1,4 @@
-function [logp] = logmvnpdf(x,mu,Sigma)
+function logp = logmvnpdf(x,mu,Sigma)
 % Log of multivariate normal pdf.
 %
 % David Duvenaud

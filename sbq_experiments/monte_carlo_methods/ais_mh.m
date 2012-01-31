@@ -1,4 +1,4 @@
-function [mean_log_evidence, var_log_evidence, samples] = ...
+function [mean_log_evidence, var_log_evidence, samples, weights] = ...
     ais_mh(loglik_fn, prior, opt)
 % Annealed Importance Sampling w.r.t. a Gaussian prior
 % using a Metropolis-Hastings sampler with a Gaussian proposal distribution.
@@ -21,9 +21,11 @@ function [mean_log_evidence, var_log_evidence, samples] = ...
 %        * proposal_covariance
 % 
 % Outputs:
-%   samples: n*d matrix of samples
+%   mean_log_evidence: the mean of our poterior over the log of the evidence.
+%   var_log_evidence: the variance of our posterior over the log of the
+%                     evidence.
+%   samples: n*d matrix of the locations of the samples.
 %   weights: n*1 list of weights.
-%   log_evidence: the log of the evidence
 %
 %
 % David Duvenaud
@@ -33,8 +35,10 @@ function [mean_log_evidence, var_log_evidence, samples] = ...
 % Define default options.
 if nargin < 3
     opt.num_samples = 1000;
-    opt.proposal_covariance = prior.covariance./10;
 end
+
+% Todo: set this adaptively with a burn-in?
+opt.proposal_covariance = prior.covariance./10;
 
 % Define annealing schedule.  This can be anything, as long as it starts
 % from zero and doesn't go above one.
@@ -72,5 +76,6 @@ end
 weights(1) = [];
 samples(1) = [];
 mean_log_evidence = sum(weights);
-var_log_evidence = var(weights);  % This is totally bogus.
+num_effective_samples = opt.num_samples / 100;  % This is totally bogus.
+var_log_evidence = var(weights)/num_effective_samples;  % todo: double check this.
 end
