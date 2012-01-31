@@ -1,11 +1,12 @@
-function [all_sample_locations, log_ev, r_gp] = ...
+function [all_sample_locations, log_ev, log_var_ev, r_gp] = ...
     sbq(start_pt, log_r_fn, prior_struct, opt)
 % Take samples samples_mat so as to best estimate the
 % evidence, an integral over exp(log_r_fn) against the prior in prior_struct.
 % 
 % OUTPUTS
 % - samples_mat: m*n matrix of hyperparameter samples
-% - log_evidence: the log of the evidence
+% - log_ev: our mean estimate for the log of the evidence
+% - log_var_ev: the variance for the log of the evidence
 % - r_gp: takes fields:
 % 
 % INPUTS
@@ -213,8 +214,10 @@ for i = 1:opt.num_samples
         end
     end
     
-    [log_ev, r_gp_params] = log_evidence(samples, prior_struct, r_gp_params, opt);
+    [log_ev, log_var_ev, r_gp_params] = log_evidence(samples, prior_struct, r_gp_params, opt);
 
+    fprintf('log evidence: %g +- %g+%g i\n', log_ev, real(log_var_ev), imag(log_var_ev));
+    
     if i < opt.num_samples  % Except for the last iteration,
         
         % Define the criterion to be optimized.
