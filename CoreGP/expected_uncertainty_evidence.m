@@ -65,8 +65,8 @@ if ~isempty(prior_struct)
     
     [num_s, num_hps] = size(hs_s);
     
-    prior_means = prior_struct.means;
-    prior_sds = prior_struct.sds;
+    prior_means = prior_struct.mean;
+    prior_sds = sqrt(diag(prior_struct.covariance));
     
 else
     % function called as

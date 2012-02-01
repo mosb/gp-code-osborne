@@ -1,5 +1,5 @@
 function [log_ev, log_var_ev, all_sample_locations, r_gp] = ...
-    sbq(start_pt, log_r_fn, prior_struct, opt)
+    sbq(log_r_fn, prior_struct, opt)
 % Take samples samples_mat so as to best estimate the
 % evidence, an integral over exp(log_r_fn) against the prior in prior_struct.
 % 
@@ -41,7 +41,7 @@ function [log_ev, log_var_ev, all_sample_locations, r_gp] = ...
 
 % Initialize options.
 % ===========================
-if nargin<4
+if nargin<3
     opt = struct();
 elseif ~isstruct(opt)
     num_samples = opt;
@@ -49,8 +49,7 @@ elseif ~isstruct(opt)
     opt.num_samples = num_samples;
 end
 
-next_sample_point = start_pt;
-sample_dimension = size(next_sample_point,2);
+sample_dimension = numel(prior_struct.mean);
 
 % Set unspecified fields to default values.
 default_opt = struct('num_samples', 300, ...
@@ -60,6 +59,7 @@ default_opt = struct('num_samples', 300, ...
                      'train_gp_num_samples', 10, ...
                      'train_gp_print', false, ...
                      'exp_loss_evals', 50 * sample_dimension, ...
+                     'start_pt', zeros(sample_dimension, 1), ...
                      'print', true, ...
                      'plots', false, ...
                      'set_ls_var_method', 'lengthscale');
@@ -90,8 +90,8 @@ retrain_inds = intlogspace(ceil(opt.num_samples/10), ...
 retrain_inds(end) = inf;
 
 % Define the box with which to bound the selection of samples.
-lower_bound = prior_struct.means - 5*prior_struct.sds;
-upper_bound = prior_struct.means + 5*prior_struct.sds;
+lower_bound = prior_struct.mean - 5*sqrt(diag(prior_struct.covariance));
+upper_bound = prior_struct.mean + 5*sqrt(diag(prior_struct.covariance));
 direct_opts.maxevals = opt.exp_loss_evals;
 direct_opts.showits = 0;
 bounds = [lower_bound; upper_bound]';
@@ -103,6 +103,8 @@ bounds = [lower_bound; upper_bound]';
 all_sample_locations = nan(opt.num_samples, sample_dimension);
 all_sample_values = nan(opt.num_samples, 1);
 
+
+next_sample_point = opt.start_pt;
 for i = 1:opt.num_samples
 
     all_sample_locations(i,:) = next_sample_point;          % Record the current sample location.

@@ -34,7 +34,7 @@ ais_method.opt = [];
 sbq_method.nicename = 'Sequential Bayesian Quadrature';
 sbq_method.uniquename = 'sequential bayesian quadrature v1';
 sbq_method.acronym = 'SBQ';
-sbq_method.function = @sbq_wrapper;
+sbq_method.function = @sbq;
 sbq_method.opt = [];
 
 bmc_method.nicename = 'Vanilla Bayesian Monte Carlo';
@@ -48,5 +48,5 @@ bmc_method.opt = [];
 methods = {};
 methods{end+1} = smc_method;
 methods{end+1} = ais_method;
-%methods{end+1} = bmc_method;
-%methods{end+1} = sbq_method;
+methods{end+1} = bmc_method;
+methods{end+1} = sbq_method;
