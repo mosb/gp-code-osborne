@@ -12,7 +12,7 @@ num_problems = length(problems);
 for p_ix = 1:num_problems
     problem = problems{p_ix};
     if problem.dimension == 1
-        clf;
+        figure(p_ix); clf;
         fprintf('Plotting %s...\n', problem.name );
         xrange = linspace(problem.prior.mean - 2*sqrt(problem.prior.covariance), ...
                           problem.prior.mean + 2*sqrt(problem.prior.covariance), ...

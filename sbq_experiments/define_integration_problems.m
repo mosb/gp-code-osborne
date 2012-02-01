@@ -17,7 +17,7 @@ sanity_easy_1d.dimension = 1;
 sanity_easy_1d.prior.mean = .9;
 sanity_easy_1d.prior.covariance = 1.1;
 likelihood.mean = .5;
-likelihood.covariance = .8;
+likelihood.covariance = .5;
 sanity_easy_1d.log_likelihood_fn = ...
     @(x) logmvnpdf( x, likelihood.mean, likelihood.covariance ); 
 sanity_easy_1d.true_log_evidence = ...

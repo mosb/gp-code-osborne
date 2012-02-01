@@ -16,7 +16,7 @@ sample_sizes = define_sample_sizes();
 num_problems = length(problems)
 num_methods = length(methods)
 num_sample_sizes = length(sample_sizes)
-num_repititions = 10;
+num_repititions = 1;
 
 for r = 1:num_repititions
     for s_ix = 1:num_sample_sizes

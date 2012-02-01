@@ -1,4 +1,4 @@
-function [mean_log_evidence, var_log_evidence, samples, weights] = ...
+function [mean_log_evidence, var_log_evidence, samples, sample_vals, weights] = ...
     ais_mh(loglik_fn, prior, opt)
 % Annealed Importance Sampling w.r.t. a Gaussian prior
 % using a Metropolis-Hastings sampler with a Gaussian proposal distribution.
@@ -25,6 +25,7 @@ function [mean_log_evidence, var_log_evidence, samples, weights] = ...
 %   var_log_evidence: the variance of our posterior over the log of the
 %                     evidence.
 %   samples: n*d matrix of the locations of the samples.
+%   sample_vals:
 %   weights: n*1 list of weights.
 %
 %
@@ -42,7 +43,7 @@ opt.proposal_covariance = prior.covariance./10;
 
 % Define annealing schedule.  This can be anything, as long as it starts
 % from zero and doesn't go above one.
-temps = linspace( 0, 1, opt.num_samples);
+temps = linspace( 0, 1, opt.num_samples + 1);
 
 % Define annealed pdf.
 log_prior_fn = @(x) logmvnpdf(x, prior.mean, prior.covariance);
@@ -69,12 +70,14 @@ for t = 2:length(temps)
     end
 
     % Compute weights.
-    weights(t) = loglik_fn(cur_pt) * (temps(t) - temps(t - 1));
+    sample_vals(t) = loglik_fn(cur_pt);
+    weights(t) = sample_vals(t) * (temps(t) - temps(t - 1));
     samples(t, :) = cur_pt;
 end
 
 weights(1) = [];
 samples(1) = [];
+sample_vals(1) = [];
 mean_log_evidence = sum(weights);
 
 rho = auto_correlation(weights);

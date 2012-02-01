@@ -58,7 +58,12 @@ fprintf(' Output filename: %s\n\n', filename );
     save( filename, 'timestamp', 'total_time', ...
           'mean_log_evidence', 'var_log_evidence', 'samples', ...
           'problem', 'method', 'outdir', 'opt', 'repitition' );
-    fprintf('\nCompleted experiment.\n\nSaved to %s\n', filename );
+      
+    fprintf('\nCompleted experiment.\n\n');
+    fprintf('True log evidence:  %d\n', problem.true_log_evidence );
+    fprintf('Estimated log evidence:  %d\n', mean_log_evidence );
+    fprintf('Estimated variance in log evidence:  %d\n', var_log_evidence );
+    fprintf('\n\nSaved to %s\n', filename );
 %catch
     %err = lasterror
     %msg = err.message
