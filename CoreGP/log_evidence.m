@@ -64,7 +64,7 @@ if ~isempty(prior_struct)
     [num_samples, sample_dimension] = size(sample_locations);
     
     prior_means = prior_struct.mean;
-    prior_sds = sqrt(diag(prior_struct.covariance));
+    prior_sds = sqrt(diag(prior_struct.covariance))';
     
 else
     % function called as
@@ -177,7 +177,7 @@ sum_prior_var_sqd_input_scales_stack_del = ...
 opposite_del = sqd_del_input_scales_stack;
 opposite_r = sqd_r_input_scales_stack;
     
-hs_sc_minus_mean_stack = reshape(bsxfun(@minus, sample_locs_combined, prior_means'),...
+hs_sc_minus_mean_stack = reshape(bsxfun(@minus, sample_locs_combined, prior_means),...
                     num_samples_combined, 1, sample_dimension);
 sqd_hs_sc_minus_mean_stack = ...
     repmat(hs_sc_minus_mean_stack.^2, [1, num_samples_combined, 1]);

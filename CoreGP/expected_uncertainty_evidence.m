@@ -149,9 +149,9 @@ sqd_del_input_scales_stack = reshape(del_input_scales.^2,1,1,num_hps);
 
 
 
-hs_a_minus_mean = hs_a - prior_means';
+hs_a_minus_mean = hs_a - prior_means;
 
-hs_sca_minus_mean_stack = reshape(bsxfun(@minus, hs_sca, prior_means'),...
+hs_sca_minus_mean_stack = reshape(bsxfun(@minus, hs_sca, prior_means),...
                     num_sca, 1, num_hps);
 sqd_hs_sca_minus_mean_stack = ...
     repmat(hs_sca_minus_mean_stack.^2, [1, 1, 1]);

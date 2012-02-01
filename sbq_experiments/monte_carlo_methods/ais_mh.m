@@ -76,7 +76,7 @@ for t = 2:length(temps)
 end
 
 weights(1) = [];
-samples(1) = [];
+samples(1, :) = [];
 sample_vals(1) = [];
 mean_log_evidence = sum(weights);
 

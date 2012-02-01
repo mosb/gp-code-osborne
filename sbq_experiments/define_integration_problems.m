@@ -17,7 +17,7 @@ sanity_easy_1d.dimension = 1;
 sanity_easy_1d.prior.mean = .9;
 sanity_easy_1d.prior.covariance = 1.1;
 likelihood.mean = .5;
-likelihood.covariance = .5;
+likelihood.covariance = .1;
 sanity_easy_1d.log_likelihood_fn = ...
     @(x) logmvnpdf( x, likelihood.mean, likelihood.covariance ); 
 sanity_easy_1d.true_log_evidence = ...
@@ -32,7 +32,7 @@ sanity_easy_4d.dimension = 4;
 sanity_easy_4d.prior.mean = .9 .* ones(1, sanity_easy_4d.dimension);
 sanity_easy_4d.prior.covariance = diag(1.1 .* ones(sanity_easy_4d.dimension,1));
 likelihood.mean = .5 .* ones(1, sanity_easy_4d.dimension);
-likelihood.covariance = diag( .8 .* ones(sanity_easy_4d.dimension,1));
+likelihood.covariance = diag( .25 .* ones(sanity_easy_4d.dimension,1));
 sanity_easy_4d.log_likelihood_fn = ...
     @(x) logmvnpdf( x, likelihood.mean, likelihood.covariance ); 
 sanity_easy_4d.true_log_evidence = ...
@@ -48,7 +48,7 @@ sanity_hard_1d.description = ['A sanity check for estimating variance: '...
 sanity_hard_1d.dimension = 1;
 sanity_hard_1d.prior.mean = .9;
 sanity_hard_1d.prior.covariance = 1.1;
-sanity_hard_1d.log_likelihood_fn = @(x) log(sin( 100.*x ) + 1.1 );
+sanity_hard_1d.log_likelihood_fn = @(x) 0.1.*log(sin( 20.*x ) + 0.11 );
 sanity_hard_1d.true_log_evidence = brute_force_integrate_1d(sanity_hard_1d);
 
 
@@ -59,7 +59,7 @@ sanity_hard_1d_exp.description = ['A sanity check for estimating variance: '...
 sanity_hard_1d_exp.dimension = 1;
 sanity_hard_1d_exp.prior.mean = .9;
 sanity_hard_1d_exp.prior.covariance = 1.1;
-sanity_hard_1d_exp.log_likelihood_fn = @(x) (sin( 100.*x ) ); 
+sanity_hard_1d_exp.log_likelihood_fn = @(x) 0.1.*sin( 20.*x ); 
 sanity_hard_1d_exp.true_log_evidence = brute_force_integrate_1d(sanity_hard_1d_exp);
 
                                  
@@ -69,16 +69,16 @@ two_humps_1d.dimension = 1;
 two_humps_1d.prior.mean = 0;
 two_humps_1d.prior.covariance = 10^2;
 likelihood.mean1 = -10; likelihood.mean2 = 10;
-likelihood.covariance1 = .01; likelihood.covariance2 = .01;
+likelihood.covariance1 = .05; likelihood.covariance2 = .05;
 % Should we be worried about numerical problems here?
 two_humps_1d.log_likelihood_fn = ...
-    @(x) log(mvnpdf( x, likelihood.mean1, likelihood.covariance1 ) ...
-           + mvnpdf( x, likelihood.mean2, likelihood.covariance2 ));
+    @(x) log(0.05.*mvnpdf( x, likelihood.mean1, likelihood.covariance1 ) ...
+           + 0.05.*mvnpdf( x, likelihood.mean2, likelihood.covariance2 ));
 two_humps_1d.true_log_evidence = ...
-    log(exp(log_volume_between_two_gaussians(two_humps_1d.prior.mean, ...
+    log(0.05.*exp(log_volume_between_two_gaussians(two_humps_1d.prior.mean, ...
                                      two_humps_1d.prior.covariance, ...
                                      likelihood.mean1, likelihood.covariance1)) + ...
-    exp(log_volume_between_two_gaussians(two_humps_1d.prior.mean, ...
+    0.05.*exp(log_volume_between_two_gaussians(two_humps_1d.prior.mean, ...
                                      two_humps_1d.prior.covariance, ...
                                      likelihood.mean2, likelihood.covariance2)));
 
@@ -90,8 +90,8 @@ two_humps_4d.prior.mean = zeros(1, two_humps_4d.dimension);
 two_humps_4d.prior.covariance = diag(ones(two_humps_4d.dimension, 1) .* 10^2);
 likelihood.mean1 = -10 .* ones(1, two_humps_4d.dimension);
 likelihood.mean2 = 10 .* ones(1, two_humps_4d.dimension);
-likelihood.covariance1 = 0.01.*diag(ones(two_humps_4d.dimension,1));
-likelihood.covariance2 = 0.01.*diag(ones(two_humps_4d.dimension,1));
+likelihood.covariance1 = 0.1 .* diag(ones(two_humps_4d.dimension,1));
+likelihood.covariance2 = 0.1 .* diag(ones(two_humps_4d.dimension,1));
 two_humps_4d.log_likelihood_fn = ...
     @(x) log(mvnpdf( x, likelihood.mean1, likelihood.covariance1 ) ...
            + mvnpdf( x, likelihood.mean2, likelihood.covariance2 ));

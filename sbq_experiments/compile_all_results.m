@@ -15,7 +15,7 @@ sample_sizes = define_sample_sizes();
 num_problems = length(problems);
 num_methods = length(methods);
 num_sample_sizes = length(sample_sizes);
-num_repititions = 10;
+num_repititions = 1;
 
 
 timing_table = NaN( num_methods, num_problems, num_sample_sizes, num_repititions);
