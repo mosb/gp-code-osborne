@@ -76,6 +76,10 @@ end
 weights(1) = [];
 samples(1) = [];
 mean_log_evidence = sum(weights);
-num_effective_samples = opt.num_samples / 100;  % This is totally bogus.
-var_log_evidence = var(weights)/num_effective_samples;  % todo: double check this.
+
+rho = auto_correlation(weights);
+effective_sample_size = opt.num_samples * ( 1 - rho ) / (1 + rho );
+var_log_evidence = var(weights)/effective_sample_size;  % todo: double check this.
 end
+
+
