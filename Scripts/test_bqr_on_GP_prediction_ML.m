@@ -296,7 +296,7 @@ ylab = ylabel('\acro{rmse}','Rotation',0)
 ylabpos = get(ylab,'Position');
 %set(ylab,'Rotation',0);
 
-hleg = mf_legend([pML,pMC,pBMC,pBQR],{'\acro{ml}','\acro{mc}','\acro{bmc}','\acro{bqr}'}, ...
+hleg = mf_legend([pML,pMC,pBMC,pBQR],{'\acro{ml}','\acro{mc}','\acro{nbq}','\acro{bqr}'}, ...
     'SouthWest',1);
 %set(hleg,'Orientation','Horizontal')
 

@@ -151,7 +151,7 @@ hold on;
 loglog(sqrt(mean(bsxfun(@minus,BMC,exact).^2)),'.b','MarkerSize',3);
 loglog(sqrt(mean(bsxfun(@minus,BQ,exact).^2)),'xr','MarkerSize',2);
 loglog(sqrt(mean(bsxfun(@minus,BQR,exact).^2)),'.k');
-);
+
 
 axis([0 200 0 0.2])
 set(gca, 'YGrid', 'off','YTick',[0.01,0.1]);
@@ -160,7 +160,7 @@ set(fh, 'units', 'centimeters');
 pos = get(fh, 'position'); 
 set(fh, 'position', [pos(1:2), 9, 4]); 
 
-legend('\acro{mc}','\acro{bmc}','\acro{bq}','\acro{bqr}', ...
+legend('\acro{mc}','\acro{nbq}','\acro{bqz}','\acro{bqr}', ...
     'Location','SouthWest')
 
 legend boxoff
@@ -172,6 +172,6 @@ xlabpos(2) = xlabpos(2)+0.0005;
 set(xlab,'Position',xlabpos);
 ylabel('\acro{rmse}','Rotation',0)
 
-matlabfrag('~/Documents/SBQ/slice_sampled_simple')
+matlabfrag('~/Docs/SBQ/slice_sampled_simple')
 
 

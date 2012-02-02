@@ -36,10 +36,13 @@ plot(x,r,'b')
 axis([-3 3 0 1.2]);
 xlabel('$\phi$')
 
-legend('$q(\phi)$','$r(\phi)$', 'Location','NorthWest')
+leg = legend('$q(\phi)=\pskinny{y\st}{\vz_d,\phi}$','$r(\phi)=\pskinny{\vz_d}{\phi}$',...
+    'Location',[0.285 0.8 0.49 0.119])
+
+%set(leg, 'Position', [0.9 -2.6 1.2 0.5])
 legend boxoff
 
 
 set(0, 'defaulttextinterpreter', 'none')
 
-matlabfrag('~/Documents/SBQ/BQR_oned_plot')
+matlabfrag('~/Docs/SBQ/BQR_oned_plot')

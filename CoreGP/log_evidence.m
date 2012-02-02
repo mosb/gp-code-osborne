@@ -267,17 +267,21 @@ minty_del_r = del_inv_K * Yot_inv_K_del_r * r_s;
 minty_del = yot_inv_K_del * Delta_tr_sc;
 correction = minty_del_r + gamma_r * minty_del;
 
+% mean ev has been determined using the rescaled log-likelihoods (that have
+% had the maximum log likelihood subtracted off), we return correct values
+% by scaling back again)
 mean_ev = minty_r + correction;
-% mean_second_moment = minty_r^2 + ...
-%     2 * minty_r * (minty_del_r + gamma_r * minty_del);
-
-var_ev = correction^2;
-
 log_mean_evidence = max_log_r_s + log(mean_ev);
-% log_mean_second_moment = 2*max_log_r_s + log(mean_second_moment);
 
-% log_var_evidence = 2*max_log_r_s + log(mean_second_moment - mean_ev^2);
 
+mean_second_moment = nan;
+log_mean_second_moment = 2*max_log_r_s + log(mean_second_moment);
+% mean_second_moment = (minty_r_tr + gamma_r)^2 + ...
+%              + ...
+%              + 2*(minty_r_tr + gamma_r)
+%log_var_evidence = 2*max_log_r_s + log(var_ev);
+
+var_ev = mean_second_moment - mean_ev.^2;
 log_var_evidence = 2*max_log_r_s + log(var_ev);
 
 r_gp_params.hs_c = candidate_locations;
@@ -293,6 +297,6 @@ r_gp_params.yot_del_sc = yot_del_sc;
 
 r_gp_params.Delta_tr_sc = Delta_tr_sc;
 
-%r_gp_params.log_mean_second_moment = log_mean_second_moment;
+r_gp_params.log_mean_second_moment = log_mean_second_moment;
 
 r_gp_params.Yot_sc_s = Yot_del_r;

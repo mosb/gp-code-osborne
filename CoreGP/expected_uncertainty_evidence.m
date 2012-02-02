@@ -66,7 +66,7 @@ if ~isempty(prior_struct)
     [num_s, num_hps] = size(hs_s);
     
     prior_means = prior_struct.mean;
-    prior_sds = sqrt(diag(prior_struct.covariance));
+    prior_sds = sqrt(diag(prior_struct.covariance))';
     
 else
     % function called as
@@ -282,11 +282,9 @@ lowr.UT = true;
 lowr.TRANSA = true;
 uppr.UT = true;
 
-sqd_dist_s_a = bsxfun(@minus, hs_s, hs_a').^2;  
+sqd_dist_s_a = bsxfun(@minus, hs_s, hs_a).^2;  
 K_r_s_a = r_sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
                     sqd_dist_s_a, sqd_r_input_scales), 2));
-K_r_s_a = r_sqd_lambda * exp(-0.5*...
-                    sqd_dist_s_a/sqd_r_input_scales);
 
 invR_K_r_s_a = linsolve(R_r_s, K_r_s_a, lowr);                
 K_invK_a_s = linsolve(R_r_s, invR_K_r_s_a, uppr)';
@@ -303,32 +301,37 @@ if opt.sds_tr_input_scales
     % we correct for the impact of learning this new hyperparameter sample,
     % r_a, on our belief about the input scales
     
-    C = opt.sds_tr_input_scales.^2;
-    if size(C,1) == 1
-        C = C';
+    % the variances of our posteriors over our input scales. We assume the
+    % covariance matrix has zero off-diagonal elements; the posterior is
+    % spherical. 
+    V_theta = opt.sds_tr_input_scales.^2;
+    if size(V_theta,1) == 1
+        V_theta = V_theta';
     end
+    
     
     invK_tr_s = solve_chol(R_r_s, tr_s);
 
     sqd_dist_stack_s = r_gp_params.sqd_dist_stack_s;
     sqd_dist_stack_s_a = reshape(sqd_dist_s_a', 1, num_s, num_hps);
 
-    %each plate is the derivative with respect to a different log input
-    %scale
+    %Dtheta_ prefix denotes the derivative of a quantity: each plate is the
+    %derivative with respect to a different log input scale
     
-    DK_a_s = bsxfun(@times, K_r_s_a', ...
+    Dtheta_K_a_s = bsxfun(@times, K_r_s_a', ...
         bsxfun(@rdivide, ...
-        sqd_dist_stack_s_a', ...
+        sqd_dist_stack_s_a, ...
         sqd_r_input_scales_stack));
-    DK_r_s = bsxfun(@times, K_r_s, ...
+    Dtheta_K_r_s = bsxfun(@times, K_r_s, ...
         bsxfun(@rdivide, ...
         sqd_dist_stack_s, ...
         sqd_r_input_scales_stack));
 
-    Dtm_a = prod3(DK_a_s, invK_tr_s) ...
-            - prod3(K_invK_a_s, prod3(DK_r_s, invK_tr_s));
+    
+    Dtheta_tm_a = prod3(Dtheta_K_a_s, invK_tr_s) ...
+            - prod3(K_invK_a_s, prod3(Dtheta_K_r_s, invK_tr_s));
         
-    tv_a = tv_a + sum(bsxfun(@times, Dtm_a.^2, C));
+    tv_a = tv_a + sum(reshape(Dtheta_tm_a.^2, num_hps, 1 , 1) .* V_theta);
 end
 
 

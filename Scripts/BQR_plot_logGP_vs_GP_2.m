@@ -72,7 +72,7 @@ set(gcf,'Position',[1 1 width height])
 
 hold on
 
-ylabel('$\tilde{q}$','Rotation',0);
+ylabel('$\tilde{r}$','Rotation',0);
 
 
 covvy.hyperparams(4)=struct('name','logOutputScale',...
@@ -109,7 +109,7 @@ xlabpos(2) = xlabpos(2)+0.004;
 set(xlab,'Position',xlabpos);
 
 set(gca, 'TickDir', 'out')
-matlabfrag('~/Documents/SBQ/logGP_vs_GP')
+matlabfrag('~/Docs/SBQ/logGP_vs_GP')
 fh = figure(2)
 clf
 
@@ -179,7 +179,7 @@ xlabpos(1) = xlabpos(1)-3;
 xlabpos(2) = xlabpos(2) + 0.5;
 set(xlab,'Position',xlabpos);
 
-matlabfrag('~/Documents/SBQ/logGP_vs_GP_delta')
+matlabfrag('~/Docs/SBQ/logGP_vs_GP_delta')
 
 
 %cd ~/Documents/mikesthesis/contents/Marginalising/

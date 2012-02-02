@@ -418,7 +418,7 @@ ylab = ylabel('\acro{ll}','Rotation',0)
 ylabpos = get(ylab,'Position');
 %set(ylab,'Rotation',0);
 
-hleg = mf_legend([pML,pMC,pBMC,pBQR],{'\acro{ml}','\acro{mc}','\acro{bmc}','\acro{bqr}'}, ...
+hleg = mf_legend([pML,pMC,pBMC,pBQR],{'\acro{ml}','\acro{mc}','\acro{nbq}','\acro{bqr}'}, ...
     'NorthWest',3);
 legend boxon
 set(hleg,'XColor',[1 1 1],'YColor',[1 1 1])
