@@ -377,9 +377,9 @@ function m2t = saveToFile( m2t, fid, fileWasOpen )
   % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
   % close the file if necessary
-  if ~fileWasOpen
+  %if ~fileWasOpen
       fclose( fid );
-  end
+  %end
 end
 % =========================================================================
 % *** END OF FUNCTION saveToFile

@@ -48,7 +48,7 @@ sanity_hard_1d.description = ['A sanity check for estimating variance: '...
 sanity_hard_1d.dimension = 1;
 sanity_hard_1d.prior.mean = .9;
 sanity_hard_1d.prior.covariance = 1.1;
-sanity_hard_1d.log_likelihood_fn = @(x) 0.1.*log(sin( 20.*x ) + 0.11 );
+sanity_hard_1d.log_likelihood_fn = @(x) 0.1.*log(sin( 20.*x ) + 1.1 );
 sanity_hard_1d.true_log_evidence = brute_force_integrate_1d(sanity_hard_1d);
 
 
