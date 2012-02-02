@@ -63,6 +63,7 @@ try
     fprintf('True log evidence:  %d\n', problem.true_log_evidence );
     fprintf('Estimated log evidence:  %d\n', mean_log_evidence );
     fprintf('Estimated variance in log evidence:  %d\n', var_log_evidence );
+    fprintf('\nTotal time taken in seconds:  %f\n', total_time );
     fprintf('\n\nSaved to %s\n', filename );
 catch
     err = lasterror

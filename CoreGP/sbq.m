@@ -62,7 +62,7 @@ default_opt = struct('num_samples', 300, ...
                      'start_pt', zeros(1, sample_dimension), ...
                      'print', true, ...
                      'plots', false, ...
-                     'set_ls_var_method', 'lengthscale');
+                     'set_ls_var_method', 'laplace');%'lengthscale');
 names = fieldnames(default_opt);
 for i = 1:length(names);
     name = names{i};
@@ -175,44 +175,53 @@ for i = 1:opt.num_samples
         log_in_scale_means = log(r_gp_params.quad_input_scales);
         
         % Specify the likelihood function which we'll be taking the hessian of:
-        like_func = @(in_scale) log_gp_lik2( samples.samples, ...
+        loglike_func = @(in_scale) log_gp_lik2( samples.samples, ...
             samples.scaled_r, ...
             r_gp, ...
             log(r_gp_params.quad_noise_sd), ...
             in_scale, ...
             log(r_gp_params.quad_output_scale), ...
             r_gp_params.quad_mean);
+
+        % Find the actual max
+     %   hrange = linspace(-5, 10, 1000 );
+     %   for t = 1:length(hrange)
+     %       vals(t) = loglike_func(hrange(t));
+     %   end
+     %   log_in_scale_means = hrange(argmin(-vals))
         
         % Find the Hessian
-        scales = Inf;
+        laplace_sds = Inf;
         try
-            scales = 1./hessdiag( like_func, in_scale_means);
+            laplace_sds = sqrt(-1./hessdiag( loglike_func, log_in_scale_means));
         catch e
             e
         end
         
         % A little sanity checking, since at first the length scale won't matter
         % much.
-        if any(isinf(scales))
+        if any(isinf(laplace_sds))
             warning('Infinite lengthscale, setting to 10');
-            scales(isinf(scales)) = 10;
+            laplace_sds(isinf(laplace_sds)) = 10;
         end
         
-        opt.sds_tr_input_scales = scales;
+        opt.sds_tr_input_scales = laplace_sds;
         
         % Plot the log-likelihood surface.
         if opt.plots && sample_dimension == 1
             figure(11); clf;
-            hrange = linspace(-10, 40, 100 );
+            hrange = linspace(-5, 10, 1000 );
             for t = 1:length(hrange)
-                vals(t) = like_func(hrange(t));
+                vals(t) = exp(loglike_func(hrange(t)));
             end
-            plot(hrange, vals); hold on;
+            plot(hrange, vals, 'b'); hold on;
+            rescale = exp(loglike_func(log_in_scale_means))/mvnpdf(0, 0, laplace_sds^2);
+            plot(hrange, rescale.*mvnpdf(hrange', log_in_scale_means, laplace_sds^2), 'r'); hold on;
             y=get(gca,'ylim');
-            h=plot([log_in_scale_means log_in_scale_means],y);
+            h=plot([log_in_scale_means log_in_scale_means],y, 'g');
             xlabel('log input scale');
-            ylabel('log likelihood');
-            legend(h, {'current mean of log input scale'})
+            ylabel('likelihood');
+            legend(h, {'current mean of log input scale'})            
         end
     end
     
