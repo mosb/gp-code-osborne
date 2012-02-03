@@ -11,13 +11,13 @@ log_r_fn = @(x) log(normf(x,r_mean1,r_sd1)+normf(x,r_mean2,r_sd2));
 
 prior_struct.mean = 0;
 prior_struct.covariance = 1;
-
+opt.print=2;
 opt.num_retrains = 5;
 opt.train_gp_time = 20;
 opt.num_samples = 50;
 opt.plots = true;
 opt.parallel = false;
-opt.set_ls_var_method = 'none'; %'laplace';
+opt.set_ls_var_method = 'laplace'; %'laplace';
 opt.start_pt = -3;
 
 [log_ev, log_var_ev, samples_mat, r_gp] = ...

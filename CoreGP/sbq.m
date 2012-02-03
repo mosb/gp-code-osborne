@@ -175,13 +175,13 @@ for i = 1:opt.num_samples
         log_in_scale_means = log(r_gp_params.quad_input_scales);
         
         % Specify the likelihood function which we'll be taking the hessian of:
-        loglike_func = @(in_scale) log_gp_lik2( samples.samples, ...
+        like_func = @(log_in_scale) exp(log_gp_lik2( samples.samples, ...
             samples.scaled_r, ...
             r_gp, ...
             log(r_gp_params.quad_noise_sd), ...
-            in_scale, ...
+            log_in_scale, ...
             log(r_gp_params.quad_output_scale), ...
-            r_gp_params.quad_mean);
+            r_gp_params.quad_mean));
 
         % Find the actual max
      %   hrange = linspace(-5, 10, 1000 );
@@ -193,7 +193,7 @@ for i = 1:opt.num_samples
         % Find the Hessian
         laplace_sds = Inf;
         try
-            laplace_sds = sqrt(-1./hessdiag( loglike_func, log_in_scale_means));
+            laplace_sds = sqrt(-1./hessdiag( like_func, log_in_scale_means));
         catch e
             e
         end
@@ -212,10 +212,10 @@ for i = 1:opt.num_samples
             figure(11); clf;
             hrange = linspace(-5, 10, 1000 );
             for t = 1:length(hrange)
-                vals(t) = exp(loglike_func(hrange(t)));
+                vals(t) = like_func(hrange(t));
             end
             plot(hrange, vals, 'b'); hold on;
-            rescale = exp(loglike_func(log_in_scale_means))/mvnpdf(0, 0, laplace_sds^2);
+            rescale = like_func(log_in_scale_means)/mvnpdf(0, 0, laplace_sds^2);
             plot(hrange, rescale.*mvnpdf(hrange', log_in_scale_means, laplace_sds^2), 'r'); hold on;
             y=get(gca,'ylim');
             h=plot([log_in_scale_means log_in_scale_means],y, 'g');
@@ -227,7 +227,7 @@ for i = 1:opt.num_samples
     
     [log_ev, log_var_ev, r_gp_params] = log_evidence(samples, prior_struct, r_gp_params, opt);
 
-    fprintf('log evidence: %g +- %g+%g i\n', log_ev, real(log_var_ev), imag(log_var_ev));
+    
     
     if i < opt.num_samples  % Except for the last iteration,
         
@@ -273,12 +273,14 @@ for i = 1:opt.num_samples
     end
     
     % Print progress dots.
-    if opt.print
+    if opt.print == 1
         if rem(i, 50) == 0
             fprintf('\n%g',i);
         else
             fprintf('.');
         end
+    elseif opt.print == 2
+        fprintf('log evidence: %g +- %g i\n', log_ev, log_var_ev);
     end
 end
 end
