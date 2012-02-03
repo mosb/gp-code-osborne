@@ -39,8 +39,8 @@ end
 [mean_evidence, var_evidence] = ...
     bmc_integrate(samples, exp(sample_vals), prior);
 
-mean_log_evidence = log(mean_evidence);
-var_log_evidence = log(var_evidence);  %todo: fix this
+% Convert the distribution over the evidence into a distribution over the
+% log-evidence by moment matching.
+var_log_evidence = log( var_evidence / mean_evidence^2 + 1 );
+mean_log_evidence = log(mean_evidence) - 0.5*var_log_evidence;
 end
-
-

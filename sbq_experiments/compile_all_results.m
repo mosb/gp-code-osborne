@@ -5,8 +5,8 @@ function compile_all_results( outdir, plotdir, tabledir )
 % plotdir: The directory to put all the pplots.
 
 if nargin < 1; outdir = '~/large_results/sbq_results/'; end
-if nargin < 2; plotdir = '~/Dropbox/code/papers/sbq-paper/figures/plots/'; end
-if nargin < 2; tabledir = '~/Dropbox/code/papers/sbq-paper/tables/'; end
+if nargin < 2; plotdir = '~/Dropbox/papers/sbq-paper/figures/plots/'; end
+if nargin < 2; tabledir = '~/Dropbox/papers/sbq-paper/tables/'; end
 
 fprintf('Compiling all results...\n');
 addpath(genpath(pwd))
