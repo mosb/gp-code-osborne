@@ -112,7 +112,9 @@ funnel_2d.dimension = 2;
 funnel_2d.prior.mean = zeros(1, funnel_2d.dimension );
 funnel_2d.prior.covariance = 25.*diag(ones(funnel_2d.dimension,1));
 funnel_2d.log_likelihood_fn = @(x) arrayfun( @(a,b,c)logmvnpdf(a,b,c), zeros(size(x,1),funnel_2d.dimension - 1), x(:,1), exp(x(:,2)));
-funnel_2d.true_log_evidence = NaN;
+% This value was gotten by calling = brute_force_integrate_2d(funnel_2d),
+% with dx = 0.01.
+funnel_2d.true_log_evidence = -2.1321289250641388690610256;
 
 
 % Specify problems.
@@ -136,12 +138,18 @@ function logZ = brute_force_integrate_1d(problem)
            .*dx);
 end
 
-%function logZ = brute_force_integrate_2d(problem)
-%    dx = 0.00001;
-%    xrange = -10:dx:10;
-%    logZ = log(sum(...
-%           exp(problem.log_likelihood_fn(xrange')) ...
-%           .*mvnpdf(xrange', problem.prior.mean, problem.prior.covariance))...
-%           .*dx);
-%end
+function logZ = brute_force_integrate_2d(problem)
+   
+    dx = 0.01;
+    xrange = -10:dx:10;
+    yrange = -10:dx:10;
+    Z = 0;
+    for y = yrange
+        vals = [xrange', ones(length(xrange),1)];
+        Z = Z + sum(...
+           exp(problem.log_likelihood_fn(vals)) ...
+           .*mvnpdf(vals, problem.prior.mean, problem.prior.covariance));
+    end
+    logZ = log(Z*dx^2);
+end
 

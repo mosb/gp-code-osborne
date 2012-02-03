@@ -82,7 +82,7 @@ mean_log_evidence = sum(weights);
 
 rho = auto_correlation(weights);
 effective_sample_size = opt.num_samples * ( 1 - rho ) / (1 + rho );
-var_log_evidence = var(weights)/effective_sample_size;  % todo: double check this.
+var_log_evidence = var(weights)*opt.num_samples/effective_sample_size^2;  % todo: double check this.
 end
 
 

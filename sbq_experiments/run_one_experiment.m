@@ -25,7 +25,7 @@ if skip
 end
 
 % Save the text output.
-mkdir(outdir);
+status = mkdir(outdir);
 diary( [filename '.txt' ] );
 
 fprintf('\n\nRunning\n');

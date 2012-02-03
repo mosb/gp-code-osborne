@@ -62,7 +62,7 @@ fprintf(file, '\\begin{center}\n');
 fprintf(file, '\\begin{tabular}{l |%s}\n', repmat(' r', 1, metrics));
 
 % first line
-fprintf(file, 'Method');
+fprintf(file, 'Integrand');
 for ii = 1:metrics
   fprintf(file, ' & \\rotatebox{0}{ %s } ', metricNames{ii});
   
@@ -101,4 +101,4 @@ fprintf(file, '%% End automatically generated LaTeX\n');
 fclose(file);
 
 % Print something that you can cut and paste into latex
-fprintf('\\input{%s}', filename );
+%fprintf('\\input{%s}', filename );
