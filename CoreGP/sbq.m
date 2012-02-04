@@ -107,6 +107,8 @@ all_sample_values = nan(opt.num_samples, 1);
 next_sample_point = opt.start_pt;
 for i = 1:opt.num_samples
 
+    % Update sample structs.
+    % ==================================
     all_sample_locations(i,:) = next_sample_point;          % Record the current sample location.
     all_sample_values(i,:) = log_r_fn(next_sample_point);   % Sample the integrand at the new point.
 
@@ -115,9 +117,11 @@ for i = 1:opt.num_samples
     samples.samples = all_sample_locations(1:i, :);
     samples.log_r = all_sample_values(1:i,:);
     samples.scaled_r = exp(samples.log_r - max(samples.log_r));
-
-    retrain_now = i >= retrain_inds(1);  % If we've passed the next retraining index.
     
+    
+    % Retrain GP
+    % ===========================   
+    retrain_now = i >= retrain_inds(1);  % If we've passed the next retraining index.
     if i==1  % First iteration.
 
         % Set up GP without training it, because there's not enough data.
@@ -127,19 +131,10 @@ for i = 1:opt.num_samples
         gp_train_opt.optim_time = opt.train_gp_time;
         
     elseif retrain_now
-
         % Retrain gp.
         [r_gp, quad_r_gp] = train_gp('sqdexp', 'constant', r_gp, ...
                                      samples.samples, samples.scaled_r, gp_train_opt);
-
         retrain_inds(1) = [];   % Move to next retraining index. 
-        
-        % WARNING: if this is actually necessary, better have a look at
-        % spgpgo and gpgo; I don't understand why if overwriting is
-        % necessary, it's not done immediately after retraining
-%         r_gp = revise_gp(sample_struct.samples, sample_struct.log_r, ...
-%             r_gp, 'overwrite', []);
-
     else
         % for hypersamples that haven't been moved, update
         r_gp = revise_gp(samples.samples, samples.scaled_r, ...
@@ -155,80 +150,84 @@ for i = 1:opt.num_samples
     r_gp_params.quad_noise_sd = best_hypersample_struct.noise_sd;
     r_gp_params.quad_mean = 0;    
 
-    % We firstly assume that the input scales over the transformed r
-    % surface are the same as for the r surface. We are secondly going to
-    % assume that the posterior for the log-input scales over the
-    % transformed r surface is a Gaussian. We take its mean to be the ML
-    % value.  Its covariance is set immediately brlow:
-    if strcmp(opt.set_ls_var_method, 'lengthscale')
-        % Diagonal covariance whose diagonal elements are equal
-        % to the squared input scales of a GP (quad_r_gp) fitted to the
-        % likelihood of the transformed r surface as a function of log-input
-        % scales.
-        opt.sds_tr_input_scales = ...
-            quad_r_gp.quad_input_scales(r_gp.input_scale_inds);
-    elseif strcmp(opt.set_ls_var_method, 'laplace')
-        % Diagonal covariance whose diagonal elements set by using the laplace
-        % method around the maximum likelihood value.
-        
-        % Assume the mean is the same as the mode.
-        log_in_scale_means = log(r_gp_params.quad_input_scales);
-        
-        % Specify the likelihood function which we'll be taking the hessian of:
-        like_func = @(log_in_scale) exp(log_gp_lik2( samples.samples, ...
-            samples.scaled_r, ...
-            r_gp, ...
-            log(r_gp_params.quad_noise_sd), ...
-            log_in_scale, ...
-            log(r_gp_params.quad_output_scale), ...
-            r_gp_params.quad_mean));
+    
+    % Update our posterior uncertainty about the lengthscale hyperparameters.
+    % =========================================================================
+    % Only if we've just updated the quadrature hyperparams.
+    if i == 1 || retrain_now
+        % We firstly assume that the input scales over the transformed r
+        % surface are the same as for the r surface. We are secondly going to
+        % assume that the posterior for the log-input scales over the
+        % transformed r surface is a Gaussian. We take its mean to be the ML
+        % value.  Its covariance is set immediately below:
+        if strcmp(opt.set_ls_var_method, 'lengthscale')
+            % Diagonal covariance whose diagonal elements are equal
+            % to the squared input scales of a GP (quad_r_gp) fitted to the
+            % likelihood of the transformed r surface as a function of log-input
+            % scales.
+            opt.sds_tr_input_scales = ...
+                quad_r_gp.quad_input_scales(r_gp.input_scale_inds);
+        elseif strcmp(opt.set_ls_var_method, 'laplace')
+            % Diagonal covariance whose diagonal elements set by using the laplace
+            % method around the maximum likelihood value.
 
-        % Find the actual max
-     %   hrange = linspace(-5, 10, 1000 );
-     %   for t = 1:length(hrange)
-     %       vals(t) = loglike_func(hrange(t));
-     %   end
-     %   log_in_scale_means = hrange(argmin(-vals))
-        
-        % Find the Hessian
-        laplace_sds = Inf;
-        try
-            laplace_sds = sqrt(-1./hessdiag( like_func, log_in_scale_means));
-        catch e
-            e
-        end
-        
-        % A little sanity checking, since at first the length scale won't matter
-        % much.
-        if any(isinf(laplace_sds))
-            warning('Infinite lengthscale, setting to 10');
-            laplace_sds(isinf(laplace_sds)) = 10;
-        end
-        
-        opt.sds_tr_input_scales = laplace_sds;
-        
-        % Plot the log-likelihood surface.
-        if opt.plots && sample_dimension == 1
-            figure(11); clf;
-            hrange = linspace(-5, 10, 1000 );
-            for t = 1:length(hrange)
-                vals(t) = like_func(hrange(t));
+            % Assume the mean is the same as the mode.
+            log_in_scale_means = log(r_gp_params.quad_input_scales);
+
+            % Specify the likelihood function which we'll be taking the hessian of:
+            like_func = @(log_in_scale) exp(log_gp_lik2( samples.samples, ...
+                samples.scaled_r, ...
+                r_gp, ...
+                log(r_gp_params.quad_noise_sd), ...
+                log_in_scale, ...
+                log(r_gp_params.quad_output_scale), ...
+                r_gp_params.quad_mean));
+
+            % Find the Hessian
+            laplace_sds = Inf;
+            try
+                laplace_sds = sqrt(-1./hessdiag( like_func, log_in_scale_means));
+            catch e; 
+                e;
             end
-            plot(hrange, vals, 'b'); hold on;
-            rescale = like_func(log_in_scale_means)/mvnpdf(0, 0, laplace_sds^2);
-            plot(hrange, rescale.*mvnpdf(hrange', log_in_scale_means, laplace_sds^2), 'r'); hold on;
-            y=get(gca,'ylim');
-            h=plot([log_in_scale_means log_in_scale_means],y, 'g');
-            xlabel('log input scale');
-            ylabel('likelihood');
-            legend(h, {'current mean of log input scale'})            
+
+            % A little sanity checking, since at first the length scale won't be
+            % sensible.
+            bad_sd_ixs = isinf(laplace_sds) | (imag(laplace_sds) > 0);
+            if any(bad_sd_ixs)
+                warning('Infinite or positive lengthscales, Setting lengthscale variance to prior variance');
+                good_sds = sqrt(diag(prior_struct.covariance));
+                laplace_sds(bad_sd_ixs) = good_sds(bad_sd_ixs);
+            end
+
+            opt.sds_tr_input_scales = laplace_sds;
+
+            % Plot the log-likelihood surface.
+            if opt.plots && sample_dimension == 1
+                figure(11); clf;
+                hrange = linspace(-5, 10, 1000 );
+                for t = 1:length(hrange)
+                    vals(t) = like_func(hrange(t));
+                end
+                plot(hrange, vals, 'b'); hold on;
+                y=get(gca,'ylim');
+                h=plot([log_in_scale_means log_in_scale_means],y, 'g');
+
+                % Plot the laplace-approx Gaussian.
+                rescale = like_func(log_in_scale_means)/mvnpdf(0, 0, laplace_sds^2);
+                plot(hrange, rescale.*mvnpdf(hrange', log_in_scale_means, laplace_sds^2), 'r'); hold on;
+                xlabel('log input scale');
+                ylabel('likelihood');
+                legend(h, {'current mean of log input scale'})            
+            end
         end
     end
     
     [log_ev, log_var_ev, r_gp_params] = log_evidence(samples, prior_struct, r_gp_params, opt);
 
     
-    
+    % Choose the next sample point.
+    % =================================
     if i < opt.num_samples  % Except for the last iteration,
         
         % Define the criterion to be optimized.
@@ -288,7 +287,7 @@ end
 function log_l = log_gp_lik2(X_data, y_data, gp, log_noise, ...
                              log_in_scale, log_out_scale, mean)
     % Evaluates the log_likelihood of a hyperparameter sample at a certain
-    % set of hyperparameters, given by sample.
+    % set of hyperparameters.
     gp.grad_hyperparams = false;
     
     % Todo:  Make a function to package a hyperparameter sample into an array,
