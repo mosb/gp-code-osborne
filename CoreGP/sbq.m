@@ -19,7 +19,8 @@ function [log_ev, log_var_ev, all_sample_locations, r_gp] = ...
 % - opt: takes fields:
 %        * num_samples: the number of samples to draw. If opt is a number rather
 %          than a structure, it's assumed opt = num_samples.
-%        * print: print reassuring dots.
+%        * print: If print == 1,  print reassuring dots. If print ==2,
+%          print even more diagnostic information.
 %        * num_retrains: how many times to retrain the gp throughout the
 %          procedure. These are logarithmically spaced: early retrains are
 %          more useful. 
@@ -54,9 +55,9 @@ sample_dimension = numel(prior_struct.mean);
 % Set unspecified fields to default values.
 default_opt = struct('num_samples', 300, ...
                      'num_retrains', 5, ...
-                     'train_gp_time', 60, ...
+                     'train_gp_time', 20 * sample_dimension, ...
                      'parallel', true, ...
-                     'train_gp_num_samples', 10, ...
+                     'train_gp_num_samples', 5 * sample_dimension, ...
                      'train_gp_print', false, ...
                      'exp_loss_evals', 50 * sample_dimension, ...
                      'start_pt', zeros(1, sample_dimension), ...
@@ -209,16 +210,16 @@ for i = 1:opt.num_samples
                 for t = 1:length(hrange)
                     vals(t) = like_func(hrange(t));
                 end
-                plot(hrange, vals, 'b'); hold on;
+                actual=plot(hrange, vals, 'b'); hold on;
                 y=get(gca,'ylim');
                 h=plot([log_in_scale_means log_in_scale_means],y, 'g');
 
                 % Plot the laplace-approx Gaussian.
                 rescale = like_func(log_in_scale_means)/mvnpdf(0, 0, laplace_sds^2);
-                plot(hrange, rescale.*mvnpdf(hrange', log_in_scale_means, laplace_sds^2), 'r'); hold on;
+                laplace_approx=plot(hrange, rescale.*mvnpdf(hrange', log_in_scale_means, laplace_sds^2), 'r'); hold on;
                 xlabel('log input scale');
                 ylabel('likelihood');
-                legend(h, {'current mean of log input scale'})            
+                legend([h, actual, laplace_approx], {'current best log input scale', 'actual likelihood surface', 'laplace approximation'})            
             end
         end
     end
@@ -279,7 +280,7 @@ for i = 1:opt.num_samples
             fprintf('.');
         end
     elseif opt.print == 2
-        fprintf('log evidence: %g +- %g i\n', log_ev, log_var_ev);
+        fprintf('evidence: %g +- %g\n', exp(log_ev), sqrt(exp(log_var_ev)));
     end
 end
 end

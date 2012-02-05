@@ -587,9 +587,6 @@ while (~flag || ceil(opt.maxevals_hs/5) > i) && i < opt.maxevals_hs-1
     end
     
     logL = gp.hypersamples.logL;
-%     if opt.verbose
-%         fprintf('%g,',logL)
-%     end
     a_hs=gp.hypersamples.hyperparameters(active_hp_inds);
     
     a_hps_mat(i,:) = a_hs;
@@ -672,3 +669,20 @@ end
 if opt.verbose && opt.plots
     %keyboard;
 end
+
+% hp = 4;
+% log_ins = linspace(-5,10, 1000);
+% logLs = nan(1000,1);
+% gp.hypersamples = hypersample;
+% for i =1:1000;
+%     gp.hypersamples(1).hyperparameters(hp) = log_ins(i);
+%     gp = revise_gp(X_data, y_data, gp, 'overwrite', [], 'all', hp);
+%     logLs(i) = gp.hypersamples(1).logL;
+%     dlogLs(i) = gp.hypersamples(1).glogL{hp};
+% end
+% clf
+% hold on
+% plot(log_ins, (logLs),'r')
+% plot(log_ins, (dlogLs),'k')
+
+    

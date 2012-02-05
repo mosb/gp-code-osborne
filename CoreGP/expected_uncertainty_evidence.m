@@ -274,9 +274,9 @@ Ups_sc_sa = [Ups_sc_s, Ups_sca_a(1:num_sc,:);
                 Ups_sca_a(range_sa,:)'];
 
 
-Delta_tr_sc = r_gp_params.Delta_tr_sc;
-Delta_tr_sca = [Delta_tr_sc;0];
-del_inv_K = solve_chol(R_del_sca, Delta_tr_sca)';
+delta_tr_sc = r_gp_params.delta_tr_sc;
+delta_tr_sca = [delta_tr_sc;0];
+del_inv_K = solve_chol(R_del_sca, delta_tr_sca)';
 del_inv_K_Ups_inv_K_r_sa = del_inv_K * solve_chol(R_r_sa, Ups_sc_sa')';
 
 n_sa = del_inv_K_Ups_inv_K_r_sa + ups_inv_K_r_sa;
@@ -292,7 +292,7 @@ K_r_s_a = r_sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
 invR_K_r_s_a = linsolve(R_r_s, K_r_s_a, lowr);                
 K_invK_a_s = linsolve(R_r_s, invR_K_r_s_a, uppr)';
 
-minty_del = ups_inv_K_del_sca * Delta_tr_sca;
+minty_del = ups_inv_K_del_sca * delta_tr_sca;
 
 n_a = n_sa(num_sa);
 % zero prior mean

@@ -38,9 +38,9 @@ default_opt = struct('num_c', 100,... % number of candidate points
                     'gamma_const', 100, ... % numerical scaling factor
                     'num_box_scales', 5, ... % defines the box over which to take candidates
                     'allowed_cond_error',10^-14, ... % allowed conditioning error
-                    'update', false, ... % update log_evidence with a single new point
-                    'print', true);
+                    'update', false); % update log_evidence with a single new point
                 
+% assign default values to any unassigned options
 names = fieldnames(default_opt);
 for i = 1:length(names);
     name = names{i};
@@ -86,11 +86,14 @@ else
     
 end
 
-% prior_sds_stack = reshape(prior_sds, 1, 1, num_sample_dims);
+% create stacks of the standard deviations and variances of the priors for
+% each hyperparameter
 prior_var = prior_sds.^2;
 prior_sds_stack = reshape(prior_sds, 1, 1, num_sample_dims);
 prior_var_stack = reshape(prior_var, 1, 1, num_sample_dims);
 
+% rescale all log-likelihood values for numerical accuracy; we'll correct
+% for this at the end of the function
 [max_log_r_s, max_ind] = max(log_sample_values);
 log_sample_values = log_sample_values - max_log_r_s;
 r_s = exp(log_sample_values);
@@ -277,7 +280,7 @@ Ups_r_r = r_sqd_output_scale^2 * ...
                 + prior_var_times_sqd_dist_stack_sc(1:num_samples, 1:num_samples, :)...
                 ),3));
 Ups_inv_K_r_r = solve_chol(R_r_s, Ups_r_r')';
-
+inv_R_Ups_inv_K_r_r_s = R_r_s'\(Ups_inv_K_r_r * r_s);
 
 % some code to test that this construction works          
 % Lambda = diag(prior_sds.^2);
@@ -287,8 +290,7 @@ Ups_inv_K_r_r = solve_chol(R_r_s, Ups_r_r')';
 % 
 % Ups_qd_r_test = @(i,j) qd_sqd_output_scale * r_sqd_output_scale *...
 %     mvnpdf([hs_s(i,:)';hs_s(j,:)'],[prior_means';prior_means'],mat);
-            
-
+%
 % As = [hs_sc_minus_mean_stack(3,:);hs_sc_minus_mean_stack(4,:)];
 % Bs = 0*[prior_means';prior_means'];
 % scalesss = [input_scales;del_input_scales].^2;
@@ -305,31 +307,55 @@ tilde = @(x, gamma_x) log(bsxfun(@rdivide, x, gamma_x) + 1);
 gamma_r = opt.gamma_const;
 tr_s = tilde(r_s, gamma_r);
 
+% Generally, we don't have to worry about output scales that much, as they
+% cancel. For example, we never need the output scale of delta.
+% Unfortunately, we do need them when we are computing the variance. Below
+% is a cheap hack to estimate the output scales over the transformed
+% likelihoods. The plus eps bit is to manage the variance=0 resulting from
+% a single sample.
+tr_sqd_output_scale = r_sqd_output_scale * (var(tr_s)+eps)/(var(r_s)+eps);
+
 lowr.UT = true;
 lowr.TRANSA = true;
 uppr.UT = true;
 
-two_thirds_r = linsolve(R_r_s,linsolve(R_r_s, K_r_s_sc, lowr), uppr)';
-mean_r_sc =  two_thirds_r * r_s;
-mean_tr_sc = two_thirds_r * tr_s;
+K_inv_K_r_sc_s = linsolve(R_r_s,linsolve(R_r_s, K_r_s_sc, lowr), uppr)';
+mean_r_sc =  K_inv_K_r_sc_s * r_s;
+mean_tr_sc = K_inv_K_r_sc_s * tr_s;
 
 % use a crude thresholding here as our tilde transformation will fail if
 % the mean goes below zero
 mean_r_sc = max(mean_r_sc, eps);
-Delta_tr_sc = mean_tr_sc - tilde(mean_r_sc, gamma_r);
 
-del_inv_K = solve_chol(R_del_sc, Delta_tr_sc)';
-tr_inv_K = solve_chol(R_del_sc, mean_tr_sc)';
 
+% the difference between the mean of the transformed (log) likelihood and
+% the transform of the mean likelihood
+delta_tr_sc = mean_tr_sc - tilde(mean_r_sc, gamma_r);
+
+del_inv_K = solve_chol(R_del_sc, delta_tr_sc)';
+tr_inv_K = solve_chol(R_r_s, tr_s)';
+
+% mean of int r(hs) p(hs) dhs given r_s
 minty_r = ups_inv_K_r * r_s;
+
+% mean of int delta(hs) r(hs) p(hs) dhs given r_s and delta_tr_sc
 minty_del_r = del_inv_K * Ups_inv_K_del_r * r_s;
-minty_tr_r = tr_inv_K * Ups_inv_K_del_r * r_s;
+
+% mean of int tilde(r)(hs) r(hs) p(hs) dhs given r_s and tr_s 
+minty_tr_r = tr_inv_K * Ups_inv_K_r_r * r_s;
+
+% mean of int tilde(r)_0(hs) r(hs) p(hs) dhs given r_s and tr_s 
 minty_tr0_r = minty_tr_r - minty_del_r;
-minty_del = ups_inv_K_del * Delta_tr_sc;
+
+% mean of int delta(hs) p(hs) dhs given r_s and delta_tr_sc 
+minty_del = ups_inv_K_del * delta_tr_sc;
+
+% the correction factor due to r being non-negative
 correction = minty_del_r + gamma_r * minty_del;
 
-Cinty_l = chi_r - ups_inv_K_r * ups_r_s;
-inv_R_Ups_inv_K_r_r_s = R_r_s'\(Ups_inv_K_r_r * r_s);
+% variance of int tilde(r)(hs) p(hs) dhs given r_s
+Vinty_r = chi_r - ups_inv_K_r * ups_r_s;
+
 
 % mean ev has been determined using the rescaled log-likelihoods (that have
 % had the maximum log likelihood subtracted off), we return correct values
@@ -337,32 +363,43 @@ inv_R_Ups_inv_K_r_r_s = R_r_s'\(Ups_inv_K_r_r * r_s);
 mean_ev = minty_r + correction;
 log_mean_evidence = max_log_r_s + log(mean_ev);
 
-mean_second_moment = (minty_tr_r + gamma_r)^2 ...
-             + gamma_r^2 * Cinty_l ...
+% (int dpsi_0/dtr(hs) m_{tr|s}(hs) dhs)^2
+A = (minty_tr_r + gamma_r)^2;
+
+% int int dpsi_0/dtr(hs) dpsi_0/dtr(hs') C_{tr|s}(hs, hs') dhs
+% Note that this is the only term sensitive to the output scale for the
+% transformed likelihood, tr: we simply rescale to account for it.
+B = tr_sqd_output_scale/r_sqd_output_scale...
+             * (gamma_r^2 * Vinty_r ...
              + 2 * gamma_r * (ups2_inv_K_r * r_s ...
                     - ups_inv_K_r * Ups_inv_K_r_r * r_s) ...
              + r_inv_K_chi3_inv_K_r ...
-             - sum(inv_R_Ups_inv_K_r_r_s.^2) ...
-             + 2*(minty_tr_r + gamma_r)*(minty_r - minty_tr0_r - gamma_r) ...
-             + (minty_r - minty_tr0_r - gamma_r)^2;
+             - sum(inv_R_Ups_inv_K_r_r_s.^2)...
+                );
+            
+% 2 (int dpsi_0/dtr(hs) m_{tr|s}(hs) dhs) * ...
+%       (psi_0 - int dpsi_0/dtr(hs) tr_0(hs) dhs)
+C = 2*(minty_tr_r + gamma_r)*(minty_r - minty_tr0_r - gamma_r);
+
+% (psi_0 - int dpsi_0/dtr(hs) tr_0(hs) dhs)^2
+D = (minty_r - minty_tr0_r - gamma_r)^2;
+
+% int (psi_0 + int dpsi_0/dtr(hs) (tr(hs) - tr_0(hs)) dhs ...
+%                   N(tr; m_{tr|s}, C_{tr|s}) dtr
+mean_second_moment =  A + B + C + D;
 log_mean_second_moment = 2*max_log_r_s + log(mean_second_moment);
 
 var_ev = mean_second_moment - mean_ev.^2;
 log_var_evidence = 2*max_log_r_s + log(var_ev);
 
-r_gp_params.hs_c = candidate_locations;
-r_gp_params.sqd_dist_stack_s = sqd_dist_stack_s;
 
-r_gp_params.R_r_s = R_r_s;
-r_gp_params.K_r_s = K_r_s;
-r_gp_params.ups_r_s = ups_r_s;
-
-r_gp_params.R_del_sc = R_del_sc;
-r_gp_params.K_del_sc = K_del_sc;
-r_gp_params.ups_del_sc = ups_del_sc;
-
-r_gp_params.Delta_tr_sc = Delta_tr_sc;
-
-r_gp_params.log_mean_second_moment = log_mean_second_moment;
-
-r_gp_params.Ups_sc_s = Ups_del_r;
+% Store a lot of stuff in the r_gp_params structure, candidate_locations
+% and Ups_del_r have different names in other files. 
+hs_c = candidate_locations;
+Ups_sc_s = Ups_del_r;
+names = {'hs_c', 'sqd_dist_stack_s', 'R_r_s', 'K_r_s', 'ups_r_s', ...
+    'R_del_sc', 'K_del_sc', 'ups_del_sc', 'delta_tr_sc', ...
+    'log_mean_second_moment', 'Ups_sc_s'};
+for i = 1:length(names)
+    r_gp_params.(names{i}) = eval(names{i});
+end

@@ -11,7 +11,7 @@ log_r_fn = @(x) log(normf(x,r_mean1,r_sd1)+normf(x,r_mean2,r_sd2));
 
 prior_struct.mean = 0;
 prior_struct.covariance = 1;
-opt.print=2;
+opt.print = 2;
 opt.num_retrains = 5;
 opt.train_gp_time = 20;
 opt.num_samples = 50;

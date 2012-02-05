@@ -1,6 +1,6 @@
 function K = gTcov(fnName,hp,grad_hp_inds,varargin)
 % Gradient of stationary covariance functions with
-% respect to input scales
+% respect to log input scales
 
 process_cov_inputs;
 
@@ -20,7 +20,9 @@ if iscell(fnName)
     end
 else % assume non-periodic
     rdr=mat2cell2d(...
-        bsxfun(@rdivide,sqd_diffs(:,grad_hp_inds),InputScale(grad_hp_inds).^2),...
+        - bsxfun(@rdivide,...
+        sqd_diffs(:,grad_hp_inds),...
+        InputScale(grad_hp_inds).^2),...
         NData,ones(1,length(grad_hp_inds)))';
 end
 %Each element of the cell array dr represents the derivative with respect
