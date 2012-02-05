@@ -32,7 +32,7 @@ if nargin < 3
 end
 
 % Get sample locations from a run of AIS.
-[ais_mean_log_evidence, ais_var_log_evidence, samples, sample_vals, ais_weights] = ...
+[ais_mean_log_evidence, ais_var_log_evidence, samples, sample_vals] = ...
     ais_mh(loglik_fn, prior, opt);
 
 % Now call BMC using the exp of those samples.
@@ -42,5 +42,5 @@ end
 % Convert the distribution over the evidence into a distribution over the
 % log-evidence by moment matching.
 var_log_evidence = log( var_evidence / mean_evidence^2 + 1 );
-mean_log_evidence = log(mean_evidence) - 0.5*var_log_evidence;
+mean_log_evidence = log(mean_evidence);% - 0.5*var_log_evidence;
 end

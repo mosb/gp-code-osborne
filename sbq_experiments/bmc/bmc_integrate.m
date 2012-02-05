@@ -25,7 +25,7 @@ if nargin < 4; covfunc = @covSEiso; end
 if nargin < 5
     hypers_init.mean = [];
     hypers_init.lik = log(0.01);
-    hypers_init.cov = log([1 1]);
+    hypers_init.cov = log( [ 1 1] );%log([ones(1, D) 1]);
 end
 if nargin < 6; learn_hypers = true; end
 

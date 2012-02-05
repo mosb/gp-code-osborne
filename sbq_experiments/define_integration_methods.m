@@ -22,26 +22,26 @@ function methods = define_integration_methods()
 smc_method.nicename = 'Simple Monte Carlo';
 smc_method.uniquename = 'simple monte carlo v1';
 smc_method.acronym = 'SMC';
-smc_method.function = @simple_monte_carlo;
+smc_method.function = @online_smc;%@simple_monte_carlo;
 smc_method.opt = [];
 
 ais_method.nicename = 'Annealed Importance Sampling';
 ais_method.uniquename = 'annealed importance sampling v1';
 ais_method.acronym = 'AIS';
-ais_method.function = @ais_mh;
+ais_method.function = @online_ais_mh; %@ais_mh;
 ais_method.opt = [];
+
+bmc_method.nicename = 'Vanilla Bayesian Monte Carlo';
+bmc_method.uniquename = 'vanilla bayesian monte carlo v1';
+bmc_method.acronym = 'BMC';
+bmc_method.function = @online_bmc; %@bmc;
+bmc_method.opt = [];
 
 sbq_method.nicename = 'Sequential Bayesian Quadrature';
 sbq_method.uniquename = 'sequential bayesian quadrature v1';
 sbq_method.acronym = 'SBQ';
 sbq_method.function = @sbq;
 sbq_method.opt = [];
-
-bmc_method.nicename = 'Vanilla Bayesian Monte Carlo';
-bmc_method.uniquename = 'vanilla bayesian monte carlo v1';
-bmc_method.acronym = 'BMC';
-bmc_method.function = @bmc;
-bmc_method.opt = [];
 
 
 % Specify integration methods.

@@ -1,4 +1,4 @@
-function [mean_log_evidence, var_log_evidence, samples, sample_vals, weights] = ...
+function [mean_log_evidence, var_log_evidence, samples, sample_vals, stats] = ...
     ais_mh(loglik_fn, prior, opt)
 % Annealed Importance Sampling w.r.t. a Gaussian prior
 % using a Metropolis-Hastings sampler with a Gaussian proposal distribution.
@@ -19,6 +19,8 @@ function [mean_log_evidence, var_log_evidence, samples, sample_vals, weights] = 
 %   opt: takes fields:
 %        * num_samples: the number of samples to draw.
 %        * proposal_covariance
+%        * learn_proposal: if true, calls ais_mh to tune the acceptance ratio
+%                          to approximately
 % 
 % Outputs:
 %   mean_log_evidence: the mean of our poterior over the log of the evidence.
@@ -26,7 +28,9 @@ function [mean_log_evidence, var_log_evidence, samples, sample_vals, weights] = 
 %                     evidence.
 %   samples: n*d matrix of the locations of the samples.
 %   sample_vals:
-%   weights: n*1 list of weights.
+%   stats: a struct of stats about the run, containing:
+%          * weights: n*1 list of weights.
+%          * acceptance ratio.
 %
 %
 % David Duvenaud
@@ -56,6 +60,7 @@ samples = nan(opt.num_samples, numel(prior.mean));
 % Start with a sample from the prior.
 cur_pt = mvnrnd( prior.mean, prior.covariance );
 
+num_accepts = 1;
 for t = 2:length(temps)
     
     % Compute MH proposal.
@@ -66,7 +71,8 @@ for t = 2:length(temps)
     % Possibly take a MH step.
     ratio = exp(proposal_ll - cur_pt_ll);
     if ratio > 1 || ratio > rand
-        cur_pt = proposal;        % Accept new state.
+        num_accepts = num_accepts + 1;
+        cur_pt = proposal;
     end
 
     % Compute weights.
@@ -74,6 +80,9 @@ for t = 2:length(temps)
     weights(t) = sample_vals(t) * (temps(t) - temps(t - 1));
     samples(t, :) = cur_pt;
 end
+
+stats.acceptance_ratio = num_accepts / length(temps);
+fprintf('\nAcceptance ratio: %f \n', stats.acceptance_ratio);
 
 weights(1) = [];
 samples(1, :) = [];

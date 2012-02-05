@@ -25,14 +25,14 @@ if skip
 end
 
 % Save the text output.
-status = mkdir(outdir);
+if ~exist([pwd '/' outdir], 'dir'); mkdir(outdir); end
 diary( [filename '.txt' ] );
 
 fprintf('\n\nRunning\n');
 fprintf('          Method: %s\n', method.uniquename );
 fprintf('         Problem: %s\n', problem.name );
 fprintf('     Num Samples: %d\n', nsamples );
-fprintf('       Repitiion: %d\n', repitition );
+fprintf('      Repitition: %d\n', repitition );
 fprintf('     Description: %s\n', problem.description );
 fprintf('Output directory: %s\n', outdir );
 fprintf(' Output filename: %s\n\n', filename );
@@ -49,24 +49,24 @@ fprintf(' Output filename: %s\n\n', filename );
     timestamp = now; tic;    % Start timing.
         
     % Run the experiment.
-    [mean_log_evidence, var_log_evidence, samples] = ...
+    [mean_log_evidences, var_log_evidences, samples] = ...
         method.function(problem.log_likelihood_fn, problem.prior, opt);
     
     total_time = toc;        % Stop timing
 
     % Save all the results.        
     save( filename, 'timestamp', 'total_time', ...
-          'mean_log_evidence', 'var_log_evidence', 'samples', ...
+          'mean_log_evidences', 'var_log_evidences', 'samples', ...
           'problem', 'method', 'outdir', 'opt', 'repitition' );
       
     fprintf('\nCompleted experiment.\n\n');
     fprintf('True log evidence:  %d\n', problem.true_log_evidence );
-    fprintf('Estimated log evidence:  %d\n', mean_log_evidence );
-    fprintf('Estimated variance in log evidence:  %d\n', var_log_evidence );
+    fprintf('Estimated log evidence:  %d\n', mean_log_evidences(end) );
+    fprintf('Estimated variance in log evidence:  %d\n', var_log_evidences(end) );
     fprintf('\nTotal time taken in seconds:  %f\n', total_time );
     fprintf('\n\nSaved to %s\n', filename );
-% catch
-%     err = lasterror
-%     msg = err.message
-% end
+ %catch
+ %    err = lasterror
+ %    msg = err.message
+ %end
 diary off

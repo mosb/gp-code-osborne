@@ -11,19 +11,22 @@ tabledirshort = 'tables/';
 plotdir = [paper_dir plotdirshort];
 tabledir = [paper_dir tabledirshort];
 
+min_samples = 5; % The minimum number of examples before we start making plots.
+
 fprintf('Compiling all results...\n');
 autocontent_filename = [paper_dir 'autocontent.tex'];
 fprintf('All content listed in %s\n', autocontent_filename);
 autocontent = fopen(autocontent_filename, 'w');
 fprintf(autocontent, '\\documentclass{article}\\usepackage{preamble}\\usepackage{morefloats}\\usepackage{pgfplots}\\newlength\\fheight\\newlength\\fwidth \\begin{document}');
 addpath(genpath(pwd))
-status = mkdir(plotdir);
-status = mkdir(tabledir);
+if ~exist([pwd '/' plotdir], 'dir'); mkdir(plotdir); end
+if ~exist([pwd '/' tabledir], 'dir'); mkdir(tabledir); end
 
 % Get experimental configuration from the definition scripts.
 problems = define_integration_problems();
 methods = define_integration_methods();
-sample_sizes = define_sample_sizes();
+%sample_sizes = 
+sample_sizes = 1:define_sample_sizes();
 
 num_problems = length(problems);
 num_methods = length(methods);
@@ -41,34 +44,35 @@ for p_ix = 1:num_problems
     fprintf('\nCompiling results for %s...\n', problems{p_ix}.name );
     for m_ix = 1:num_methods
         fprintf( '%6s |', methods{m_ix}.acronym);
-        for s_ix = 1:num_sample_sizes
-            for r = 1:num_repititions
-                try
-                    % Load one results file.
-                    % These are written in run_one_experiment.m.
-                    filename = run_one_experiment( problems{p_ix}, methods{m_ix}, sample_sizes(s_ix), r, results_dir, true );
-                    results = load( filename );
 
-                    % Now save all relevant results into tables.
+        for r = 1:num_repititions
+            try
+                % Load one results file.
+                % These are written in run_one_experiment.m.
+                filename = run_one_experiment( problems{p_ix}, methods{m_ix}, sample_sizes(end), r, results_dir, true );
+                results = load( filename );
 
+                % Now save all relevant results into tables.
+                for s_ix = 1:num_sample_sizes
                     timing_table(m_ix, p_ix, s_ix, r) = results.total_time;
-                    mean_log_ev_table(m_ix, p_ix, s_ix, r) = results.mean_log_evidence;
-                    var_log_ev_table(m_ix, p_ix, s_ix, r) = results.var_log_evidence;
+                    mean_log_ev_table(m_ix, p_ix, s_ix, r) = results.mean_log_evidences(s_ix);
+                    var_log_ev_table(m_ix, p_ix, s_ix, r) = results.var_log_evidences(s_ix);
                     true_log_ev_table(m_ix, p_ix, s_ix, r) = results.problem.true_log_evidence;
-
-                    if isnan(results.mean_log_evidence) || isnan(results.var_log_evidence)
-                        fprintf('N');
-                    else
-                        fprintf('O');       % O for OK.e
-                    end
-                catch
-                    %disp(lasterror);
-                    fprintf('X');       % Never even finished.
-                    num_missing = num_missing + 1;
                 end
+                if any(isnan(results.mean_log_evidences(min_samples:end))) ...
+                        || any(isnan(results.var_log_evidences((min_samples:end))))
+                    fprintf('N');
+                else
+                    fprintf('O');       % O for OK
+                end
+            catch
+                %disp(lasterror);
+                fprintf('X');       % Never even finished.
+                num_missing = num_missing + 1;
             end
-            fprintf(' ');
         end
+        fprintf(' ');
+        
         fprintf('\n');
     end
     fprintf('\n');
@@ -78,7 +82,8 @@ method_names = cellfun( @(method) method.acronym, methods, 'UniformOutput', fals
 problem_names = cellfun( @(problem) problem.name, problems, 'UniformOutput', false );
 
 % Print tables.
-print_table( 'time taken (s)', problem_names, method_names, squeeze(timing_table(:,:,end,1))' );
+print_table( 'time taken (s)', problem_names, method_names, ...
+    squeeze(timing_table(:,:,end,1))' );
 fprintf('\n\n');
 print_table( 'mean_log_ev', problem_names, { method_names{:}, 'Truth' }, ...
     [ squeeze(mean_log_ev_table(:,:,end, 1))' true_log_ev_table(1, :, end, 1)' ] );
@@ -88,17 +93,19 @@ print_table( 'var_log_ev', problem_names, method_names, ...
 
 
 % Save tables.
-latex_table( [tabledir, 'times_taken.tex'], squeeze(timing_table(:,:,end,1))', problem_names, method_names, 'time taken (s)' );
+latex_table( [tabledir, 'times_taken.tex'], squeeze(timing_table(:,:,end,1))', ...
+    problem_names, method_names, 'time taken (s)' );
 fprintf(autocontent, '\\input{%s}\n', [tabledirshort, 'times_taken.tex']);
 
-se = bsxfun(@minus, mean_log_ev_table(:,:,5, 1)', true_log_ev_table(1, :, 5, 1)').^2;
-latex_table( [tabledir, 'se.tex'], se, problem_names, method_names, 'squared error at 50 samples' );
+se = bsxfun(@minus, mean_log_ev_table(:,:,end, 1)', true_log_ev_table(1, :, end, 1)').^2;
+latex_table( [tabledir, 'se.tex'], se, problem_names, method_names, ...
+    sprintf('squared error at %i samples', sample_sizes(end)) );
 fprintf(autocontent, '\\input{%s}\n', [tabledirshort, 'se.tex']);
 
 for p_ix = 1:num_problems
     for m_ix = 1:num_methods
         r = 1;
-        s = 5;%num_sample_sizes;
+        s = sample_sizes(end);
         true_log_evidence = true_log_ev_table( 1, p_ix, s, r );
         mean_prediction = mean_log_ev_table( m_ix, p_ix, s, r );
         var_prediction = var_log_ev_table( m_ix, p_ix, s, r );
@@ -109,7 +116,8 @@ for p_ix = 1:num_problems
         end
     end
 end
-latex_table( [tabledir, 'truth_prob.tex'], -log_liks', problem_names, method_names, 'neg density of truth at 50 samples' );
+latex_table( [tabledir, 'truth_prob.tex'], -log_liks', problem_names, ...
+     method_names, sprintf('neg density of truth at %i samples', sample_sizes(end)) );
 fprintf(autocontent, '\\input{%s}\n', [tabledirshort, 'truth_prob.tex']);
 
 
@@ -140,6 +148,9 @@ fprintf(autocontent, '\n\\begin{figure}\n\\centering\\setlength\\fheight{3cm}\\s
 
 % Plot log likelihood of true answer, versus number of samples
 % ===============================================================
+plotted_sample_set = min_samples:num_sample_sizes;
+figure_string = '\n\\begin{figure}\n\\centering\\setlength\\fheight{4cm}\\setlength\\fwidth{4cm}\\input{%s}\n\\end{figure}\n';
+
 for chosen_problem_ix = 1:num_problems
     cur_problem_name = problem_names{chosen_problem_ix};
     figure; clf;
@@ -147,13 +158,15 @@ for chosen_problem_ix = 1:num_problems
     try
         for m_ix = 1:num_methods
             for r = 1:num_repititions
-                for s = 1:num_sample_sizes
+                for s = plotted_sample_set
                     true_log_evidence = true_log_ev_table( 1, chosen_problem_ix, s, r );
                     mean_prediction = mean_log_ev_table( m_ix, chosen_problem_ix, s, r );
                     var_prediction = var_log_ev_table( m_ix, chosen_problem_ix, s, r );
                     neg_log_liks(s) = logmvnpdf(true_log_evidence, mean_prediction, var_prediction);
                 end
-                z_handle(m_ix) = plot( sample_sizes, neg_log_liks, '-', 'Color', color( m_ix, 1:3), 'LineWidth', 1); hold on;
+                z_handle(m_ix) = plot( plotted_sample_set, ...
+                    neg_log_liks(plotted_sample_set), '-', ...
+                    'Color', color( m_ix, 1:3), 'LineWidth', 1); hold on;
             end
         end
         xlabel('Number of samples');
@@ -163,8 +176,9 @@ for chosen_problem_ix = 1:num_problems
         %ylim([-3 3 ]);
 
         filename = sprintf('log_of_truth_plot_%s.tikz', strrep(cur_problem_name, ' ', '_'));
-        matlab2tikz( [plotdir filename], 'height', '\fheight', 'width', '\fwidth', 'showInfo', false, 'showWarnings', false );
-        fprintf(autocontent, '\n\\begin{figure}\n\\centering\\setlength\\fheight{4cm}\\setlength\\fwidth{4cm}\\input{%s}\n\\end{figure}\n', [plotdirshort filename]);    
+        matlab2tikz( [plotdir filename], 'height', '\fheight', 'width', ...
+            '\fwidth', 'showInfo', false, 'showWarnings', false );
+        fprintf(autocontent, figure_string, [plotdirshort filename]);    
     catch e
         %e
     end
@@ -180,13 +194,15 @@ for chosen_problem_ix = 1:num_problems
     try
         for m_ix = 1:num_methods
             for r = 1:num_repititions
-                for s = 1:num_sample_sizes
+                for s = min_samples:num_sample_sizes
                     true_log_evidence = true_log_ev_table( 1, chosen_problem_ix, s, r );
                     mean_prediction = mean_log_ev_table( m_ix, chosen_problem_ix, s, r );
                     var_prediction = var_log_ev_table( m_ix, chosen_problem_ix, s, r );
                     squared_error(s) = (true_log_evidence - mean_prediction)^2;
                 end
-                z_handle(m_ix) = semilogy( sample_sizes, squared_error, '-', 'Color', color( m_ix, 1:3), 'LineWidth', 1); hold on;
+                z_handle(m_ix) = semilogy( plotted_sample_set, ...
+                    squared_error(plotted_sample_set), '-',...
+                    'Color', color( m_ix, 1:3), 'LineWidth', 1); hold on;
             end
         end
         xlabel('Number of samples');
@@ -196,8 +212,9 @@ for chosen_problem_ix = 1:num_problems
         %ylim([-3 3 ]);
 
         filename = sprintf('se_plot_%s.tikz', strrep(cur_problem_name, ' ', '_'));
-        matlab2tikz( [plotdir filename], 'height', '\fheight', 'width', '\fwidth', 'showInfo', false, 'showWarnings', false );
-        fprintf(autocontent, '\n\\begin{figure}\n\\centering\\setlength\\fheight{4cm}\\setlength\\fwidth{4cm}\\input{%s}\n\\end{figure}\n', [plotdirshort filename]);    
+        matlab2tikz( [plotdir filename], 'height', '\fheight', ...
+            'width', '\fwidth', 'showInfo', false, 'showWarnings', false );
+        fprintf(autocontent, figure_string, [plotdirshort filename]);    
     catch e
         %e
     end
@@ -219,23 +236,27 @@ for chosen_problem_ix = 1:num_problems
                                                           :, chosen_repetition ))';
             var_predictions = squeeze(var_log_ev_table( m_ix, chosen_problem_ix, ...
                                                           :, chosen_repetition ))';
-            jbfill(sample_sizes, mean_predictions + 2.*sqrt(var_predictions), ...
-                                 mean_predictions - 2.*sqrt(var_predictions), ...
+            jbfill(plotted_sample_set, mean_predictions(plotted_sample_set) + 2.*sqrt(var_predictions(plotted_sample_set)), ...
+                                 mean_predictions(plotted_sample_set) - 2.*sqrt(var_predictions(plotted_sample_set)), ...
                                  color(m_ix,1:3), edgecolor, 1, opacity); hold on;
-            z_handle(m_ix) = plot( sample_sizes, mean_predictions, '-', 'Color', sqrt(color( m_ix, 1:3) ), 'LineWidth', 1); hold on;
+            z_handle(m_ix) = plot( plotted_sample_set, ...
+                mean_predictions(plotted_sample_set), '-', ...
+                'Color', sqrt(color( m_ix, 1:3) ), 'LineWidth', 1); hold on;
         end
 
         true_log_evidence = squeeze(true_log_ev_table( 1, chosen_problem_ix, ...
                                                           :, chosen_repetition ))';
-        truth_handle = plot( sample_sizes, true_log_evidence, 'k-', 'LineWidth', 1); hold on;
+        truth_handle = plot( plotted_sample_set, ...
+            true_log_evidence(plotted_sample_set), 'k-', 'LineWidth', 1); hold on;
         xlabel('Number of samples');
         ylabel('log evidence');
         title(cur_problem_name);
         %legend([z_handle, truth_handle], {method_names{:}, 'True value'} );
 
         filename = sprintf('varplot_%s.tikz', strrep(cur_problem_name, ' ', '_'));
-        matlab2tikz( [plotdir filename], 'height', '\fheight', 'width', '\fwidth', 'showInfo', false, 'showWarnings', false );
-        fprintf(autocontent, '\n\\begin{figure}\n\\centering\\setlength\\fheight{4cm}\\setlength\\fwidth{4cm}\\input{%s}\n\\end{figure}\n', [plotdirshort filename]);    
+        matlab2tikz( [plotdir filename], 'height', '\fheight', ...
+            'width', '\fwidth', 'showInfo', false, 'showWarnings', false );
+        fprintf(autocontent, figure_string, [plotdirshort filename]);    
     catch e
         %e
     end
@@ -245,4 +266,4 @@ end
 fprintf(autocontent, '\n\n\\end{document}');
 fclose(autocontent);
 
-close all;
+%close all;

@@ -23,7 +23,7 @@ end
 % This is maximum digits left of the dot AFTER shifting the column over by
 % the exponent from fixMatrix(). Note that MaxLeftDigits is not the same as
 % maxSigFigs.
-maxLeftDigits = 1;
+maxLeftDigits = 3;
 maxClip = 10 ^ maxLeftDigits;
 
 [methods metrics] = size(meanScore);
@@ -59,7 +59,7 @@ fprintf(file, '%s\n', experimentName);
 fprintf(file, '}}\n');
 fprintf(file, '\\label{tbl:%s}\n', experimentName);
 fprintf(file, '\\begin{center}\n');
-fprintf(file, '\\begin{tabular}{l |%s}\n', repmat(' r', 1, metrics));
+fprintf(file, '\\begin{tabular}{l %s}\n', repmat(' r', 1, metrics));
 
 % first line
 fprintf(file, 'Integrand');
@@ -67,10 +67,12 @@ for ii = 1:metrics
   fprintf(file, ' & \\rotatebox{0}{ %s } ', metricNames{ii});
   
   % We don't want the clip to be so small even the best method gets clipped
-  orderMagBest = exp10(2+ceil(log10(max(min(meanScore(:, ii)), 0))));
+  orderMagBest = exp10(2+ceil(log10(max(min(meanScore(jj, :)'), 0))));
   maxClipCol(ii) = max(maxClip, orderMagBest);
 end
-fprintf(file, ' \\\\ \\hline\n');
+%fprintf(file, ' \\\\ \\hline\n');
+fprintf(file, ' \\\\ \\midrule\n');   % Using booktabs
+
 
 % for each method
 for ii = 1:methods

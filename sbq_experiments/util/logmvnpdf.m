@@ -12,6 +12,13 @@ logp = (-dim/2)*log(2*pi) + (-.5)*logdetcov +...
 end
 
 function ld = logdet(K)
-    % returns the log-determinant of posdef matrix K
-    ld = 2*sum(log(diag(chol(K))));
+    % returns the log-determinant of posdef matrix K.
+    
+    % This is horribly slow.
+    ld = NaN;
+    try
+        ld = 2*sum(log(diag(chol(K))));
+    catch e
+        e
+    end
 end
