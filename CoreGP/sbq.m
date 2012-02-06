@@ -1,5 +1,5 @@
 function [mean_log_evidences, var_log_evidences, all_sample_locations, r_gp] = ...
-    sbq(log_r_fn, prior_struct, opt)
+    sbq(log_likelihood_fn, prior, opt)
 % Take samples samples_mat so as to best estimate the
 % evidence, an integral over exp(log_r_fn) against the prior in prior_struct.
 % 
@@ -11,8 +11,8 @@ function [mean_log_evidences, var_log_evidences, all_sample_locations, r_gp] = .
 % 
 % INPUTS
 % - start_pt: 1*n vector expressing starting point for algorithm
-% - log_r_fn: a function that takes a single argument, a 1*n vector of
-%             hyperparameters, and returns the log of the likelihood
+% - log_likelihood_fn: a function that takes a single argument, a 1*n vector of
+%                      hyperparameters, and returns the log of the likelihood.
 % - prior_struct: requires fields
 %                 * means
 %                 * sds
@@ -50,7 +50,7 @@ elseif ~isstruct(opt)
     opt.num_samples = num_samples;
 end
 
-sample_dimension = numel(prior_struct.mean);
+sample_dimension = numel(prior.mean);
 
 % Set unspecified fields to default values.
 default_opt = struct('num_samples', 300, ...
@@ -91,8 +91,8 @@ retrain_inds = intlogspace(ceil(opt.num_samples/10), ...
 retrain_inds(end) = inf;
 
 % Define the box with which to bound the selection of samples.
-lower_bound = prior_struct.mean - 5*sqrt(diag(prior_struct.covariance))';
-upper_bound = prior_struct.mean + 5*sqrt(diag(prior_struct.covariance))';
+lower_bound = prior.mean - 5*sqrt(diag(prior.covariance))';
+upper_bound = prior.mean + 5*sqrt(diag(prior.covariance))';
 direct_opts.maxevals = opt.exp_loss_evals;
 direct_opts.showits = 0;
 bounds = [lower_bound; upper_bound]';
@@ -111,11 +111,11 @@ for i = 1:opt.num_samples
     % Update sample structs.
     % ==================================
     all_sample_locations(i,:) = next_sample_point;          % Record the current sample location.
-    all_sample_values(i,:) = log_r_fn(next_sample_point);   % Sample the integrand at the new point.
+    all_sample_values(i,:) = log_likelihood_fn(next_sample_point);   % Sample the integrand at the new point.
 
     % Grab all existing function samples and put them in a struct.
     samples = struct();
-    samples.samples = all_sample_locations(1:i, :);
+    samples.locations = all_sample_locations(1:i, :);
     samples.log_r = all_sample_values(1:i,:);
     samples.scaled_r = exp(samples.log_r - max(samples.log_r));
     
@@ -128,17 +128,17 @@ for i = 1:opt.num_samples
         % Set up GP without training it, because there's not enough data.
         gp_train_opt.optim_time = 0;
         [r_gp, quad_r_gp] = train_gp('sqdexp', 'constant', [], ...
-                                     samples.samples, samples.scaled_r, gp_train_opt);
+                                     samples.locations, samples.scaled_r, gp_train_opt);
         gp_train_opt.optim_time = opt.train_gp_time;
         
     elseif retrain_now
         % Retrain gp.
         [r_gp, quad_r_gp] = train_gp('sqdexp', 'constant', r_gp, ...
-                                     samples.samples, samples.scaled_r, gp_train_opt);
+                                     samples.locations, samples.scaled_r, gp_train_opt);
         retrain_inds(1) = [];   % Move to next retraining index. 
     else
         % for hypersamples that haven't been moved, update
-        r_gp = revise_gp(samples.samples, samples.scaled_r, ...
+        r_gp = revise_gp(samples.locations, samples.scaled_r, ...
                          r_gp, 'update', i);
     end
     
@@ -176,7 +176,7 @@ for i = 1:opt.num_samples
             log_in_scale_means = log(r_gp_params.quad_input_scales);
 
             % Specify the likelihood function which we'll be taking the hessian of:
-            like_func = @(log_in_scale) exp(log_gp_lik2( samples.samples, ...
+            like_func = @(log_in_scale) exp(log_gp_lik2( samples.locations, ...
                 samples.scaled_r, ...
                 r_gp, ...
                 log(r_gp_params.quad_noise_sd), ...
@@ -197,7 +197,7 @@ for i = 1:opt.num_samples
             bad_sd_ixs = isinf(laplace_sds) | (imag(laplace_sds) > 0);
             if any(bad_sd_ixs)
                 warning('Infinite or positive lengthscales, Setting lengthscale variance to prior variance');
-                good_sds = sqrt(diag(prior_struct.covariance));
+                good_sds = sqrt(diag(prior.covariance));
                 laplace_sds(bad_sd_ixs) = good_sds(bad_sd_ixs);
             end
 
@@ -224,7 +224,7 @@ for i = 1:opt.num_samples
         end
     end
     
-    [log_ev, log_var_ev, r_gp_params] = log_evidence(samples, prior_struct, r_gp_params, opt);
+    [log_ev, log_var_ev, r_gp_params] = log_evidence(samples, prior, r_gp_params, opt);
 
     
     % Choose the next sample point.
@@ -232,8 +232,8 @@ for i = 1:opt.num_samples
     if i < opt.num_samples  % Except for the last iteration,
         
         % Define the criterion to be optimized.
-        Problem.f = @(hs_a) expected_uncertainty_evidence...
-                (hs_a', samples, prior_struct, r_gp_params, opt);
+        Problem.f = @(new_sample_location) expected_uncertainty_evidence...
+                (new_sample_location', samples, prior, r_gp_params, opt);
             
         if opt.plots && sample_dimension == 1
 
@@ -253,7 +253,7 @@ for i = 1:opt.num_samples
             figure(1234); clf;
             h_surface = plot(test_pts, losses, 'b'); hold on;           
             % Also plot previously chosen points.
-            test_pts = samples.samples;
+            test_pts = samples.locations;
             losses = nan(1, i);
             for loss_i=1:length(test_pts)
                 losses(loss_i) = Problem.f(test_pts(loss_i));

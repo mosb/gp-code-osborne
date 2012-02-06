@@ -1,14 +1,14 @@
 function [log_mean_evidence, log_var_evidence, r_gp_params] = ...
-    log_evidence(sample_struct, prior_struct, r_gp_params, opt)
+    log_evidence(samples, prior, r_gp_params, opt)
 % Returns the log-mean-evidence, and a structure r_gp_params to ease its
 % future computation.
 %
 % [log_mean_evidence, r_gp_params] = ...
 % evidence(sample_struct, prior_struct, r_gp_params, opt)
-% - sample_struct requires fields
+% - samples requires fields
 %     * samples
 %     * log_r
-% - prior_struct requires fields
+% - prior requires fields
 %     * means
 %     * sds
 % - (optional) input r_gp_params has fields
@@ -16,12 +16,6 @@ function [log_mean_evidence, log_var_evidence, r_gp_params] = ...
 %     * quad_noise_sd
 %     * quad_input_scales
 %
-% alternatively:
-% [log_mean_evidence, r_gp_params] = evidence(gp, [], r_gp_params, opt)
-% - gp requires fields:
-%     * hyperparams(i).priorMean
-%     * hyperparams(i).priorSD
-%     * hypersamples.logL
 %
 % - output r_gp_params has the same fields as input r_gp_params plus
 %     * hs_c
@@ -49,61 +43,28 @@ for i = 1:length(names);
     end
 end
 
-% If we have actually only added a single new sample at position opt.update,
+% Note: If we have actually only added a single new sample at position opt.update,
 % can do efficient sequential updates.
 % updating = isnumeric(opt.update);
 % for now, we recompute evidence from scratch each time
-
-if ~isempty(prior_struct)
-    % function called as
-    % evidence(sample_struct, prior_struct, r_gp_params, opt)
-    
-    sample_locations = sample_struct.samples;
-    log_sample_values = sample_struct.log_r;
-    
-    [num_samples, num_sample_dims] = size(sample_locations);
-    
-    prior_means = prior_struct.mean;
-    prior_sds = sqrt(diag(prior_struct.covariance))';
-    
-else
-    % function called as
-    % evidence(gp, [], r_gp_params, opt)
-    % rather than as advertised:
-    % evidence(sample_struct, prior_struct, r_gp_params, opt)
-    
-    gp = sample_struct;
-    
-    sample_locations = vertcat(gp.hypersamples.hyperparameters);
-    log_sample_values = vertcat(gp.hypersamples.logL);
-    
-    [num_samples, num_sample_dims] = size(sample_locations);
-    
-    prior_means = vertcat(gp.hyperparams.priorMean);
-    prior_sds = vertcat(gp.hyperparams.priorSD);
-    
-    clear gp;
-    
-end
+[num_samples, num_sample_dims] = size(samples.locations);
 
 % create stacks of the standard deviations and variances of the priors for
 % each hyperparameter
-prior_var = prior_sds.^2;
-prior_sds_stack = reshape(prior_sds, 1, 1, num_sample_dims);
+prior_var = diag(prior.covariance)';
+prior_sds_stack = reshape(sqrt(prior_var), 1, 1, num_sample_dims);
 prior_var_stack = reshape(prior_var, 1, 1, num_sample_dims);
 
 % rescale all log-likelihood values for numerical accuracy; we'll correct
 % for this at the end of the function
-[max_log_r_s, max_ind] = max(log_sample_values);
-log_sample_values = log_sample_values - max_log_r_s;
-r_s = exp(log_sample_values);
-
+max_log_r_s = max(samples.log_r);
+r_s = exp(samples.log_r - max_log_r_s);
 
 % hyperparameters for gp over the log-likelihood, r, assumed to have zero
 % mean
 if no_r_gp_params || isempty(r_gp_params)
     [r_noise_sd, r_input_scales, r_output_scale] = ...
-        hp_heuristics(sample_locations, r_s, 10);
+        hp_heuristics(samples.locations, r_s, 10);
 
     r_sqd_output_scale = r_output_scale^2;
     
@@ -125,22 +86,22 @@ del_sqd_output_scale = r_sqd_output_scale;
 del_sqd_lambda = del_sqd_output_scale* ...
     prod(2*pi*del_input_scales.^2)^(-0.5);
 
-lower_bound = min(sample_locations) - opt.num_box_scales*min_input_scales;
-upper_bound = max(sample_locations) + opt.num_box_scales*min_input_scales;
+lower_bound = min(samples.locations) - opt.num_box_scales*min_input_scales;
+upper_bound = max(samples.locations) + opt.num_box_scales*min_input_scales;
 
 opt.num_c = min(opt.num_c, num_samples);
 num_c = opt.num_c;
 
 % find the candidate points, far removed from existing samples
 try
-    candidate_locations = find_farthest(sample_locations, [lower_bound; upper_bound], num_c, ...
+    candidate_locations = find_farthest(samples.locations, [lower_bound; upper_bound], num_c, ...
                          min_input_scales);
 catch
     warning('find_farthest failed')
-    candidate_locations = far_pts(sample_locations, [lower_bound; upper_bound], num_c);
+    candidate_locations = far_pts(samples.locations, [lower_bound; upper_bound], num_c);
 end
 
-sample_locs_combined = [sample_locations; candidate_locations];
+sample_locs_combined = [samples.locations; candidate_locations];
 num_samples_combined = size(sample_locs_combined, 1);
 
 sqd_dist_stack_sc = bsxfun(@minus,...
@@ -202,7 +163,7 @@ chi3_var_stack_r = prior_var_stack .* ...
 opposite_del = sqd_del_input_scales_stack;
 opposite_r = sqd_r_input_scales_stack;
     
-hs_sc_minus_mean_stack = reshape(bsxfun(@minus, sample_locs_combined, prior_means),...
+hs_sc_minus_mean_stack = reshape(bsxfun(@minus, sample_locs_combined, prior.mean),...
                     num_samples_combined, 1, num_sample_dims);
 sqd_hs_sc_minus_mean_stack = ...
     repmat(hs_sc_minus_mean_stack.^2, [1, num_samples_combined, 1]);
@@ -289,10 +250,10 @@ inv_R_Ups_inv_K_r_r_s = R_r_s'\(Ups_inv_K_r_r * r_s);
 % mat = kron(ones(2),Lambda)+blkdiag(W_qd,W_r);
 % 
 % Ups_qd_r_test = @(i,j) qd_sqd_output_scale * r_sqd_output_scale *...
-%     mvnpdf([hs_s(i,:)';hs_s(j,:)'],[prior_means';prior_means'],mat);
+%     mvnpdf([hs_s(i,:)';hs_s(j,:)'],[prior.mean';prior.mean'],mat);
 %
 % As = [hs_sc_minus_mean_stack(3,:);hs_sc_minus_mean_stack(4,:)];
-% Bs = 0*[prior_means';prior_means'];
+% Bs = 0*[prior.mean';prior.mean'];
 % scalesss = [input_scales;del_input_scales].^2;
 % covmat = kron2d(diag(prior_sds.^2), ones(2)) + diag(scalesss(:));
 % sqd_output_scale.^2 * mvnpdf(As(:),Bs(:),covmat);
