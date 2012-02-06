@@ -90,10 +90,6 @@ retrain_inds = intlogspace(ceil(opt.num_samples/10), ...
                                 opt.num_retrains+1);
 retrain_inds(end) = inf;
 
-% Define the box with which to bound the selection of samples.
-lower_bound = prior.mean - 5*sqrt(diag(prior.covariance))';
-upper_bound = prior.mean + 5*sqrt(diag(prior.covariance))';
-bounds = [lower_bound; upper_bound]';
 
 
 % Start of actual SBQ algorithm
@@ -208,6 +204,11 @@ for i = 1:opt.num_samples
         objective_fn = @(new_sample_location) expected_uncertainty_evidence...
                 (new_sample_location', samples, prior, r_gp_params, opt);
             
+        % Define the box with which to bound the selection of samples.
+        lower_bound = prior.mean - 5*sqrt(diag(prior.covariance))';
+        upper_bound = prior.mean + 5*sqrt(diag(prior.covariance))';
+        bounds = [lower_bound; upper_bound]';            
+            
         if opt.plots && D == 1    
             % If we have a 1-dimensional function, optimize it by exhaustive
             % evaluation.
@@ -259,6 +260,3 @@ function log_l = log_gp_lik2(X_data, y_data, gp, log_noise, ...
     gp = revise_gp(X_data, y_data, gp, 'overwrite', [], 1);
     log_l = gp.hypersamples(1).logL;
 end
-
-
-

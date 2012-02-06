@@ -45,18 +45,18 @@ for i = 1:length(names);
     end
 end
 
-hs_s = samples.locations;
+samples.locations = samples.locations;
 log_r_s = samples.log_r;
 
-[num_s, num_hps] = size(hs_s);
+[num_s, num_hps] = size(samples.locations);
 
 prior_means = prior.mean;
 prior_sds = sqrt(diag(prior.covariance))';
 
 hs_c = r_gp_params.hs_c;   % David asking Mike:  Should this be here?
-hs_sc = [hs_s; hs_c];
+hs_sc = [samples.locations; hs_c];
 hs_sca = [hs_sc; new_sample_location];
-hs_sa = [hs_s; new_sample_location];
+hs_sa = [samples.locations; new_sample_location];
 
 num_sc = size(hs_sc, 1);
 num_sca = num_sc + 1;
@@ -85,7 +85,7 @@ tr_s = tilde(r_s, gamma_r);
 % hyperparameters for gp over the log-likelihood, r, assumed to have zero mean
 if no_r_gp_params || isempty(r_gp_params)
     [r_noise_sd, r_input_scales, r_output_scale] = ...
-        hp_heuristics(hs_s, r_s, 10);
+        hp_heuristics(samples.locations, r_s, 10);
 
     r_sqd_output_scale = r_output_scale^2;
 else
@@ -173,7 +173,7 @@ K_del_sca = improve_covariance_conditioning(K_del_sca, ...
     importances, opt.allowed_cond_error);
 R_del_sca = updatechol(K_del_sca, R_del_sc, num_sca);        
 
-% ups_s = int K(hs, hs_s)  prior(hs) dhs
+% ups_s = int K(hs, samples.locations)  prior(hs) dhs
 
 sum_prior_var_sqd_input_scales_r = ...
     prior_var + sqd_r_input_scales;
@@ -209,7 +209,7 @@ inv_determ_del_r = (prior_var_stack.*(...
         sqd_r_input_scales_stack + sqd_del_input_scales_stack) + ...
         sqd_r_input_scales_stack.*sqd_del_input_scales_stack).^(-1);
 
-% Ups_s_s = int K(hs_s, hs) K(hs, hs_s) prior(hs) dhs
+% Ups_s_s = int K(samples.locations, hs) K(hs, samples.locations) prior(hs) dhs
 Ups_sca_a = del_sqd_output_scale * r_sqd_output_scale * ...
     prod(1/(2*pi) * sqrt(inv_determ_del_r)) .* ...
     exp(-0.5 * sum(bsxfun(@times,inv_determ_del_r,...
@@ -249,7 +249,7 @@ lowr.UT = true;
 lowr.TRANSA = true;
 uppr.UT = true;
 
-sqd_dist_s_a = bsxfun(@minus, hs_s, new_sample_location).^2;  
+sqd_dist_s_a = bsxfun(@minus, samples.locations, new_sample_location).^2;  
 K_r_s_a = r_sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
                     sqd_dist_s_a, sqd_r_input_scales), 2));
 
