@@ -1,4 +1,4 @@
-function [mean_log_evidences, var_log_evidences, sample_locations, gp_hypers] = ...
+function [mean_log_evidences, var_log_evidences, samples, gp_hypers] = ...
     sbq(log_likelihood_fn, prior, opt)
 % Take samples samples_mat so as to best estimate the
 % evidence, an integral over exp(log_r_fn) against the prior in prior_struct.
@@ -13,7 +13,7 @@ function [mean_log_evidences, var_log_evidences, sample_locations, gp_hypers] = 
 % - start_pt: 1*n vector expressing starting point for algorithm
 % - log_likelihood_fn: a function that takes a single argument, a 1*n vector of
 %                      hyperparameters, and returns the log of the likelihood.
-% - prior_struct: requires fields
+% - prior: requires fields
 %                 * means
 %                 * sds
 % - opt: takes fields:
@@ -34,7 +34,7 @@ function [mean_log_evidences, var_log_evidences, sample_locations, gp_hypers] = 
 %          The more, the more exploration.
 %        * plots: Whether to plot the expected variance surface (only works in 1d)
 %        * set_ls_var_method:  How to estimate the variance of lengthscale
-%                              parameters.  Can be: one of:
+%                              parameters.  Can be one of:
 %            + 'lengthscale':  Use the squared lengthscale from quadrature params.
 %            + 'laplace': Compute the Hessian of the log-likelihood surface.
 %            + 'none': Assume zero variance in the lengthscales.
@@ -50,17 +50,17 @@ elseif ~isstruct(opt)
     opt.num_samples = num_samples;
 end
 
-sample_dimension = numel(prior.mean);
+D = numel(prior.mean);
 
 % Set unspecified fields to default values.
 default_opt = struct('num_samples', 300, ...
                      'num_retrains', 5, ...
-                     'train_gp_time', 20 * sample_dimension, ...
+                     'train_gp_time', 20 * D, ...
                      'parallel', true, ...
-                     'train_gp_num_samples', 3 * sample_dimension, ...
+                     'train_gp_num_samples', 3 * D, ...
                      'train_gp_print', false, ...
-                     'exp_loss_evals', 50 * sample_dimension, ...
-                     'start_pt', zeros(1, sample_dimension), ...
+                     'exp_loss_evals', 50 * D, ...
+                     'start_pt', zeros(1, D), ...
                      'print', true, ...
                      'plots', false, ...
                      'set_ls_var_method', 'laplace');%'lengthscale');
@@ -93,17 +93,11 @@ retrain_inds(end) = inf;
 % Define the box with which to bound the selection of samples.
 lower_bound = prior.mean - 5*sqrt(diag(prior.covariance))';
 upper_bound = prior.mean + 5*sqrt(diag(prior.covariance))';
-direct_opts.maxevals = opt.exp_loss_evals;
-direct_opts.showits = 0;
 bounds = [lower_bound; upper_bound]';
 
 
 % Start of actual SBQ algorithm
 % =======================================
-
-sample_locations = nan(opt.num_samples, sample_dimension);
-all_sample_values = nan(opt.num_samples, 1);
-
 
 next_sample_point = opt.start_pt;
 for i = 1:opt.num_samples
@@ -199,7 +193,7 @@ for i = 1:opt.num_samples
             opt.sds_tr_input_scales = laplace_sds;
 
             % Plot the log-likelihood surface.
-            if opt.plots && sample_dimension == 1
+            if opt.plots && D == 1
                 figure(11); clf;
                 hrange = linspace(-5, 10, 1000 );
                 for t = 1:length(hrange)
@@ -227,42 +221,20 @@ for i = 1:opt.num_samples
     if i < opt.num_samples  % Except for the last iteration,
         
         % Define the criterion to be optimized.
-        Problem.f = @(new_sample_location) expected_uncertainty_evidence...
+        objective_fn = @(new_sample_location) expected_uncertainty_evidence...
                 (new_sample_location', samples, prior, r_gp_params, opt);
             
-        if opt.plots && sample_dimension == 1
-
+        if opt.plots && D == 1    
             % If we have a 1-dimensional function, optimize it by exhaustive
             % evaluation.
-            N = 1000;
-            test_pts = linspace(lower_bound, upper_bound, N);
-            losses = nan(1, N);
-            for loss_i=1:length(test_pts)
-                losses(loss_i) = Problem.f(test_pts(loss_i));
-            end
-            % Choose the best point.
-            [min_loss,min_ind] = min(losses);
-            next_sample_point = test_pts(min_ind);
-            
-            % Plot the expected uncertainty surface.
-            figure(1234); clf;
-            h_surface = plot(test_pts, losses, 'b'); hold on;           
-            % Also plot previously chosen points.
-            test_pts = samples.locations;
-            losses = nan(1, i);
-            for loss_i=1:length(test_pts)
-                losses(loss_i) = Problem.f(test_pts(loss_i));
-            end
-            h_points = plot(test_pts, losses, 'kd', 'MarkerSize', 4); hold on;
-            h_best = plot(next_sample_point, min_loss, 'rd', 'MarkerSize', 4); hold on;
-            xlabel('Sample location');
-            ylabel('Expected uncertainty after adding a new sample');
-            legend( [h_surface, h_points, h_best], {'Expected uncertainty', 'Previously Sampled Points', 'Best new sample'}, 'Location', 'Best');
-            title(sprintf('Iteration %d', i ));
-            drawnow;
+            [exp_loss_min, next_sample_point] = ...
+                plot_1d_minimize(objective_fn, bounds, samples);
         else
             % Call DIRECT to hopefully optimize faster than by exhaustive search.
-            [exp_loss_min, next_sample_point] = Direct(Problem, bounds, direct_opts);
+            problem.f = objective_fn;
+            direct_opts.maxevals = opt.exp_loss_evals;
+            direct_opts.showits = 0;
+            [exp_loss_min, next_sample_point] = Direct(problem, bounds, direct_opts);
             next_sample_point = next_sample_point';
         end
     end
@@ -282,7 +254,7 @@ for i = 1:opt.num_samples
     % log-evidence by moment matching.  This is just a hack for now!!!
     mean_log_evidences(i) = log_ev;
     var_log_evidences(i) = log( exp(log_var_ev) / exp(log_ev)^2 + 1 );
-    end
+end
 end
 
 function log_l = log_gp_lik2(X_data, y_data, gp, log_noise, ...

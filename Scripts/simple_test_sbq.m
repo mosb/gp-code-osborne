@@ -20,7 +20,7 @@ opt.parallel = false;
 opt.set_ls_var_method = 'laplace'; %'laplace';
 opt.start_pt = -3;
 
-[log_ev, log_var_ev, samples_mat, r_gp] = ...
+[log_ev, log_var_ev, samples, r_gp] = ...
     sbq(log_r_fn, prior_struct, opt);
 
 % Plot integrand and sample points.
@@ -28,7 +28,7 @@ test_pts = linspace(prior_struct.mean - 5*prior_struct.covariance, ...
             prior_struct.mean + 5*prior_struct.covariance, 1000);
 figure;
 h_func = plot(test_pts, log_r_fn(test_pts), 'b'); hold on;
-h_samples = plot(samples_mat, log_r_fn(samples_mat), '.k', 'MarkerSize', 8)
+h_samples = plot(samples.locations, log_r_fn(samples.locations), '.k', 'MarkerSize', 8)
 xlim([-5 5]);
 legend( [h_func, h_samples], {'Log-integrand', 'Sample Points'}, 'Location', 'Best');
 

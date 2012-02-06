@@ -1,8 +1,8 @@
 function xpc_unc = expected_uncertainty_evidence...
       (new_sample_location, samples, prior, r_gp_params, opt)
 % returns the expected negative-squared-mean-evidence after adding a
-% hyperparameter sample new_sample_location. This quantity is a scaled version of
-% the expected variance in the evidence.
+% hyperparameter sample hs_a. This quantity is a scaled version of the
+% expected variance in the evidence.
 %
 % [exp_log_unc] = ...
 %   expected_uncertainty_evidence(hs_a, sample_struct, prior_struct, r_gp_params, widths_quad_input_scales, opt)
@@ -11,12 +11,12 @@ function xpc_unc = expected_uncertainty_evidence...
 %   returned mean and variance are the non-expected qantities for the
 %   evidence.
 % - evidence: the current evidence
-% - samples requires fields
-%   * locations
+% - sample_struct requires fields
+%   * samples
 %   * log_r
-% - prior requires fields
-%   * mean
-%   * covariance
+% - prior_struct requires fields
+%   * means
+%   * sds
 % - (optional) input r_gp_params has fields
 %   * quad_output_scale
 %   * quad_noise_sd
@@ -45,19 +45,20 @@ for i = 1:length(names);
     end
 end
 
+hs_s = samples.locations;
 log_r_s = samples.log_r;
 
-[num_s, num_hps] = size(samples.locations);
+[num_s, num_hps] = size(hs_s);
 
 prior_means = prior.mean;
 prior_sds = sqrt(diag(prior.covariance))';
 
 hs_c = r_gp_params.hs_c;   % David asking Mike:  Should this be here?
-samples.locationsc = [samples.locations; hs_c];
-samples.locationsca = [samples.locationsc; new_sample_location];
-samples.locationsa = [samples.locations; new_sample_location];
+hs_sc = [hs_s; hs_c];
+hs_sca = [hs_sc; new_sample_location];
+hs_sa = [hs_s; new_sample_location];
 
-num_sc = size(samples.locationsc, 1);
+num_sc = size(hs_sc, 1);
 num_sca = num_sc + 1;
 num_sa = num_s + 1;
 
@@ -84,7 +85,7 @@ tr_s = tilde(r_s, gamma_r);
 % hyperparameters for gp over the log-likelihood, r, assumed to have zero mean
 if no_r_gp_params || isempty(r_gp_params)
     [r_noise_sd, r_input_scales, r_output_scale] = ...
-        hp_heuristics(samples.locations, r_s, 10);
+        hp_heuristics(hs_s, r_s, 10);
 
     r_sqd_output_scale = r_output_scale^2;
 else
@@ -114,19 +115,19 @@ sqd_del_input_scales_stack = reshape(del_input_scales.^2,1,1,num_hps);
 
 hs_a_minus_mean = new_sample_location - prior_means;
 
-samples.locationsca_minus_mean_stack = reshape(bsxfun(@minus, samples.locationsca, prior_means),...
+hs_sca_minus_mean_stack = reshape(bsxfun(@minus, hs_sca, prior_means),...
                     num_sca, 1, num_hps);
-sqd_samples.locationsca_minus_mean_stack = ...
-    repmat(samples.locationsca_minus_mean_stack.^2, [1, 1, 1]);
+sqd_hs_sca_minus_mean_stack = ...
+    repmat(hs_sca_minus_mean_stack.^2, [1, 1, 1]);
 
 hs_a_minus_mean_stack = reshape(hs_a_minus_mean,...
                     1, 1, num_hps);
 sqd_hs_a_minus_mean_stack = ...
     repmat(hs_a_minus_mean_stack.^2, [num_sca, 1, 1]);
 
-sqd_dist_stack_sca_a = reshape(bsxfun(@minus, samples.locationsca, new_sample_location).^2, ...
+sqd_dist_stack_sca_a = reshape(bsxfun(@minus, hs_sca, new_sample_location).^2, ...
                     num_sca, 1, num_hps);
-sqd_dist_stack_sa_a = reshape(bsxfun(@minus, samples.locationsa, new_sample_location).^2, ...
+sqd_dist_stack_sa_a = reshape(bsxfun(@minus, hs_sa, new_sample_location).^2, ...
                     num_sa, 1, num_hps);
 
 R_r_s = r_gp_params.R_r_s ;
@@ -172,7 +173,7 @@ K_del_sca = improve_covariance_conditioning(K_del_sca, ...
     importances, opt.allowed_cond_error);
 R_del_sca = updatechol(K_del_sca, R_del_sc, num_sca);        
 
-% ups_s = int K(hs, samples.locations)  prior(hs) dhs
+% ups_s = int K(hs, hs_s)  prior(hs) dhs
 
 sum_prior_var_sqd_input_scales_r = ...
     prior_var + sqd_r_input_scales;
@@ -208,12 +209,12 @@ inv_determ_del_r = (prior_var_stack.*(...
         sqd_r_input_scales_stack + sqd_del_input_scales_stack) + ...
         sqd_r_input_scales_stack.*sqd_del_input_scales_stack).^(-1);
 
-% Ups_s_s = int K(samples.locations, hs) K(hs, samples.locations) prior(hs) dhs
+% Ups_s_s = int K(hs_s, hs) K(hs, hs_s) prior(hs) dhs
 Ups_sca_a = del_sqd_output_scale * r_sqd_output_scale * ...
     prod(1/(2*pi) * sqrt(inv_determ_del_r)) .* ...
     exp(-0.5 * sum(bsxfun(@times,inv_determ_del_r,...
                 bsxfun(@times, opposite_r, ...
-                    sqd_samples.locationsca_minus_mean_stack) ...
+                    sqd_hs_sca_minus_mean_stack) ...
                 + bsxfun(@times, opposite_del, ...
                     sqd_hs_a_minus_mean_stack) ...
                 + prior_var_times_sqd_dist_stack_sca_a...
@@ -228,7 +229,7 @@ Ups_sca_a = del_sqd_output_scale * r_sqd_output_scale * ...
 %     mat = kron(ones(2),Lambda)+blkdiag(W_del,W_r);
 % 
 %     Ups_sca_a_test = @(i) del_sqd_output_scale * r_sqd_output_scale *...
-%         mvnpdf([samples.locationsc(i,:)';hs_a'],[prior_means';prior_means'],mat);
+%         mvnpdf([hs_sc(i,:)';hs_a'],[prior_means';prior_means'],mat);
 
 range_sa = [1:num_s,num_sca];
 
@@ -248,7 +249,7 @@ lowr.UT = true;
 lowr.TRANSA = true;
 uppr.UT = true;
 
-sqd_dist_s_a = bsxfun(@minus, samples.locations, new_sample_location).^2;  
+sqd_dist_s_a = bsxfun(@minus, hs_s, new_sample_location).^2;  
 K_r_s_a = r_sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
                     sqd_dist_s_a, sqd_r_input_scales), 2));
 
