@@ -33,15 +33,7 @@ default_opt = struct('num_c', 100,... % number of candidate points
                     'num_box_scales', 5, ... % defines the box over which to take candidates
                     'allowed_cond_error',10^-14, ... % allowed conditioning error
                     'update', false); % update log_evidence with a single new point
-                
-% assign default values to any unassigned options
-names = fieldnames(default_opt);
-for i = 1:length(names);
-    name = names{i};
-    if (~isfield(opt, name))
-      opt.(name) = default_opt.(name);
-    end
-end
+opt = set_defaults( opt, default_opt );
 
 % Note: If we have actually only added a single new sample at position opt.update,
 % can do efficient sequential updates.

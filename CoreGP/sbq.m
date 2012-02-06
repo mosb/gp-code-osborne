@@ -64,13 +64,7 @@ default_opt = struct('num_samples', 300, ...
                      'print', true, ...
                      'plots', false, ...
                      'set_ls_var_method', 'laplace');%'lengthscale');
-names = fieldnames(default_opt);
-for i = 1:length(names);
-    name = names{i};
-    if (~isfield(opt, name))
-      opt.(name) = default_opt.(name);
-    end
-end
+opt = set_defaults( opt, default_opt );
 
 % GP training options.
 gp_train_opt.optim_time = opt.train_gp_time;

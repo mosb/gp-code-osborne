@@ -35,15 +35,8 @@ default_opt = struct('gamma_const', 100, ... % numerical scaling factor
                     'allowed_cond_error',10^-14, ... % allowed conditioning error
                     'sds_tr_input_scales', false);
 % sds_tr_input_scales represents the posterior standard deviations in the
-% input scales for tr. If false, a delta function posterior is assumed.
-             
-names = fieldnames(default_opt);
-for i = 1:length(names);
-    name = names{i};
-    if (~isfield(opt, name))
-      opt.(name) = default_opt.(name);
-    end
-end
+% input scales for tr. If false, a delta function posterior is assumed.            
+opt = set_defaults( opt, default_opt );
 
 samples.locations = samples.locations;
 log_r_s = samples.log_r;
