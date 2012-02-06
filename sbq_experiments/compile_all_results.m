@@ -11,7 +11,7 @@ tabledirshort = 'tables/';
 plotdir = [paper_dir plotdirshort];
 tabledir = [paper_dir tabledirshort];
 
-min_samples = 5; % The minimum number of examples before we start making plots.
+min_samples = 30; % The minimum number of examples before we start making plots.
 
 fprintf('Compiling all results...\n');
 autocontent_filename = [paper_dir 'autocontent.tex'];
@@ -76,6 +76,14 @@ for p_ix = 1:num_problems
         fprintf('\n');
     end
     fprintf('\n');
+end
+
+% Some sanity checking.
+for p_ix = 1:num_problems
+    % Check that the true value for every problem was recorded as being the
+    % same for all repititions, timesteps and methods tried.
+    assert(all(all(all(true_log_ev_table(:, p_ix, :, :) == ...
+                       true_log_ev_table(1, p_ix, 1, 1)))));
 end
 
 method_names = cellfun( @(method) method.acronym, methods, 'UniformOutput', false );
@@ -149,24 +157,25 @@ fprintf(autocontent, '\n\\begin{figure}\n\\centering\\setlength\\fheight{3cm}\\s
 % Plot log likelihood of true answer, versus number of samples
 % ===============================================================
 plotted_sample_set = min_samples:num_sample_sizes;
-figure_string = '\n\\begin{figure}\n\\centering\\setlength\\fheight{4cm}\\setlength\\fwidth{4cm}\\input{%s}\n\\end{figure}\n';
+figure_string = '\n\\begin{figure}\n\\centering\\setlength\\fheight{14cm}\\setlength\\fwidth{12cm}\\input{%s}\n\\end{figure}\n';
 
-for chosen_problem_ix = 1:num_problems
-    cur_problem_name = problem_names{chosen_problem_ix};
+for p_ix = 1:num_problems
+    cur_problem_name = problem_names{p_ix};
     figure; clf;
 
-    try
+    %try
         for m_ix = 1:num_methods
             for r = 1:num_repititions
                 for s = plotted_sample_set
-                    true_log_evidence = true_log_ev_table( 1, chosen_problem_ix, s, r );
-                    mean_prediction = mean_log_ev_table( m_ix, chosen_problem_ix, s, r );
-                    var_prediction = var_log_ev_table( m_ix, chosen_problem_ix, s, r );
-                    neg_log_liks(s) = logmvnpdf(true_log_evidence, mean_prediction, var_prediction);
+                    true_log_evidence = true_log_ev_table( 1, p_ix, s, r );
+                    mean_prediction = mean_log_ev_table( m_ix, p_ix, s, r );
+                    var_prediction = var_log_ev_table( m_ix, p_ix, s, r );
+                    neg_log_liks(m_ix, s) = real(logmvnpdf(true_log_evidence, ...
+                                                mean_prediction, var_prediction));
                 end
                 z_handle(m_ix) = plot( plotted_sample_set, ...
-                    neg_log_liks(plotted_sample_set), '-', ...
-                    'Color', color( m_ix, 1:3), 'LineWidth', 1); hold on;
+                    real(neg_log_liks(m_ix, plotted_sample_set)), '-', ...
+                    'Color', color( m_ix, :), 'LineWidth', 1); hold on;
             end
         end
         xlabel('Number of samples');
@@ -174,35 +183,40 @@ for chosen_problem_ix = 1:num_problems
         title(cur_problem_name);
         %legend(z_handle, method_names);
         %ylim([-3 3 ]);
+        good_methods = 1:num_methods; good_methods(2) = [];
+        %keyboard
+        min1 = min(min((neg_log_liks(good_methods, plotted_sample_set))));
+        max1 = max(max((neg_log_liks(good_methods, plotted_sample_set))));
+        ylim( [min1 max1] );
 
         filename = sprintf('log_of_truth_plot_%s.tikz', strrep(cur_problem_name, ' ', '_'));
         matlab2tikz( [plotdir filename], 'height', '\fheight', 'width', ...
             '\fwidth', 'showInfo', false, 'showWarnings', false );
         fprintf(autocontent, figure_string, [plotdirshort filename]);    
-    catch e
+    %catch e
         %e
-    end
+    %end
 end
 
 
 % Plot log of squared distance to true answer, versus number of samples
 % ======================================================================
-for chosen_problem_ix = 1:num_problems
-    cur_problem_name = problem_names{chosen_problem_ix};
+for p_ix = 1:num_problems
+    cur_problem_name = problem_names{p_ix};
     figure; clf;
 
     try
         for m_ix = 1:num_methods
             for r = 1:num_repititions
                 for s = min_samples:num_sample_sizes
-                    true_log_evidence = true_log_ev_table( 1, chosen_problem_ix, s, r );
-                    mean_prediction = mean_log_ev_table( m_ix, chosen_problem_ix, s, r );
-                    var_prediction = var_log_ev_table( m_ix, chosen_problem_ix, s, r );
+                    true_log_evidence = true_log_ev_table( 1, p_ix, s, r );
+                    mean_prediction = mean_log_ev_table( m_ix, p_ix, s, r );
+                    var_prediction = var_log_ev_table( m_ix, p_ix, s, r );
                     squared_error(s) = (true_log_evidence - mean_prediction)^2;
                 end
                 z_handle(m_ix) = semilogy( plotted_sample_set, ...
                     squared_error(plotted_sample_set), '-',...
-                    'Color', color( m_ix, 1:3), 'LineWidth', 1); hold on;
+                    'Color', color( m_ix, :), 'LineWidth', 1); hold on;
             end
         end
         xlabel('Number of samples');
@@ -226,31 +240,32 @@ end
 % ===============================================================
 
 chosen_repetition = 1;
-for chosen_problem_ix = 1:num_problems
-    cur_problem_name = problem_names{chosen_problem_ix};
+for p_ix = 1:num_problems
+    cur_problem_name = problem_names{p_ix};
     figure; clf;
     try
         for m_ix = 1:num_methods
             % Draw transparent part.
-            mean_predictions = squeeze(mean_log_ev_table( m_ix, chosen_problem_ix, ...
+            mean_predictions(m_ix, :) = squeeze(mean_log_ev_table( m_ix, p_ix, ...
                                                           :, chosen_repetition ))';
-            var_predictions = squeeze(var_log_ev_table( m_ix, chosen_problem_ix, ...
-                                                          :, chosen_repetition ))';
-            jbfill(plotted_sample_set, mean_predictions(plotted_sample_set) + 2.*sqrt(var_predictions(plotted_sample_set)), ...
-                                 mean_predictions(plotted_sample_set) - 2.*sqrt(var_predictions(plotted_sample_set)), ...
-                                 color(m_ix,1:3), edgecolor, 1, opacity); hold on;
+            var_predictions = real(squeeze(var_log_ev_table( m_ix, p_ix, ...
+                                                          :, chosen_repetition ))');
+            jbfill(plotted_sample_set, mean_predictions(m_ix, plotted_sample_set) + 2.*sqrt(var_predictions(plotted_sample_set)), ...
+                                 mean_predictions(m_ix, plotted_sample_set) - 2.*sqrt(var_predictions(plotted_sample_set)), ...
+                                 color(m_ix,:), edgecolor, 1, opacity); hold on;
             z_handle(m_ix) = plot( plotted_sample_set, ...
-                mean_predictions(plotted_sample_set), '-', ...
-                'Color', sqrt(color( m_ix, 1:3) ), 'LineWidth', 1); hold on;
+                mean_predictions(m_ix, plotted_sample_set), '-', ...
+                'Color', sqrt(color( m_ix, :) ), 'LineWidth', 1); hold on;
         end
 
-        true_log_evidence = squeeze(true_log_ev_table( 1, chosen_problem_ix, ...
+        true_log_evidence = squeeze(true_log_ev_table( 1, p_ix, ...
                                                           :, chosen_repetition ))';
         truth_handle = plot( plotted_sample_set, ...
             true_log_evidence(plotted_sample_set), 'k-', 'LineWidth', 1); hold on;
         xlabel('Number of samples');
         ylabel('log evidence');
         title(cur_problem_name);
+        ylim( [min(min((mean_predictions(:, plotted_sample_set)))), max(max((mean_predictions(:, plotted_sample_set)))) + 1] );
         %legend([z_handle, truth_handle], {method_names{:}, 'True value'} );
 
         filename = sprintf('varplot_%s.tikz', strrep(cur_problem_name, ' ', '_'));
@@ -258,7 +273,7 @@ for chosen_problem_ix = 1:num_problems
             'width', '\fwidth', 'showInfo', false, 'showWarnings', false );
         fprintf(autocontent, figure_string, [plotdirshort filename]);    
     catch e
-        %e
+        e
     end
 end
 

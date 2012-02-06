@@ -1371,7 +1371,7 @@ function [xDataCellNew , yDataCellNew, yDeviationCellNew] = splitByOutliers( xDa
       % and to which boundary it must be normalized.
       v = [ xLim(1)-x, x-xLim(2), yLim(1)-y, y-yLim(2) ];
       maxVal = max(v,[],2);
-      outliers = find( maxVal > delta);
+      outliers = find( maxVal > delta)';
 
       % if nothing to do in this cell, take a shortcut
       if isempty(outliers)

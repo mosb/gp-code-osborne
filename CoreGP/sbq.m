@@ -1,4 +1,4 @@
-function [log_ev, log_var_ev, all_sample_locations, r_gp] = ...
+function [mean_log_evidences, var_log_evidences, all_sample_locations, r_gp] = ...
     sbq(log_r_fn, prior_struct, opt)
 % Take samples samples_mat so as to best estimate the
 % evidence, an integral over exp(log_r_fn) against the prior in prior_struct.
@@ -282,7 +282,12 @@ for i = 1:opt.num_samples
     elseif opt.print == 2
         fprintf('evidence: %g +- %g\n', exp(log_ev), sqrt(exp(log_var_ev)));
     end
-end
+    
+    % Convert the distribution over the evidence into a distribution over the
+    % log-evidence by moment matching.  This is just a hack for now!!!
+    mean_log_evidences(i) = log_ev;
+    var_log_evidences(i) = log( exp(log_var_ev) / exp(log_ev)^2 + 1 );
+    end
 end
 
 function log_l = log_gp_lik2(X_data, y_data, gp, log_noise, ...
