@@ -1,13 +1,13 @@
-function [mean_log_evidences, var_log_evidences, all_sample_locations, r_gp] = ...
+function [mean_log_evidences, var_log_evidences, sample_locations, gp_hypers] = ...
     sbq(log_likelihood_fn, prior, opt)
 % Take samples samples_mat so as to best estimate the
 % evidence, an integral over exp(log_r_fn) against the prior in prior_struct.
 % 
 % OUTPUTS
-% - samples_mat: m*n matrix of hyperparameter samples
-% - log_ev: our mean estimate for the log of the evidence
-% - log_var_ev: the variance for the log of the evidence
-% - r_gp: takes fields:
+% - mean_log_evidences: our mean estimate for the log of the evidence
+% - var_log_evidences: the variance for the log of the evidence
+% - sample_locations: n*d matrix of hyperparameter samples
+% - gp_hypers
 % 
 % INPUTS
 % - start_pt: 1*n vector expressing starting point for algorithm
@@ -101,22 +101,17 @@ bounds = [lower_bound; upper_bound]';
 % Start of actual SBQ algorithm
 % =======================================
 
-all_sample_locations = nan(opt.num_samples, sample_dimension);
+sample_locations = nan(opt.num_samples, sample_dimension);
 all_sample_values = nan(opt.num_samples, 1);
 
 
 next_sample_point = opt.start_pt;
 for i = 1:opt.num_samples
 
-    % Update sample structs.
+    % Update sample struct.
     % ==================================
-    all_sample_locations(i,:) = next_sample_point;          % Record the current sample location.
-    all_sample_values(i,:) = log_likelihood_fn(next_sample_point);   % Sample the integrand at the new point.
-
-    % Grab all existing function samples and put them in a struct.
-    samples = struct();
-    samples.locations = all_sample_locations(1:i, :);
-    samples.log_r = all_sample_values(1:i,:);
+    samples.locations(i,:) = next_sample_point;          % Record the current sample location.
+    samples.log_r(i,:) = log_likelihood_fn(next_sample_point);   % Sample the integrand at the new point.
     samples.scaled_r = exp(samples.log_r - max(samples.log_r));
     
     
@@ -127,25 +122,25 @@ for i = 1:opt.num_samples
 
         % Set up GP without training it, because there's not enough data.
         gp_train_opt.optim_time = 0;
-        [r_gp, quad_r_gp] = train_gp('sqdexp', 'constant', [], ...
+        [gp_hypers, quad_r_gp] = train_gp('sqdexp', 'constant', [], ...
                                      samples.locations, samples.scaled_r, gp_train_opt);
         gp_train_opt.optim_time = opt.train_gp_time;
         
     elseif retrain_now
         % Retrain gp.
-        [r_gp, quad_r_gp] = train_gp('sqdexp', 'constant', r_gp, ...
+        [gp_hypers, quad_r_gp] = train_gp('sqdexp', 'constant', gp_hypers, ...
                                      samples.locations, samples.scaled_r, gp_train_opt);
         retrain_inds(1) = [];   % Move to next retraining index. 
     else
         % for hypersamples that haven't been moved, update
-        r_gp = revise_gp(samples.locations, samples.scaled_r, ...
-                         r_gp, 'update', i);
+        gp_hypers = revise_gp(samples.locations, samples.scaled_r, ...
+                         gp_hypers, 'update', i);
     end
     
     % Put the values of the best quadrature parameters into the current GP.
     % NB: disp_hyperparams exponentiates the actual hyperparameters e.g.
     % the log-input-scales. 
-    [best_hypersample, best_hypersample_struct] = disp_hyperparams(r_gp);
+    [best_hypersample, best_hypersample_struct] = disp_hyperparams(gp_hypers);
     r_gp_params.quad_output_scale = best_hypersample_struct.output_scale;
     r_gp_params.quad_input_scales = best_hypersample_struct.input_scales;
     r_gp_params.quad_noise_sd = best_hypersample_struct.noise_sd;
@@ -167,7 +162,7 @@ for i = 1:opt.num_samples
             % likelihood of the transformed r surface as a function of log-input
             % scales.
             opt.sds_tr_input_scales = ...
-                quad_r_gp.quad_input_scales(r_gp.input_scale_inds);
+                quad_r_gp.quad_input_scales(gp_hypers.input_scale_inds);
         elseif strcmp(opt.set_ls_var_method, 'laplace')
             % Diagonal covariance whose diagonal elements set by using the laplace
             % method around the maximum likelihood value.
@@ -178,7 +173,7 @@ for i = 1:opt.num_samples
             % Specify the likelihood function which we'll be taking the hessian of:
             like_func = @(log_in_scale) exp(log_gp_lik2( samples.locations, ...
                 samples.scaled_r, ...
-                r_gp, ...
+                gp_hypers, ...
                 log(r_gp_params.quad_noise_sd), ...
                 log_in_scale, ...
                 log(r_gp_params.quad_output_scale), ...
