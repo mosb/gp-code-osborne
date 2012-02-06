@@ -136,7 +136,8 @@ close all;
 color(1, 1:3) = [1 0.1 0.1];  % red
 color(2, 1:3) = [0.1 1 0.1];  % green
 color(3, 1:3) = [0.1 0.1 1];  % blue
-color(4, 1:3) = [.4 .4 0.1]; 
+color(4, 1:3) = [.4 .4 0.1];  % dark yellow
+color(4, 1:3) = [0.1 1   1];  % cyan
 
 opacity = 0.1;
 edgecolor = 'none';

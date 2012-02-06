@@ -14,14 +14,13 @@ prior_struct.covariance = 1;
 opt.print = 2;
 opt.num_retrains = 5;
 opt.train_gp_time = 20;
-opt.num_samples = 5;
+opt.num_samples = 15;
 opt.plots = true;
 opt.parallel = false;
-opt.set_ls_var_method = 'laplace'; %'laplace';
+opt.set_ls_var_method = 'laplace';
 opt.start_pt = -3;
 
-[log_ev, log_var_ev, samples, r_gp] = ...
-    sbq(log_r_fn, prior_struct, opt);
+[log_ev, log_var_ev, samples, r_gp] = sbq(log_r_fn, prior_struct, opt);
 
 % Plot integrand and sample points.
 test_pts = linspace(prior_struct.mean - 5*prior_struct.covariance, ...

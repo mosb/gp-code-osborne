@@ -51,7 +51,7 @@ opt = set_defaults( opt, default_opt );
 
 % Init GP Hypers
 covfunc = @covSEiso;
-gp_hypers.mean = [];
+gp_hypers.mean = 0;
 gp_hypers.lik = log(0.01);
 gp_hypers.cov = log( [ 1 1] );%log([ones(1, D) 1]);
 
@@ -72,8 +72,15 @@ for i = 1:opt.num_samples
     % ===========================   
     inference = @infExact;
     likfunc = @likGauss;
-    meanfunc = {'meanZero'};
+    meanfunc = {'meanConst'};
     max_iters = 100;
+    
+    % Init GP Hypers each time to prevent getting lost in some weird place.
+    % todo: init from some heuristics.
+    covfunc = @covSEiso;
+    gp_hypers.mean = 0;
+    gp_hypers.lik = log(0.01);
+    gp_hypers.cov = log( [ 1 1] );%log([ones(1, D) 1]);    
 
     % Fit the model, but not the likelihood hyperparam (which stays fixed).
     gp_hypers = minimize(gp_hypers, @gp_fixedlik, -max_iters, ...
@@ -85,7 +92,7 @@ for i = 1:opt.num_samples
     if strcmp(opt.set_ls_var_method, 'laplace')
         % Set the variances of the lengthscales using the laplace
         % method around the maximum likelihood value.
-        laplace_mode = log(gp_hypers.cov(1:end - 1));
+        laplace_mode = gp_hypers.cov(1:end - 1);
 
         % Specify the likelihood function which we'll be taking the hessian of:
         % Todo: check that there isn't a scaling factor since Mike uses
@@ -106,7 +113,7 @@ for i = 1:opt.num_samples
 
         % A little sanity checking, since at first the length scale won't be
         % sensible.
-        bad_sd_ixs = isinf(laplace_sds) | (imag(laplace_sds) > 0);
+        bad_sd_ixs = isnan(laplace_sds) | isinf(laplace_sds) | (abs(imag(laplace_sds)) > 0);
         if any(bad_sd_ixs)
             warning(['Infinite or positive lengthscales, ' ...
                     'Setting lengthscale variance to prior variance']);
@@ -120,10 +127,14 @@ for i = 1:opt.num_samples
         end
     end
     
+    laplace_sds
+    exp(gp_hypers.cov(end))
+    exp(gp_hypers.cov(1:end - 1))
+    
     % Convert gp_hypers to r_gp_params.
     % TODO: check that these are the right units.
-    r_gp_params.quad_output_scale = gp_hypers.cov(end);
-    r_gp_params.quad_output_scale(1:D) = gp_hypers.cov(1:end - 1);
+    r_gp_params.quad_output_scale = exp(gp_hypers.cov(end));
+    r_gp_params.quad_input_scales(1:D) = exp(gp_hypers.cov(1:end - 1));
     [log_ev, log_var_ev, r_gp_params] = log_evidence(samples, prior, r_gp_params, opt);
 
     
@@ -155,9 +166,8 @@ for i = 1:opt.num_samples
         end
     end
     
-    % Print progress dots.
-    fprintf('Iteration %d    evidence: %g +- %g\n', i, exp(log_ev), ...
-        sqrt(exp(log_var_ev)));
+    % Print progress.
+    fprintf('Iteration %d evidence: %g +- %g\n', i, exp(log_ev), sqrt(exp(log_var_ev)));
 
     % Convert the distribution over the evidence into a distribution over the
     % log-evidence by moment matching.  This is just a hack for now!!!
@@ -170,5 +180,5 @@ end
 function l = gpml_likelihood( log_in_scale, gp_hypers, inference, meanfunc, covfunc, likfunc, X, y)
 % Just replaces the lengthscales.
     gp_hypers.cov(1:end-1) = log_in_scale;
-    l = exp(gp_fixedlik(gp_hypers, inference, meanfunc, covfunc, likfunc, X, y));
+    l = exp(-gp_fixedlik(gp_hypers, inference, meanfunc, covfunc, likfunc, X, y));
 end

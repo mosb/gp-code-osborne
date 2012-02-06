@@ -173,7 +173,7 @@ for i = 1:opt.num_samples
 
             % A little sanity checking, since at first the length scale won't be
             % sensible.
-            bad_sd_ixs = isinf(laplace_sds) | (imag(laplace_sds) > 0);
+            bad_sd_ixs = isnan(laplace_sds) | isinf(laplace_sds) | (abs(imag(laplace_sds)) > 0);
             if any(bad_sd_ixs)
                 warning('Infinite or positive lengthscales, Setting lengthscale variance to prior variance');
                 good_sds = sqrt(diag(prior.covariance));
