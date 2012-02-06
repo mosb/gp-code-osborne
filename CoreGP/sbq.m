@@ -162,7 +162,7 @@ for i = 1:opt.num_samples
             % method around the maximum likelihood value.
 
             % Assume the mean is the same as the mode.
-            log_in_scale_means = log(r_gp_params.quad_input_scales);
+            laplace_mode = log(r_gp_params.quad_input_scales);
 
             % Specify the likelihood function which we'll be taking the hessian of:
             like_func = @(log_in_scale) exp(log_gp_lik2( samples.locations, ...
@@ -176,7 +176,7 @@ for i = 1:opt.num_samples
             % Find the Hessian
             laplace_sds = Inf;
             try
-                laplace_sds = sqrt(-1./hessdiag( like_func, log_in_scale_means));
+                laplace_sds = sqrt(-1./hessdiag( like_func, laplace_mode));
             catch e; 
                 e;
             end
@@ -189,26 +189,10 @@ for i = 1:opt.num_samples
                 good_sds = sqrt(diag(prior.covariance));
                 laplace_sds(bad_sd_ixs) = good_sds(bad_sd_ixs);
             end
-
             opt.sds_tr_input_scales = laplace_sds;
 
-            % Plot the log-likelihood surface.
             if opt.plots && D == 1
-                figure(11); clf;
-                hrange = linspace(-5, 10, 1000 );
-                for t = 1:length(hrange)
-                    vals(t) = like_func(hrange(t));
-                end
-                actual=plot(hrange, vals, 'b'); hold on;
-                y=get(gca,'ylim');
-                h=plot([log_in_scale_means log_in_scale_means],y, 'g');
-
-                % Plot the laplace-approx Gaussian.
-                rescale = like_func(log_in_scale_means)/mvnpdf(0, 0, laplace_sds^2);
-                laplace_approx=plot(hrange, rescale.*mvnpdf(hrange', log_in_scale_means, laplace_sds^2), 'r'); hold on;
-                xlabel('log input scale');
-                ylabel('likelihood');
-                legend([h, actual, laplace_approx], {'current best log input scale', 'actual likelihood surface', 'laplace approximation'})            
+                plot_hessian_approx( like_func, laplace_sds, laplace_mode );
             end
         end
     end
@@ -275,3 +259,6 @@ function log_l = log_gp_lik2(X_data, y_data, gp, log_noise, ...
     gp = revise_gp(X_data, y_data, gp, 'overwrite', [], 1);
     log_l = gp.hypersamples(1).logL;
 end
+
+
+
