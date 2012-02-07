@@ -7,13 +7,20 @@ function [min_loss, next_sample_point] = ...
     N = 1000;
     test_pts = linspace(bounds(1), bounds(2), N);
     losses = nan(1, N);
+    m = nan(1, N);
+    V = nan(1, N);
     for loss_i=1:length(test_pts)
-        losses(loss_i) = objective_fn(test_pts(loss_i));
+        [losses(loss_i), m(loss_i), V(loss_i)] = objective_fn(test_pts(loss_i));
     end
 
     % Choose the best point.
     [min_loss,min_ind] = min(losses);
     next_sample_point = test_pts(min_ind);
+    
+    figure(666);clf
+    gamma = (exp(1) - 1)^(-1);
+    tr = log(exp(samples.log_r-max(samples.log_r))/gamma + 1);
+    gp_plot(test_pts, m, sqrt(V), samples.locations, tr);
 
     % Plot the function.
     figure(1234); clf;

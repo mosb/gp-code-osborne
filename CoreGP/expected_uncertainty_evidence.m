@@ -1,4 +1,4 @@
-function xpc_unc = expected_uncertainty_evidence...
+function [xpc_unc, tm_a, tv_a] = expected_uncertainty_evidence...
       (new_sample_location, samples, prior, r_gp_params, opt)
 % returns the expected negative-squared-mean-evidence after adding a
 % hyperparameter sample hs_a. This quantity is a scaled version of the
@@ -17,32 +17,46 @@ function xpc_unc = expected_uncertainty_evidence...
 % - prior_struct requires fields
 %   * means
 %   * sds
-% - (optional) input r_gp_params has fields
+% - input r_gp_params has fields
 %   * quad_output_scale
 %   * quad_noise_sd
 %   * quad_input_scales
 %   * hs_c
+%   * sqd_dist_stack_s
 %   * R_r_s
+%   * K_r_s
 %   * ups_r_s
+%   * R_del_sc
+%   * K_del_sc
+%   * ups_del_sc
+%   * delta_tr_sc
+%   * jitters_r_s
+%   * log_mean_second_moment
 %   * Ups_sc_s
                         
-no_r_gp_params = nargin<4;
 if nargin<5
     opt = struct();
 end
 
-default_opt = struct('gamma_const', 100, ... % numerical scaling factor
+default_opt = struct('gamma_const', (exp(1)-1)^(-1), ... % numerical scaling factor
                     'allowed_cond_error',10^-14, ... % allowed conditioning error
                     'sds_tr_input_scales', false);
 % sds_tr_input_scales represents the posterior standard deviations in the
 % input scales for tr. If false, a delta function posterior is assumed.            
 opt = set_defaults( opt, default_opt );
 
-samples.locations = samples.locations;
+% read in and assign to variables all fields of structure r_gp_params
+cellfun(@(n,v) assignin('caller',n,v),fieldnames(r_gp_params),...
+    struct2cell(r_gp_params));
+%clear r_gp_params;
+
 log_r_s = samples.log_r;
 
 [num_s, num_hps] = size(samples.locations);
 
+% David asking Mike:  Should this be here?
+% Mike says: yes, the expecetd variance depends on the squared mean for the
+% integral over the likelihood, for which we need hs_c.
 hs_sc = [samples.locations; r_gp_params.candidate_locations];
 hs_sca = [hs_sc; new_sample_location];
 hs_sa = [samples.locations; new_sample_location];
@@ -71,22 +85,15 @@ gamma_r = opt.gamma_const;
 tr_s = tilde(r_s, gamma_r);
 
 
-% hyperparameters for gp over the log-likelihood, r, assumed to have zero mean
-if no_r_gp_params || isempty(r_gp_params)
-    [r_noise_sd, r_input_scales, r_output_scale] = ...
-        hp_heuristics(samples.locations, r_s, 10);
-
-    r_sqd_output_scale = r_output_scale^2;
-else
-    r_sqd_output_scale = r_gp_params.quad_output_scale^2;
-    r_input_scales = r_gp_params.quad_input_scales;
-end
+% hyperparameters for gp over the log-likelihood, r, assumed to have zero
+% mean
+r_sqd_output_scale = quad_output_scale^2;
+r_input_scales = quad_input_scales;
 r_sqd_lambda = r_sqd_output_scale* ...
     prod(2*pi*r_input_scales.^2)^(-0.5);
 
 sqd_r_input_scales = r_input_scales.^2;
 sqd_r_input_scales_stack = reshape(sqd_r_input_scales,1,1,num_hps);
-
 
 % hyperparameters for gp over delta, the difference between log-gp-mean-r and
 % gp-mean-log-r
@@ -98,17 +105,11 @@ del_sqd_lambda = del_sqd_output_scale* ...
 sqd_del_input_scales = del_input_scales.^2;
 sqd_del_input_scales_stack = reshape(del_input_scales.^2,1,1,num_hps);
 
-
-
-
-
 hs_a_minus_mean = new_sample_location - prior.mean;
-
 hs_sca_minus_mean_stack = reshape(bsxfun(@minus, hs_sca, prior.mean),...
                     num_sca, 1, num_hps);
 sqd_hs_sca_minus_mean_stack = ...
     repmat(hs_sca_minus_mean_stack.^2, [1, 1, 1]);
-
 hs_a_minus_mean_stack = reshape(hs_a_minus_mean,...
                     1, 1, num_hps);
 sqd_hs_a_minus_mean_stack = ...
@@ -118,12 +119,6 @@ sqd_dist_stack_sca_a = reshape(bsxfun(@minus, hs_sca, new_sample_location).^2, .
                     num_sca, 1, num_hps);
 sqd_dist_stack_sa_a = reshape(bsxfun(@minus, hs_sa, new_sample_location).^2, ...
                     num_sa, 1, num_hps);
-
-R_r_s = r_gp_params.R_r_s ;
-K_r_s = r_gp_params.K_r_s;
-
-R_del_sc = r_gp_params.R_del_sc;
-K_del_sc = r_gp_params.K_del_sc;
 
 % we update the covariance matrix over r. We consider all old jitters fixed
 % and add in jitter at hs_a sufficient to render the matrix
@@ -144,6 +139,7 @@ K_del_sca_a = del_sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
                     sqd_dist_stack_sca_a, sqd_del_input_scales_stack), 3));
 K_del_sca(num_sca, :) = K_del_sca_a;
 K_del_sca(:, num_sca) = K_del_sca_a';
+
 
 % this importances vector is to force the jitter to be applied solely to
 % the added point hs_a. improve_covariance_conditioning will automatically
@@ -178,11 +174,9 @@ ups_del_a = del_sqd_output_scale * ...
     exp(-0.5 * ...
     sum(hs_a_minus_mean.^2./sum_prior_var_sqd_input_scales_del));
 
-ups_r_s = r_gp_params.ups_r_s;
 ups_r_sa = [ups_r_s; ups_r_a];
 ups_inv_K_r_sa = solve_chol(R_r_sa, ups_r_sa)';
 
-ups_del_sc = r_gp_params.ups_del_sc;
 ups_del_sca = [ups_del_sc; ups_del_a];
 ups_inv_K_del_sca = solve_chol(R_del_sca, ups_del_sca)';  
 
@@ -222,12 +216,9 @@ Ups_sca_a = del_sqd_output_scale * r_sqd_output_scale * ...
 
 range_sa = [1:num_s,num_sca];
 
-Ups_sc_s = r_gp_params.Ups_sc_s;
 Ups_sc_sa = [Ups_sc_s, Ups_sca_a(1:num_sc,:);
                 Ups_sca_a(range_sa,:)'];
 
-
-delta_tr_sc = r_gp_params.delta_tr_sc;
 delta_tr_sca = [delta_tr_sc;0];
 del_inv_K = solve_chol(R_del_sca, delta_tr_sca)';
 del_inv_K_Ups_inv_K_r_sa = del_inv_K * solve_chol(R_r_sa, Ups_sc_sa')';
@@ -241,6 +232,10 @@ uppr.UT = true;
 sqd_dist_s_a = bsxfun(@minus, samples.locations, new_sample_location).^2;  
 K_r_s_a = r_sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
                     sqd_dist_s_a, sqd_r_input_scales), 2));
+               
+%remove the jitter associated with the closest datum to to hs_a
+[K_r_s, R_r_s] = ...
+    jitter_correction(jitters_r_s, K_r_s_a', K_r_s, R_r_s);
 
 invR_K_r_s_a = linsolve(R_r_s, K_r_s_a, lowr);                
 K_invK_a_s = linsolve(R_r_s, invR_K_r_s_a, uppr)';
@@ -252,6 +247,18 @@ n_a = n_sa(num_sa);
 tm_a = K_invK_a_s * tr_s;
 
 tv_a = r_sqd_lambda - invR_K_r_s_a' * invR_K_r_s_a;
+if tv_a < 0
+    tv_a = eps;
+end
+
+% Generally, we don't have to worry about output scales that much, as they
+% cancel.
+% Unfortunately, we do need them when we are computing the variance. Below
+% is a cheap hack to estimate the output scales over the transformed
+% likelihoods. The plus eps bit is to manage the variance=0 resulting from
+% a single sample.
+tr_sqd_output_scale = r_sqd_output_scale * (var(tr_s)+eps)/(var(r_s)+eps);
+tv_a = tr_sqd_output_scale/r_sqd_output_scale * tv_a;
 
 if opt.sds_tr_input_scales
     % we correct for the impact of learning this new hyperparameter sample,
@@ -268,11 +275,10 @@ if opt.sds_tr_input_scales
     
     invK_tr_s = solve_chol(R_r_s, tr_s);
 
-    sqd_dist_stack_s = r_gp_params.sqd_dist_stack_s;
     sqd_dist_stack_s_a = reshape(sqd_dist_s_a', 1, num_s, num_hps);
 
-    %Dtheta_ prefix denotes the derivative of a quantity: each plate is the
-    %derivative with respect to a different log input scale
+    % Dtheta_ prefix denotes the derivative of a quantity: each plate is the
+    % derivative with respect to a different log input scale
     
     Dtheta_K_a_s = bsxfun(@times, K_r_s_a', ...
         bsxfun(@rdivide, ...
@@ -291,9 +297,11 @@ if opt.sds_tr_input_scales
 end
 
 
+
 n_r_s = n_sa(1:num_s) * r_s + gamma_r * minty_del;
 
 xpc_unc =  - n_r_s^2 ...
     - 2 * n_r_s * (gamma_r * exp(tm_a + 0.5*tv_a) - gamma_r) ...
     - n_a^2 * gamma_r^2 * ...
         (exp(2*tm_a + 2*tv_a) - 2 * exp(tm_a + 0.5*tv_a) + 1);
+    

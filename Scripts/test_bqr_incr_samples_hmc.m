@@ -169,7 +169,7 @@ set(fh, 'units', 'centimeters');
 pos = get(fh, 'position'); 
 set(fh, 'position', [pos(1:2), 9, 4]); 
 
-legend('\acro{mc}','\acro{bmc}','\acro{bqz}','\acro{bqr}', ...
+legend('\acro{mc}','\acro{nbq}','\acro{bqz}','\acro{bqr}', ...
     'Location','SouthWest')
 
 legend boxoff

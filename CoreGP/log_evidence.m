@@ -29,7 +29,7 @@ if nargin<4
 end
 
 default_opt = struct('num_c', 100,... % number of candidate points
-                    'gamma_const', 100, ... % numerical scaling factor
+                    'gamma_const', (exp(1)-1)^(-1), ... % numerical scaling factor
                     'num_box_scales', 5, ... % defines the box over which to take candidates
                     'allowed_cond_error',10^-14, ... % allowed conditioning error
                     'update', false); % update log_evidence with a single new point
@@ -350,7 +350,7 @@ log_var_evidence = 2*max_log_r_s + log(var_ev);
 % Ups_del_r has a different name in other files. 
 Ups_sc_s = Ups_del_r;
 names = {'candidate_locations', 'sqd_dist_stack_s', 'R_r_s', 'K_r_s', 'ups_r_s', ...
-    'R_del_sc', 'K_del_sc', 'ups_del_sc', 'delta_tr_sc', ...
+    'R_del_sc', 'K_del_sc', 'ups_del_sc', 'delta_tr_sc', 'jitters_r_s', ...
     'log_mean_second_moment', 'Ups_sc_s'};
 for i = 1:length(names)
     r_gp_params.(names{i}) = eval(names{i});

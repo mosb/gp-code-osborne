@@ -89,29 +89,9 @@ uppr.UT=true;
 MuStar = Mu(hs,XStar);
 KStarData = K(hs, XStar, XData);
 
-jitter_correction_error = false;
 if jitter_corrected
-    [highest_correlation, closest_ind] = max(sum(abs(KStarData),1));
-    
-    K_data(closest_ind,closest_ind) = K_data(closest_ind,closest_ind) ...
-                                        - jitters(closest_ind);
-    
-    [cholK,error_msg] = revisechol(K_data,cholK,closest_ind);
-    % if X_star is very close to a datum, then a large amount of jitter
-    % must be added, leading to some errors.
-    jitter_correction_error = error_msg ~= 0;
-%    if error_msg ~= 0
-%        
-%         m = MuStar + KStarData*datatwothirds;
-%         C = eps;
-%           return
-%    end
-    if ~jitter_correction_error
-        datahalf = revisedatahalf(cholK,yData - Mu(hs, XData),datahalf,closest_ind);
-        datatwothirds = linsolve(cholK, datahalf, uppr);
-    else
-        cholK=gp.hypersamples(sample).cholK;
-    end
+    [K_data, cholK, datahalf, datatwothirds] = ...
+        jitter_correction(jitters, KStarData, K_data, cholK, yData - Mu(hs, XData), datahalf, datatwothirds);
 end
 
 if ~nomean
@@ -129,9 +109,10 @@ if nargout>1
         Kterm = linsolve(cholK,linsolve(cholK,KStarData',lowr),uppr);
         Kstst = K(hs, XStar,XStar);
         C = Kstst - KStarData*Kterm;
-    elseif jitter_correction_error
-        C = eps;
     end
+    
+    too_close = any(C<0);
+    C(C<0) = eps;
 
     if noise_corrected_variance
         C = C + Noise(hs, XStar);
@@ -162,7 +143,7 @@ if nargout>1
             elseif ~nocov              
                 gC = cellfun(@(DKmat) -2*DKmat*Kterm, DKStarData,...
                     'UniformOutput',false);
-            elseif jitter_correction_error
+            elseif too_close
                 gC = cellfun(@(DKmat) 0*DKmat, DKStarData,...
                     'UniformOutput',false);
             end

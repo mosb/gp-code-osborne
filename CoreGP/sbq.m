@@ -4,9 +4,9 @@ function [mean_log_evidences, var_log_evidences, samples, gp_hypers] = ...
 % evidence, an integral over exp(log_r_fn) against the prior in prior_struct.
 % 
 % OUTPUTS
-% - mean_log_evidences: our mean estimate for the log of the evidence
-% - var_log_evidences: the variance for the log of the evidence
-% - sample_locations: n*d matrix of hyperparameter samples
+% - mean_log_evidences: our mean estimates for the log of the evidence
+% - var_log_evidences: the variances for the log of the evidence
+% - samples: n*d matrix of hyperparameter samples
 % - gp_hypers
 % 
 % INPUTS
