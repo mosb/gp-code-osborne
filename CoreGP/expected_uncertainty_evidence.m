@@ -43,8 +43,7 @@ log_r_s = samples.log_r;
 
 [num_s, num_hps] = size(samples.locations);
 
-hs_c = r_gp_params.hs_c;   % David asking Mike:  Should this be here?
-hs_sc = [samples.locations; hs_c];
+hs_sc = [samples.locations; r_gp_params.candidate_locations];
 hs_sca = [hs_sc; new_sample_location];
 hs_sa = [samples.locations; new_sample_location];
 

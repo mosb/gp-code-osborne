@@ -63,10 +63,12 @@ fprintf(file, '\\begin{tabular}{l %s}\n', repmat(' r', 1, metrics));
 fprintf(file, 'Integrand');
 for ii = 1:metrics
   fprintf(file, ' & \\rotatebox{0}{ %s } ', metricNames{ii});
-  
+end
+
+for jj = 1:methods
   % We don't want the clip to be so small even the best method gets clipped
   orderMagBest = exp10(2+ceil(log10(max(min(results(jj, :)'), 0))));
-  maxClipCol(ii) = max(maxClip, orderMagBest);
+  maxClipCol(jj) = max(maxClip, orderMagBest);
 end
 %fprintf(file, ' \\\\ \\hline\n');
 fprintf(file, ' \\\\ \\midrule\n');   % Using booktabs

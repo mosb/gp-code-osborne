@@ -83,9 +83,9 @@ for i = 1:opt.num_samples
     gp_hypers.cov = log( [ 1 1] );%log([ones(1, D) 1]);    
 
     % Fit the model, but not the likelihood hyperparam (which stays fixed).
-    gp_hypers = minimize(gp_hypers, @gp_fixedlik, -max_iters, ...
-                         inference, meanfunc, covfunc, likfunc, ...
-                         samples.locations, samples.scaled_r);     
+    %gp_hypers = minimize(gp_hypers, @gp_fixedlik, -max_iters, ...
+    %                     inference, meanfunc, covfunc, likfunc, ...
+    %                     samples.locations, samples.scaled_r);     
     
     % Update our posterior uncertainty about the lengthscale hyperparameters.
     % =========================================================================
@@ -106,7 +106,8 @@ for i = 1:opt.num_samples
         % Find the Hessian.
         laplace_sds = Inf;
         try
-            laplace_sds = sqrt(-1./hessdiag( like_func, laplace_mode));
+            %laplace_sds = sqrt(-1./hessdiag( like_func, laplace_mode));
+            [grad,err,finaldelta] = gradest(fun,x0)
         catch e; 
             e;
         end
@@ -125,18 +126,16 @@ for i = 1:opt.num_samples
         if opt.plots && D == 1
             plot_hessian_approx( like_func, laplace_sds, laplace_mode );
         end
+        fprintf('Posterior variance in lengthscales: '); disp(laplace_sds);
     end
-    
-    laplace_sds
-    exp(gp_hypers.cov(end))
-    exp(gp_hypers.cov(1:end - 1))
     
     % Convert gp_hypers to r_gp_params.
     % TODO: check that these are the right units.
+    fprintf('Output variance: '); disp(exp(gp_hypers.cov(end)));
+    fprintf('Lengthscales: '); disp(exp(gp_hypers.cov(1:end - 1)));    
     r_gp_params.quad_output_scale = exp(gp_hypers.cov(end));
     r_gp_params.quad_input_scales(1:D) = exp(gp_hypers.cov(1:end - 1));
     [log_ev, log_var_ev, r_gp_params] = log_evidence(samples, prior, r_gp_params, opt);
-
     
     % Choose the next sample point.
     % =================================
@@ -182,3 +181,11 @@ function l = gpml_likelihood( log_in_scale, gp_hypers, inference, meanfunc, covf
     gp_hypers.cov(1:end-1) = log_in_scale;
     l = exp(-gp_fixedlik(gp_hypers, inference, meanfunc, covfunc, likfunc, X, y));
 end
+
+
+function l = gpml_likelihood_grad( log_in_scale, gp_hypers, inference, meanfunc, covfunc, likfunc, X, y)
+% Just replaces the lengthscales.
+    gp_hypers.cov(1:end-1) = log_in_scale;
+    l = exp(-gp_fixedlik(gp_hypers, inference, meanfunc, covfunc, likfunc, X, y));
+end
+

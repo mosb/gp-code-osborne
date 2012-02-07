@@ -346,11 +346,10 @@ var_ev = mean_second_moment - mean_ev.^2;
 log_var_evidence = 2*max_log_r_s + log(var_ev);
 
 
-% Store a lot of stuff in the r_gp_params structure, candidate_locations
-% and Ups_del_r have different names in other files. 
-hs_c = candidate_locations;
+% Store a lot of stuff in the r_gp_params structure.
+% Ups_del_r has a different name in other files. 
 Ups_sc_s = Ups_del_r;
-names = {'hs_c', 'sqd_dist_stack_s', 'R_r_s', 'K_r_s', 'ups_r_s', ...
+names = {'candidate_locations', 'sqd_dist_stack_s', 'R_r_s', 'K_r_s', 'ups_r_s', ...
     'R_del_sc', 'K_del_sc', 'ups_del_sc', 'delta_tr_sc', ...
     'log_mean_second_moment', 'Ups_sc_s'};
 for i = 1:length(names)
