@@ -43,9 +43,6 @@ log_r_s = samples.log_r;
 
 [num_s, num_hps] = size(samples.locations);
 
-prior_means = prior.mean;
-prior_sds = sqrt(diag(prior.covariance))';
-
 hs_c = r_gp_params.hs_c;   % David asking Mike:  Should this be here?
 hs_sc = [samples.locations; hs_c];
 hs_sca = [hs_sc; new_sample_location];
@@ -55,7 +52,7 @@ num_sc = size(hs_sc, 1);
 num_sca = num_sc + 1;
 num_sa = num_s + 1;
 
-prior_var = prior_sds.^2;
+prior_var = diag(prior.covariance)';
 prior_var_stack = reshape(prior_var, 1, 1, num_hps);
 
 [max_log_r_s, max_ind] = max(log_r_s);
@@ -106,9 +103,9 @@ sqd_del_input_scales_stack = reshape(del_input_scales.^2,1,1,num_hps);
 
 
 
-hs_a_minus_mean = new_sample_location - prior_means;
+hs_a_minus_mean = new_sample_location - prior.mean;
 
-hs_sca_minus_mean_stack = reshape(bsxfun(@minus, hs_sca, prior_means),...
+hs_sca_minus_mean_stack = reshape(bsxfun(@minus, hs_sca, prior.mean),...
                     num_sca, 1, num_hps);
 sqd_hs_sca_minus_mean_stack = ...
     repmat(hs_sca_minus_mean_stack.^2, [1, 1, 1]);
@@ -222,7 +219,7 @@ Ups_sca_a = del_sqd_output_scale * r_sqd_output_scale * ...
 %     mat = kron(ones(2),Lambda)+blkdiag(W_del,W_r);
 % 
 %     Ups_sca_a_test = @(i) del_sqd_output_scale * r_sqd_output_scale *...
-%         mvnpdf([hs_sc(i,:)';hs_a'],[prior_means';prior_means'],mat);
+%         mvnpdf([hs_sc(i,:)';hs_a'],[prior.mean';prior.mean'],mat);
 
 range_sa = [1:num_s,num_sca];
 

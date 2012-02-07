@@ -12,6 +12,10 @@ function [out, sqd_jitters] = improve_covariance_conditioning(in,importance,allo
 % covariance matrix. If in contains nan elements, it is assumed that they
 % are to be replaced by non-problematic entries. 
 
+%sqd_jitters = ones(size(in,1),1).*max(in(:)).*1e-10;
+%out = in + diag(sqd_jitters);
+%return;
+
 N = length(in);
 
 if nargin<2 || isempty(importance)

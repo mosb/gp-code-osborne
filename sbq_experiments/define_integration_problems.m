@@ -144,15 +144,17 @@ funnel_2d.prior.covariance = 25.*diag(ones(funnel_2d.dimension,1));
 funnel_2d.log_likelihood_fn = @(x) arrayfun( @(a,b,c)logmvnpdf(a,b,c), zeros(size(x,1),funnel_2d.dimension - 1), x(:,1), exp(x(:,2)));
 % This value was gotten by calling = brute_force_integrate_2d(funnel_2d),
 % with dx = 0.01.  However I think it's a little bit off.
-funnel_2d.true_log_evidence = -2.1321289250641388690610256;
+%funnel_2d.true_log_evidence = -2.1321289250641388690610256;
+% This value was gotten by simple_monte_carlo with 10000 examples.
+funnel_2d.true_log_evidence = -2.7480;
 
 
 % Specify problems.
 problems = {};
 problems{end+1} = easy_1d;
 problems{end+1} = easy_4d;
-problems{end+1} = easy_10d;
-problems{end+1} = easy_20d;
+%problems{end+1} = easy_10d;
+%problems{end+1} = easy_20d;
 problems{end+1} = bumpy_1d;
 problems{end+1} = bumpy_1d_exp;
 problems{end+1} = two_humps_1d;

@@ -43,11 +43,17 @@ sbq_method.acronym = 'SBQ';
 sbq_method.function = @sbq;
 sbq_method.opt = [];
 
-sbq_gpml_method.nicename = 'Sequential Bayesian Quadrature';
-sbq_gpml_method.uniquename = 'sequential bayesian quadrature v1';
+sbq_gpml_method.nicename = 'Sequential Bayesian Quadrature GPML';
+sbq_gpml_method.uniquename = 'sbq gpml v1';
 sbq_gpml_method.acronym = 'SBQ_GPML';
 sbq_gpml_method.function = @sbq_gpml;
 sbq_gpml_method.opt = [];
+
+bq_gpml_ais_method.nicename = 'Bayesian Quadrature using AIS';
+bq_gpml_ais_method.uniquename = 'bayesian quadrature gpml ais v1';
+bq_gpml_ais_method.acronym = 'BQ_GPML_AIS';
+bq_gpml_ais_method.function = @online_bq_ais;
+bq_gpml_ais_method.opt = [];
 
 
 % Specify integration methods.
@@ -55,5 +61,6 @@ methods = {};
 methods{end+1} = smc_method;
 methods{end+1} = ais_method;
 methods{end+1} = bmc_method;
-%methods{end+1} = sbq_method;
+methods{end+1} = sbq_method;
 methods{end+1} = sbq_gpml_method;
+methods{end+1} = bq_gpml_ais_method;

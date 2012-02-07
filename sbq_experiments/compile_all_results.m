@@ -79,12 +79,12 @@ for p_ix = 1:num_problems
 end
 
 % Some sanity checking.
-for p_ix = 1:num_problems
+%for p_ix = 1:num_problems
     % Check that the true value for every problem was recorded as being the
     % same for all repititions, timesteps and methods tried.
-    assert(all(all(all(true_log_ev_table(:, p_ix, :, :) == ...
-                       true_log_ev_table(1, p_ix, 1, 1)))));
-end
+%    assert(all(all(all(true_log_ev_table(:, p_ix, :, :) == ...
+%                       true_log_ev_table(1, p_ix, 1, 1)))));
+%end
 
 method_names = cellfun( @(method) method.acronym, methods, 'UniformOutput', false );
 problem_names = cellfun( @(problem) problem.name, problems, 'UniformOutput', false );
@@ -133,17 +133,20 @@ fprintf(autocontent, '\\input{%s}\n', [tabledirshort, 'truth_prob.tex']);
 % ================================
 close all;
 
-color(1, 1:3) = [1 0.1 0.1];  % red
-color(2, 1:3) = [0.1 1 0.1];  % green
-color(3, 1:3) = [0.1 0.1 1];  % blue
-color(4, 1:3) = [.4 .4 0.1];  % dark yellow
-color(4, 1:3) = [0.1 1   1];  % cyan
+color(1, 1:3) = [1   0.1 0.1];  % red
+color(2, 1:3) = [0.1   1 0.1];  % green
+color(3, 1:3) = [0.1   0.1 1];  % blue
+color(4, 1:3) = [.4  0.4 0.1];  % dark yellow
+color(5, 1:3) = [0.1   1   1];  % cyan
+color(6, 1:3) = [0.9 0.9 0.9];  % dark grey
 
 opacity = 0.1;
 edgecolor = 'none';
 
 % Print legend.
 % =====================
+method_names = cellfun( @(name) strrep( name, '_', ' '), method_names, ...
+                       'UniformOutput', false);
 figure; clf;
 for m_ix = 1:num_methods
     z_handle(m_ix) = plot( 1, 1, '-', 'Color', sqrt(color( m_ix, 1:3) ), 'LineWidth', 1); hold on;
@@ -164,14 +167,14 @@ for p_ix = 1:num_problems
     cur_problem_name = problem_names{p_ix};
     figure; clf;
 
-    %try
+    try
         for m_ix = 1:num_methods
             for r = 1:num_repititions
                 for s = plotted_sample_set
                     true_log_evidence = true_log_ev_table( 1, p_ix, s, r );
                     mean_prediction = mean_log_ev_table( m_ix, p_ix, s, r );
                     var_prediction = var_log_ev_table( m_ix, p_ix, s, r );
-                    neg_log_liks(m_ix, s) = real(logmvnpdf(true_log_evidence, ...
+                    neg_log_liks(m_ix, s) = -real(logmvnpdf(true_log_evidence, ...
                                                 mean_prediction, var_prediction));
                 end
                 z_handle(m_ix) = plot( plotted_sample_set, ...
@@ -180,7 +183,7 @@ for p_ix = 1:num_problems
             end
         end
         xlabel('Number of samples');
-        ylabel('Log Density of True Value');
+        ylabel('Neg Log Density of True Value');
         title(cur_problem_name);
         %legend(z_handle, method_names);
         %ylim([-3 3 ]);
@@ -194,9 +197,9 @@ for p_ix = 1:num_problems
         matlab2tikz( [plotdir filename], 'height', '\fheight', 'width', ...
             '\fwidth', 'showInfo', false, 'showWarnings', false );
         fprintf(autocontent, figure_string, [plotdirshort filename]);    
-    %catch e
+    catch e
         %e
-    %end
+    end
 end
 
 

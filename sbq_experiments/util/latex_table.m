@@ -8,8 +8,6 @@
 % ========================
 function latex_table(filename, results, methodNames, metricNames, experimentName)
 
-meanScore = results;
-
 file = fopen( filename, 'w');
 
 for i = 1:length(methodNames)
@@ -26,16 +24,16 @@ end
 maxLeftDigits = 3;
 maxClip = 10 ^ maxLeftDigits;
 
-[methods metrics] = size(meanScore);
+[methods metrics] = size(results);
 assert(length(methodNames) == methods);
 assert(length(metricNames) == metrics);
 maxClipCol = zeros(metrics, 1);
 
 % argmin might have trouble if methods is singleton. TODO fix
-[best, best_ix] = min(meanScore');
+[best, best_ix] = min(results');
 % nearbest keeps track of if we are significantly different from the best
 % model.
-nearbest = zeros( size(meanScore));
+nearbest = zeros( size(results));
 for ii = 1:methods  
     for jj = 1:metrics
         % run a paired ttest
@@ -67,7 +65,7 @@ for ii = 1:metrics
   fprintf(file, ' & \\rotatebox{0}{ %s } ', metricNames{ii});
   
   % We don't want the clip to be so small even the best method gets clipped
-  orderMagBest = exp10(2+ceil(log10(max(min(meanScore(jj, :)'), 0))));
+  orderMagBest = exp10(2+ceil(log10(max(min(results(jj, :)'), 0))));
   maxClipCol(ii) = max(maxClip, orderMagBest);
 end
 %fprintf(file, ' \\\\ \\hline\n');
@@ -84,13 +82,13 @@ for ii = 1:methods
     if nearbest(ii, jj)
       %fprintf(file, [' & $\\mathbf{' printFormat '} \\pm %2.1f$'], ...
       fprintf(file, [' & $\\mathbf{' printFormat '}$'], ...
-        meanScore(ii, jj));
-    elseif meanScore(ii, jj) > maxClipCol(jj)
+        results(ii, jj));
+    elseif results(ii, jj) > maxClipCol(jj)
       fprintf(file, ' & $>$ %d', maxClipCol(jj));
     else
       %fprintf(file, [' & $' printFormat ' \\pm %2.1f$' ], ...
       fprintf(file, [' & $' printFormat '$' ], ...
-        meanScore(ii, jj));
+        results(ii, jj));
     end
   end
   fprintf(file, ' \\\\\n');
