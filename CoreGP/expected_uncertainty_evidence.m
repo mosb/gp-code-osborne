@@ -69,6 +69,7 @@ prior_var = diag(prior.covariance)';
 prior_var_stack = reshape(prior_var, 1, 1, num_hps);
 
 [max_log_r_s, max_ind] = max(log_r_s);
+max_r_s = exp(max_log_r_s);
 % this function is only ever used to compare different hs_a's for the
 % single fixed r_s, so no big deal about subtracting off this
 log_r_s = log_r_s - max_log_r_s;
@@ -85,7 +86,7 @@ gamma_r = opt.gamma_const;
 tr_s = tilde(r_s, gamma_r);
 
 
-% hyperparameters for gp over the log-likelihood, r, assumed to have zero
+% hyperparameters for gp over the likelihood, r, assumed to have zero
 % mean
 r_sqd_output_scale = quad_output_scale^2;
 r_input_scales = quad_input_scales;
@@ -300,8 +301,9 @@ end
 
 n_r_s = n_sa(1:num_s) * r_s + gamma_r * minty_del;
 
-xpc_unc =  - n_r_s^2 ...
+xpc_unc =  exp(log_mean_second_moment)...
+    + max_r_s.^2 * (- n_r_s^2 ...
     - 2 * n_r_s * (gamma_r * exp(tm_a + 0.5*tv_a) - gamma_r) ...
     - n_a^2 * gamma_r^2 * ...
-        (exp(2*tm_a + 2*tv_a) - 2 * exp(tm_a + 0.5*tv_a) + 1);
+        (exp(2*tm_a + 2*tv_a) - 2 * exp(tm_a + 0.5*tv_a) + 1));
     

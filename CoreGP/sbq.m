@@ -208,7 +208,7 @@ for i = 1:opt.num_samples
             % If we have a 1-dimensional function, optimize it by exhaustive
             % evaluation.
             [exp_loss_min, next_sample_point] = ...
-                plot_1d_minimize(objective_fn, bounds, samples);
+                plot_1d_minimize(objective_fn, bounds, samples, log_var_ev);
         else
             % Call DIRECT to hopefully optimize faster than by exhaustive search.
             problem.f = objective_fn;

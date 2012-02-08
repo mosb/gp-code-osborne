@@ -79,8 +79,11 @@ del_sqd_output_scale = r_sqd_output_scale;
 del_sqd_lambda = del_sqd_output_scale* ...
     prod(2*pi*del_input_scales.^2)^(-0.5);
 
-lower_bound = min(samples.locations) - opt.num_box_scales*prior_sds;
-upper_bound = max(samples.locations) + opt.num_box_scales*prior_sds;
+lower_bound = min(samples.locations) - 2*min_input_scales;
+lower_bound = max(lower_bound, prior.mean - opt.num_box_scales*prior_sds);
+
+upper_bound = max(samples.locations) + 2*min_input_scales;
+upper_bound = min(upper_bound, prior.mean + opt.num_box_scales*prior_sds);
 
 opt.num_c = min(opt.num_c, num_samples);
 num_c = opt.num_c;
@@ -142,10 +145,11 @@ ups2_detvar_stack_r = ...
 ups2_var_stack_r = ...
     prior_var_stack + 2 * sqd_r_input_scales_stack ...
      - ups_var_stack_r .* ...
-    ups2_detvar_stack_r.^(-1) .*  ups_var_stack_r;
-chi_detvar_stack = ups2_detvar_stack_r;
+    (2 * prior_var_stack + sqd_r_input_scales_stack).^(-1) ...
+        .*  ups_var_stack_r;
+chi_detvar_stack = 2 * prior_var_stack + sqd_r_input_scales_stack;
 chi3_detvar_stack_r = ...
-    ups2_var_stack_r ...
+    2 * prior_var_stack + sqd_r_input_scales_stack ...
     - 2 * prior_var_stack .* ...
         ups_var_stack_r.^(-1) .*  prior_var_stack;
 chi3_var_stack_r = prior_var_stack .* ...
@@ -198,7 +202,7 @@ chi3_r = r_sqd_output_scale * ...
     exp(-0.5 * ...
     sum(bsxfun(@rdivide, sqd_dist_stack_s, ...
     chi3_var_stack_r),3));
-chi3_r = ups_r_s' * chi3_r * ups_r_s;
+chi3_r = chi3_r .* (ups_r_s * ups_r_s');
 r_inv_K_chi3_inv_K_r = inv_K_r_r_s' * chi3_r * inv_K_r_r_s;
 
 prior_var_times_sqd_dist_stack_sc = bsxfun(@times, prior_var_stack, ...
@@ -307,8 +311,12 @@ minty_del = ups_inv_K_del * delta_tr_sc;
 % the correction factor due to r being non-negative
 correction = minty_del_r + gamma_r * minty_del;
 
-% variance of int tilde(r)(hs) p(hs) dhs given r_s
+% variance of int r(hs) p(hs) dhs given r_s
 Vinty_r = chi_r - ups_inv_K_r * ups_r_s;
+% NB: we actually want the variance of int tr(hs) p(hs) dhs, which differs
+% only in the output scale used (the input scales are identical, and the
+% actual observations tr_s and r_s do not enter). We will correct for using
+% r_sqd_output_scale rather than tr_sqd_output_scale later.
 
 
 % mean ev has been determined using the rescaled log-likelihoods (that have
@@ -344,6 +352,11 @@ mean_second_moment =  A + B + C + D;
 log_mean_second_moment = 2*max_log_r_s + log(mean_second_moment);
 
 var_ev = mean_second_moment - mean_ev.^2;
+if var_ev < 0
+    warning('variance of evidence negative');
+    fprintf('variance of evidence: %g\n', var_ev.*exp(max_log_r_s)^2);
+    var_ev = eps;
+end
 log_var_evidence = 2*max_log_r_s + log(var_ev);
 
 
