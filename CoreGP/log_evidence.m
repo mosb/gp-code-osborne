@@ -44,7 +44,8 @@ opt = set_defaults( opt, default_opt );
 % create stacks of the standard deviations and variances of the priors for
 % each hyperparameter
 prior_var = diag(prior.covariance)';
-prior_sds_stack = reshape(sqrt(prior_var), 1, 1, num_sample_dims);
+prior_sds = sqrt(prior_var);
+prior_sds_stack = reshape(prior_sds, 1, 1, num_sample_dims);
 prior_var_stack = reshape(prior_var, 1, 1, num_sample_dims);
 
 % rescale all log-likelihood values for numerical accuracy; we'll correct
@@ -78,8 +79,8 @@ del_sqd_output_scale = r_sqd_output_scale;
 del_sqd_lambda = del_sqd_output_scale* ...
     prod(2*pi*del_input_scales.^2)^(-0.5);
 
-lower_bound = min(samples.locations) - opt.num_box_scales*min_input_scales;
-upper_bound = max(samples.locations) + opt.num_box_scales*min_input_scales;
+lower_bound = min(samples.locations) - opt.num_box_scales*prior_sds;
+upper_bound = max(samples.locations) + opt.num_box_scales*prior_sds;
 
 opt.num_c = min(opt.num_c, num_samples);
 num_c = opt.num_c;
