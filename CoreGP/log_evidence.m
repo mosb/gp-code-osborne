@@ -75,7 +75,7 @@ r_sqd_lambda = r_sqd_output_scale* ...
     prod(2*pi*r_input_scales.^2)^(-0.5);
 
 del_input_scales = 0.5 * r_input_scales;
-del_sqd_output_scale = r_sqd_output_scale;
+del_sqd_output_scale = 0.1 * r_sqd_output_scale;
 del_sqd_lambda = del_sqd_output_scale* ...
     prod(2*pi*del_input_scales.^2)^(-0.5);
 

@@ -69,7 +69,6 @@ prior_var = diag(prior.covariance)';
 prior_var_stack = reshape(prior_var, 1, 1, num_hps);
 
 [max_log_r_s, max_ind] = max(log_r_s);
-max_r_s = exp(max_log_r_s);
 % this function is only ever used to compare different hs_a's for the
 % single fixed r_s, so no big deal about subtracting off this
 log_r_s = log_r_s - max_log_r_s;
@@ -99,7 +98,7 @@ sqd_r_input_scales_stack = reshape(sqd_r_input_scales,1,1,num_hps);
 % hyperparameters for gp over delta, the difference between log-gp-mean-r and
 % gp-mean-log-r
 del_input_scales = 0.5 * r_input_scales;
-del_sqd_output_scale = r_sqd_output_scale;
+del_sqd_output_scale = 0.1 * r_sqd_output_scale;
 del_sqd_lambda = del_sqd_output_scale* ...
     prod(2*pi*del_input_scales.^2)^(-0.5);
 
@@ -142,6 +141,9 @@ K_del_sca(num_sca, :) = K_del_sca_a;
 K_del_sca(:, num_sca) = K_del_sca_a';
 
 
+
+
+
 % this importances vector is to force the jitter to be applied solely to
 % the added point hs_a. improve_covariance_conditioning will automatically
 % do this so long as K_r_sa has nans in the appropriate off-diagonal
@@ -157,7 +159,16 @@ R_r_sa = updatechol(K_r_sa, R_r_s, num_sa);
 importances = [inf(num_sc,1);0];
 K_del_sca = improve_covariance_conditioning(K_del_sca, ...
     importances, opt.allowed_cond_error);
-R_del_sca = updatechol(K_del_sca, R_del_sc, num_sca);        
+R_del_sca = updatechol(K_del_sca, R_del_sc, num_sca); 
+
+% we add noise to delta to account for the fact that it will change
+% following the addition of a new observation. delta will be unchanged at
+% zero at hs_s, and will change at hs_c more for locations close to hs_a.
+% Of course, we also know with certainty that delta at hs_a will be zero. 
+del_noise = K_del_sca_a;
+del_noise(1:num_s) = 0;
+del_noise(num_sca) = 0;
+R_del_sca = perturbchol(R_del_sca, del_noise);
 
 % ups_s = int K(hs, samples.locations)  prior(hs) dhs
 
@@ -217,12 +228,12 @@ Ups_sca_a = del_sqd_output_scale * r_sqd_output_scale * ...
 
 range_sa = [1:num_s,num_sca];
 
-Ups_sc_sa = [Ups_sc_s, Ups_sca_a(1:num_sc,:);
+Ups_sca_sa = [Ups_sc_s, Ups_sca_a(1:num_sc,:);
                 Ups_sca_a(range_sa,:)'];
 
 delta_tr_sca = [delta_tr_sc;0];
 del_inv_K = solve_chol(R_del_sca, delta_tr_sca)';
-del_inv_K_Ups_inv_K_r_sa = del_inv_K * solve_chol(R_r_sa, Ups_sc_sa')';
+del_inv_K_Ups_inv_K_r_sa = del_inv_K * solve_chol(R_r_sa, Ups_sca_sa')';
 
 n_sa = del_inv_K_Ups_inv_K_r_sa + ups_inv_K_r_sa;
 
@@ -302,8 +313,8 @@ end
 n_r_s = n_sa(1:num_s) * r_s + gamma_r * minty_del;
 
 xpc_unc =  exp(log_mean_second_moment)...
-    + max_r_s.^2 * (- n_r_s^2 ...
-    - 2 * n_r_s * (gamma_r * exp(tm_a + 0.5*tv_a) - gamma_r) ...
-    - n_a^2 * gamma_r^2 * ...
+    - exp(2*max_log_r_s) * (n_r_s^2 ...
+    + 2 * n_r_s * n_a * (gamma_r * exp(tm_a + 0.5*tv_a) - gamma_r) ...
+    + n_a^2 * gamma_r^2 * ...
         (exp(2*tm_a + 2*tv_a) - 2 * exp(tm_a + 0.5*tv_a) + 1));
     
