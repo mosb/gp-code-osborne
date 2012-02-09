@@ -323,6 +323,7 @@ Vinty_r = chi_r - ups_inv_K_r * ups_r_s;
 % had the maximum log likelihood subtracted off), we return correct values
 % by scaling back again)
 mean_ev = minty_r + correction;
+
 log_mean_evidence = max_log_r_s + log(mean_ev);
 
 % (int dpsi_0/dtr(hs) m_{tr|s}(hs) dhs)^2
@@ -365,7 +366,7 @@ log_var_evidence = 2*max_log_r_s + log(var_ev);
 Ups_sc_s = Ups_del_r;
 names = {'candidate_locations', 'sqd_dist_stack_s', 'R_r_s', 'K_r_s', 'ups_r_s', ...
     'R_del_sc', 'K_del_sc', 'ups_del_sc', 'delta_tr_sc', 'jitters_r_s', ...
-    'log_mean_second_moment', 'Ups_sc_s'};
+    'log_mean_second_moment', 'Ups_sc_s', 'minty_del'};
 for i = 1:length(names)
     r_gp_params.(names{i}) = eval(names{i});
 end

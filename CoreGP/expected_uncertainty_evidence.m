@@ -40,7 +40,8 @@ end
 
 default_opt = struct('gamma_const', (exp(1)-1)^(-1), ... % numerical scaling factor
                     'allowed_cond_error',10^-14, ... % allowed conditioning error
-                    'sds_tr_input_scales', false);
+                    'sds_tr_input_scales', false,...
+                    'delta_update', false);
 % sds_tr_input_scales represents the posterior standard deviations in the
 % input scales for tr. If false, a delta function posterior is assumed.            
 opt = set_defaults( opt, default_opt );
@@ -218,22 +219,31 @@ Ups_sca_a = del_sqd_output_scale * r_sqd_output_scale * ...
 % determinant of a 2 x 2 matrix
             
 %     % some code to test that this construction works          
-%     Lambda = diag(prior_sds.^2);
+%     Lambda = diag(prior_var);
 %     W_del = diag(del_input_scales.^2);
 %     W_r = diag(r_input_scales.^2);
 %     mat = kron(ones(2),Lambda)+blkdiag(W_del,W_r);
 % 
 %     Ups_sca_a_test = @(i) del_sqd_output_scale * r_sqd_output_scale *...
-%         mvnpdf([hs_sc(i,:)';hs_a'],[prior.mean';prior.mean'],mat);
+%         mvnpdf([hs_sc(i,:)';new_sample_location'],[prior.mean';prior.mean'],mat);
 
 range_sa = [1:num_s,num_sca];
 
-Ups_sca_sa = [Ups_sc_s, Ups_sca_a(1:num_sc,:);
-                Ups_sca_a(range_sa,:)'];
+if opt.delta_update
+    % update for the influence of the new observation at hs_a on delta.
+    Ups_sca_sa = [Ups_sc_s, Ups_sca_a(1:num_sc,:);
+                    Ups_sca_a(range_sa,:)'];
+    delta_tr_sca = [delta_tr_sc;0];
+    del_inv_K = solve_chol(R_del_sca, delta_tr_sca)';
+    del_inv_K_Ups_inv_K_r_sa = del_inv_K * solve_chol(R_r_sa, Ups_sca_sa')';
 
-delta_tr_sca = [delta_tr_sc;0];
-del_inv_K = solve_chol(R_del_sca, delta_tr_sca)';
-del_inv_K_Ups_inv_K_r_sa = del_inv_K * solve_chol(R_r_sa, Ups_sca_sa')';
+    minty_del = ups_inv_K_del_sca * delta_tr_sca;
+else     
+    Ups_sc_sa = [Ups_sc_s,Ups_sca_a(1:num_sc,:)];
+    del_inv_K = solve_chol(R_del_sc, delta_tr_sc)';
+    del_inv_K_Ups_inv_K_r_sa = del_inv_K * solve_chol(R_r_sa, Ups_sc_sa')';
+end
+
 
 n_sa = del_inv_K_Ups_inv_K_r_sa + ups_inv_K_r_sa;
 
@@ -252,7 +262,7 @@ K_r_s_a = r_sqd_lambda * exp(-0.5*sum(bsxfun(@rdivide, ...
 invR_K_r_s_a = linsolve(R_r_s, K_r_s_a, lowr);                
 K_invK_a_s = linsolve(R_r_s, invR_K_r_s_a, uppr)';
 
-minty_del = ups_inv_K_del_sca * delta_tr_sca;
+
 
 n_a = n_sa(num_sa);
 % zero prior mean
