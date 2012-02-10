@@ -106,8 +106,8 @@ latex_table( [tabledir, 'times_taken.tex'], squeeze(timing_table(:,:,end,1))', .
 fprintf(autocontent, '\\input{%s}\n', [tabledirshort, 'times_taken.tex']);
 
 se = bsxfun(@minus, mean_log_ev_table(:,:,end, 1)', true_log_ev_table(1, :, end, 1)').^2;
-latex_table( [tabledir, 'se.tex'], se, problem_names, method_names, ...
-    sprintf('squared error at %i samples', sample_sizes(end)) );
+latex_table( [tabledir, 'se.tex'], log(real(se)), problem_names, method_names, ...
+    sprintf('log squared error at %i samples', sample_sizes(end)) );
 fprintf(autocontent, '\\input{%s}\n', [tabledirshort, 'se.tex']);
 
 for p_ix = 1:num_problems
@@ -125,7 +125,7 @@ for p_ix = 1:num_problems
     end
 end
 latex_table( [tabledir, 'truth_prob.tex'], -log_liks', problem_names, ...
-     method_names, sprintf('neg density of truth at %i samples', sample_sizes(end)) );
+     method_names, sprintf('neg log density of truth at %i samples', sample_sizes(end)) );
 fprintf(autocontent, '\\input{%s}\n', [tabledirshort, 'truth_prob.tex']);
 
 

@@ -132,11 +132,15 @@ laplace_sds
 exp(gp_hypers.cov(end))
 exp(gp_hypers.cov(1:end - 1))
 
-% Convert gp_hypers to r_gp_params.
-% TODO: check that these are the right units.
-r_gp_params.quad_output_scale = exp(gp_hypers.cov(end));
+% Convert gp_hypers to r_gp_params.  GPML and Mike's code have different 
+% normalization constants.
+converted_output_scale = gp_hypers.cov(end) ...
+    - logmvnpdf(zeros(1,D), zeros(1,D), diag(ones(D,1).*exp(gp_hypers.cov(1:end - 1))))/2;
+fprintf('Output variance: '); disp(exp(converted_output_scale));
+fprintf('Lengthscales: '); disp(exp(gp_hypers.cov(1:end - 1)));    
+r_gp_params.quad_output_scale = converted_output_scale;
 r_gp_params.quad_input_scales(1:D) = exp(gp_hypers.cov(1:end - 1));
-[log_ev, log_var_ev] = log_evidence(samples, prior, r_gp_params, opt);
+[log_ev, log_var_ev, r_gp_params] = log_evidence(samples, prior, r_gp_params, opt);
 
 % Convert the distribution over the evidence into a distribution over the
 % log-evidence by moment matching.  This is just a hack for now!!!

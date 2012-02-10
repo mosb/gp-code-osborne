@@ -12,7 +12,7 @@ if nargin < 1; problem_number = 1; end
 if nargin < 2; nsamples = 5; end
 if nargin < 3; outdir = 'results/'; end
 
-method_number = 5;
+method_number = 6;
 repitition = 11;
 
 problems = define_integration_problems();

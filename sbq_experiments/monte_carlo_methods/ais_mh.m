@@ -70,7 +70,7 @@ for t = 2:length(temps)
     
     % Possibly take a MH step.
     ratio = exp(proposal_ll - cur_pt_ll);
-    if ratio > 1 || ratio > rand
+    if ratio > rand
         num_accepts = num_accepts + 1;
         cur_pt = proposal;
     end

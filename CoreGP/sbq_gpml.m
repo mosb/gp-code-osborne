@@ -120,8 +120,7 @@ for i = opt.init_pts + 1:opt.num_samples
         % sensible.
         bad_sd_ixs = isnan(laplace_sds) | isinf(laplace_sds) | (abs(imag(laplace_sds)) > 0);
         if any(bad_sd_ixs)
-            warning(['Infinite or positive lengthscales, ' ...
-                    'Setting lengthscale variance to prior variance']);
+            warning('Non-negative curvature, setting lengthscale variance to prior variance');
             good_sds = sqrt(diag(prior.covariance));
             laplace_sds(bad_sd_ixs) = good_sds(bad_sd_ixs);
         end
@@ -133,11 +132,13 @@ for i = opt.init_pts + 1:opt.num_samples
         fprintf('Posterior variance in lengthscales: '); disp(laplace_sds);
     end
     
-    % Convert gp_hypers to r_gp_params.
-    % TODO: check that these are the right units.
-    fprintf('Output variance: '); disp(exp(gp_hypers.cov(end)));
+    % Convert gp_hypers to r_gp_params.  GPML and Mike's code have different 
+    % normalization constants.
+    converted_output_scale = gp_hypers.cov(end) ...
+        - logmvnpdf(zeros(1,D), zeros(1,D), diag(ones(D,1).*exp(gp_hypers.cov(1:end - 1))))/2;
+    fprintf('Output variance: '); disp(exp(converted_output_scale));
     fprintf('Lengthscales: '); disp(exp(gp_hypers.cov(1:end - 1)));    
-    r_gp_params.quad_output_scale = exp(gp_hypers.cov(end));
+    r_gp_params.quad_output_scale = converted_output_scale;
     r_gp_params.quad_input_scales(1:D) = exp(gp_hypers.cov(1:end - 1));
     [log_ev, log_var_ev, r_gp_params] = log_evidence(samples, prior, r_gp_params, opt);
     
