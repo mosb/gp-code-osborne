@@ -42,7 +42,7 @@ end
 
 opt = struct('gamma_const', (exp(1)-1)^(-1), ... % numerical scaling factor
                     'allowed_cond_error',10^-14, ... % allowed conditioning error
-                    'sds_tr_input_scales', false,...
+                    'sds_tr_input_scales', opt.sds_tr_input_scales,...
                     'delta_update', false);
 % sds_tr_input_scales represents the posterior standard deviations in the
 % input scales for tr. If false, a delta function posterior is assumed.            

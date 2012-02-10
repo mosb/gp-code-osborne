@@ -23,8 +23,8 @@ opt.parallel = false;
 opt.set_ls_var_method = 'laplace';
 opt.start_pt = -3;
 
-[log_ev, log_var_ev, samples, r_gp] = sbq_gpml(log_r_fn, prior_struct, opt);
-
+[log_ev, log_var_ev, samples, r_gp] = sbq(log_r_fn, prior_struct, opt);
+sample_locations = samples.locations;
 
 % Plot integrand and sample points.
 test_pts = linspace(prior_struct.mean - 5*prior_struct.covariance, ...
