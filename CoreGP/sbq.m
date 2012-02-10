@@ -232,8 +232,8 @@ for i = 1:opt.num_samples
             for start_i = 1:num_start_pts
                 
                 start_pt = start_pts(start_i);
-                start_lb = start_pt - r_gp_params.quad_input_scales;
-                start_ub = start_pt + r_gp_params.quad_input_scales;
+                start_lb = start_pt - 3 * r_gp_params.quad_input_scales;
+                start_ub = start_pt + 3 * r_gp_params.quad_input_scales;
                 [end_points(start_i), mins(start_i)] = ...
                     fmincon(objective_fn,start_pt, ...
                     [],[],[],[],...
