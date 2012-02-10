@@ -165,6 +165,7 @@ for i = opt.init_pts + 1:opt.num_samples
             problem.f = objective_fn;
             direct_opts.maxevals = opt.exp_loss_evals;
             direct_opts.showits = 1;
+            bounds = bounds .* (0.9 + 0.1 * rand);
             [exp_loss_min, next_sample_point] = Direct(problem, bounds, direct_opts);
             next_sample_point = next_sample_point';
         end
