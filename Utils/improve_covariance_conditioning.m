@@ -12,7 +12,11 @@ function [out, sqd_jitters] = improve_covariance_conditioning(in,importance,allo
 % covariance matrix. If in contains nan elements, it is assumed that they
 % are to be replaced by non-problematic entries. 
 
-sqd_jitters = ones(size(in,1),1).*max(in(:)).*1e-6;
+% fixed inds are those rows/cols that have already had jitter applied prior
+% to the calling of these functions
+fixed_inds = any(isnan(in))';
+
+sqd_jitters = ~fixed_inds.*max(in(:)).*1e-8;
 out = in + diag(sqd_jitters);
 return;
 

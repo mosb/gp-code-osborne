@@ -4,7 +4,7 @@ function [min_loss, next_sample_point] = ...
 % and plots the function as well.
 
     % Evaluate exhaustively between the bounds.
-    N = 1000;
+    N = 100;
     test_pts = linspace(bounds(1), bounds(2), N);
     losses = nan(1, N);
     m = nan(1, N);
@@ -18,12 +18,10 @@ function [min_loss, next_sample_point] = ...
     next_sample_point = test_pts(min_ind);
     
     % make a plot of the gp
-    figure(666);clf
+    figure(666);clf;
     gamma = (exp(1) - 1)^(-1);
     tr = log(exp(samples.log_r-max(samples.log_r))/gamma + 1);
     gp_plot(test_pts, m, sqrt(V), samples.locations, tr);
-
-
     
     % Plot the function.
     figure(1234); clf;
