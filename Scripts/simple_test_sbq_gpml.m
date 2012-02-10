@@ -1,4 +1,7 @@
-
+% Fix random seed.
+randn('state', 0);
+rand('twister', 0);  
+    
 % Set up a simple toy function to test SQB.
 r_mean1 = 1;
 r_sd1 = 1;
@@ -14,7 +17,7 @@ prior_struct.covariance = 1;
 opt.print = 2;
 opt.num_retrains = 5;
 opt.train_gp_time = 20;
-opt.num_samples = 30;
+opt.num_samples = 20;
 opt.plots = true;
 opt.parallel = false;
 opt.set_ls_var_method = 'laplace';
@@ -22,12 +25,13 @@ opt.start_pt = -3;
 
 [log_ev, log_var_ev, samples, r_gp] = sbq_gpml(log_r_fn, prior_struct, opt);
 
+
 % Plot integrand and sample points.
 test_pts = linspace(prior_struct.mean - 5*prior_struct.covariance, ...
             prior_struct.mean + 5*prior_struct.covariance, 1000);
 figure;
 h_func = plot(test_pts, log_r_fn(test_pts), 'b'); hold on;
-h_samples = plot(samples, log_r_fn(samples), '.k', 'MarkerSize', 8)
+h_samples = plot(samples.locations, log_r_fn(samples.locations), '.k', 'MarkerSize', 8)
 xlim([-5 5]);
 legend( [h_func, h_samples], {'Log-integrand', 'Sample Points'}, 'Location', 'Best');
 

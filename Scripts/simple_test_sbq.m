@@ -23,14 +23,7 @@ opt.parallel = false;
 opt.set_ls_var_method = 'laplace';
 opt.start_pt = -3;
 
-[log_ev, log_var_ev, samples, r_gp, plots_struct] = sbq(log_r_fn, prior_struct, opt);
-
-problem.log_likelihood_fn = log_r_fn;
-problem.prior = prior_struct;
-problem.name = 'Mike''s double hump';
-
-sample_locations = samples.locations;
-plot_sample_path_3d( problem, sample_locations, plots_struct )
+[log_ev, log_var_ev, samples, r_gp] = sbq_gpml(log_r_fn, prior_struct, opt);
 
 
 % Plot integrand and sample points.

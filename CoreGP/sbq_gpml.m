@@ -44,22 +44,23 @@ D = numel(prior.mean);
 default_opt = struct('num_samples', 300, ...
                      'exp_loss_evals', 50 * D, ...
                      'start_pt', zeros(1, D), ...
+                     'init_pts', 10 * D, ...  % Number of points to start with.
                      'plots', false, ...
                      'set_ls_var_method', 'laplace');
 opt = set_defaults( opt, default_opt );
 
 
-% Init GP Hypers
-covfunc = @covSEiso;
-gp_hypers.mean = 0;
-gp_hypers.lik = log(0.01);
-gp_hypers.cov = log( [ 1 1] );%log([ones(1, D) 1]);
-
+% Initialize with some random points.
+for i = 1:opt.init_pts
+    next_sample_point = mvnrnd(prior.mean, prior.covariance);
+    samples.locations(i,:) = next_sample_point;
+    samples.log_r(i,:) = log_likelihood_fn(next_sample_point);
+end
 
 % Start of actual SBQ algorithm
 % =======================================
 next_sample_point = opt.start_pt;
-for i = 1:opt.num_samples
+for i = opt.init_pts + 1:opt.num_samples
 
     % Update sample struct.
     % ==================================
@@ -68,30 +69,27 @@ for i = 1:opt.num_samples
     samples.scaled_r = exp(samples.log_r - max(samples.log_r));
     
     
-    % Train GP
-    % ===========================   
+    % Train a GP over the untransformed observations.
+    % ====================================================
     inference = @infExact;
     likfunc = @likGauss;
-    meanfunc = {'meanConst'};
-    max_iters = 100;
-    
-    % Init GP Hypers each time to prevent getting lost in some weird place.
-    % todo: init from some heuristics.
+    meanfunc = {'meanZero'};
+    max_iters = 100;    
     covfunc = @covSEiso;
-    gp_hypers.mean = 0;
-    gp_hypers.lik = log(0.01);
-    gp_hypers.cov = log( [ 1 1] );%log([ones(1, D) 1]);    
     
-%if ~exist('X','var') % if no initial hyper-parameters are given
-  % set them to "good" heuristic values (look at statistics of the data)
-  %lh = repmat([log(2*std(x)) 0 -1]',1,E);
-  %lh(D+1,:) = log(std(target));
-  %lh(D+2,:) = log(std(target)/10);    
-
+    % Init GP Hypers each time at first to prevent getting lost in some weird place.
+    if ~exist('gp_hypers', 'var') || i < 10 * D
+        fprintf('Initializing hypers from heuristics');
+        gp_hypers.mean = [];%0;
+        gp_hypers.lik = log(0.01);
+        %gp_hypers.cov = log( [ 1 1] );%log([ones(1, D) 1]);    
+        gp_hypers.cov = log( [ mean(sqrt(diag(prior.covariance)))/10 1] ); 
+    end
+  
     % Fit the model, but not the likelihood hyperparam (which stays fixed).
-    %gp_hypers = minimize(gp_hypers, @gp_fixedlik, -max_iters, ...
-    %                     inference, meanfunc, covfunc, likfunc, ...
-    %                     samples.locations, samples.scaled_r);     
+    gp_hypers = minimize(gp_hypers, @gp_fixedlik, -max_iters, ...
+                         inference, meanfunc, covfunc, likfunc, ...
+                         samples.locations, samples.scaled_r);     
     
     % Update our posterior uncertainty about the lengthscale hyperparameters.
     % =========================================================================
@@ -112,8 +110,8 @@ for i = 1:opt.num_samples
         % Find the Hessian.
         laplace_sds = Inf;
         try
-            %laplace_sds = sqrt(-1./hessdiag( like_func, laplace_mode));
-            [grad,err,finaldelta] = gradest(fun,x0)
+            laplace_sds = sqrt(-1./hessdiag( like_func, laplace_mode));
+            %[grad,err,finaldelta] = gradest(fun,x0)
         catch e; 
             e;
         end
@@ -160,7 +158,7 @@ for i = 1:opt.num_samples
             % If we have a 1-dimensional function, optimize it by exhaustive
             % evaluation.
             [exp_loss_min, next_sample_point] = ...
-                plot_1d_minimize(objective_fn, bounds, samples);
+                plot_1d_minimize(objective_fn, bounds, samples, log_var_ev);
         else
             % Call DIRECT to hopefully optimize faster than by exhaustive search.
             problem.f = objective_fn;
