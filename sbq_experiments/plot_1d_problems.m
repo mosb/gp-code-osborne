@@ -25,8 +25,12 @@ for p_ix = 1:num_problems
                       'r', 'LineWidth', 1);
         %legend([h_prior h_ll h_post], {'Prior', 'Likelihood', 'Posterior'});
         title(problem.name);
-        %xlabel('x');
-        %ylabel('f(x)');
+        
+        % remove axes
+        set(gca,'ytick',[]);
+        set(gca,'xtick',[]);
+        set(gca,'yticklabel',[]);
+        set(gca,'xticklabel',[]);        
         
         set(gcf,'units','centimeters')
         set(gcf,'Position',[1 1 40 15])

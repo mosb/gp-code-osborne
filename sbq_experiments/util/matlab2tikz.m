@@ -1,3 +1,102 @@
+%MATLAB2TIKZ    Save figure in native LaTeX (TikZ/Pgfplots).
+%   MATLAB2TIKZ() saves the current figure as LaTeX file.
+%   MATLAB2TIKZ comes with several options that can be combined at will.
+%
+%   MATLAB2TIKZ(FILENAME,...) or MATLAB2TIKZ('filename',FILENAME,...)
+%   stores the LaTeX code in FILENAME.
+%
+%   MATLAB2TIKZ('filehandle',FILEHANDLE,...) stores the LaTeX code in the file
+%   referenced by FILEHANDLE. (default: [])
+%
+%   MATLAB2TIKZ('figurehandle',FIGUREHANDLE,...) explicitly specifies the
+%   handle of the figure that is to be stored. (default: gcf)
+%
+%   MATLAB2TIKZ('colormap',DOUBLE,...) explicitly specifies the colormap to be
+%   used. (default: current color map)
+%
+%   MATLAB2TIKZ('strict',BOOL,...) tells MATLAB2TIKZ to adhere to MATLAB(R)
+%   conventions wherever there is room for relaxation. (default: FALSE)
+%
+%   MATLAB2TIKZ('showInfo',BOOL,...) turns informational output on or off.
+%   (default: true)
+%
+%   MATLAB2TIKZ('showWarning',BOOL,...) turns warnings on or off.
+%   (default: true)
+%
+%   MATLAB2TIKZ('imagesAsPng',BOOL,...) stores MATLAB(R) images as (lossless)
+%   PNG files. This is more efficient than storing the image color data as TikZ
+%   matrix. (default: true)
+%
+%   MATLAB2TIKZ('relativePngPath',CHAR, ...) tells MATLAB2TIKZ to use the given
+%   path to follow the PNG file. If LaTeX source and PNG file will reside in
+%   the same directory, this can be set to '.'. (default: [])
+%
+%   MATLAB2TIKZ('height',CHAR,...) sets the height of the image. This can be any
+%   LaTeX-compatible length, e.g., '3in' or '5cm' or '0.5\textwidth'.
+%   If unspecified, MATLAB2TIKZ tries to make a reasonable guess.
+%
+%   MATLAB2TIKZ('width',CHAR,...) sets the width of the image.
+%   If unspecified, MATLAB2TIKZ tries to make a reasonable guess.
+%
+%   MATLAB2TIKZ('minimumPointsDistance',DOUBLE,...) gives a minimum distance at
+%   which two nodes are considered different. This can help with plots that
+%   contain a large amount of data points not all of which need to be plotted.
+%   (default: 0.0)
+%
+%   MATLAB2TIKZ('extraAxisOptions',CHAR or CELLCHAR,...) explicitly adds extra
+%   options to the Pgfplots axis environment. (default: [])
+%
+%   MATLAB2TIKZ('encoding',CHAR,...) sets the encoding of the output file.
+%
+%   MATLAB2TIKZ('parseStrings',BOOL,...) determines whether title, axes labels
+%   and the like are parsed into LaTeX by MATLAB2TIKZ's parser.
+%   If you want greater flexibility, set this to false and use straight LaTeX
+%   for your labels. (default: true)
+%
+%   MATLAB2TIKZ('parseStringsAsMath',BOOL,...) determines whether to use TeX's
+%   math mode for more characters (such as operators and figures).
+%   (default: false)
+%
+%   MATLAB2TIKZ('interpretTickLabelsAsTex',BOOL,...) determines whether to
+%   interpret tick labels as TeX. MATLAB(R) doesn't do that by default.
+%   (default: false)
+%
+%   MATLAB2TIKZ('tikzFileComment',CHAR,...) adds a custom comment to the header
+%   of the output file.
+%
+%   Example
+%      x = -pi:pi/10:pi;
+%      y = tan(sin(x)) - sin(tan(x));
+%      plot(x,y,'--rs');
+%      matlab2tikz( 'myfile.tex' );
+%
+%   See also PRINT.
+
+%   Copyright (c) 2008--2012, Nico Schlömer <nico.schloemer@gmail.com>
+%   All rights reserved.
+%
+%   Redistribution and use in source and binary forms, with or without
+%   modification, are permitted provided that the following conditions are
+%   met:
+%
+%      * Redistributions of source code must retain the above copyright
+%        notice, this list of conditions and the following disclaimer.
+%      * Redistributions in binary form must reproduce the above copyright
+%        notice, this list of conditions and the following disclaimer in
+%        the documentation and/or other materials provided with the distribution
+%
+%   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+%   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+%   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+%   ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+%   LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+%   CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+%   SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+%   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+%   CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+%   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+%   POSSIBILITY OF SUCH DAMAGE.
+
 % =========================================================================
 % *** FUNCTION matlab2tikz
 % ***
@@ -11,6 +110,7 @@
 % ***    2.) Invoke matlab2tikz by
 % ***
 % ***        >> matlab2tikz( 'test.tikz' );
+
 % ***
 % ***
 % *** -------
@@ -32,31 +132,7 @@
 % ***
 % =========================================================================
 % ***
-% *** Copyright (c) 2008--2011, Nico Schlömer <nico.schloemer@gmail.com>
-% *** All rights reserved.
-% ***
-% *** Redistribution and use in source and binary forms, with or without
-% *** modification, are permitted provided that the following conditions are
-% *** met:
-% ***
-% ***    * Redistributions of source code must retain the above copyright
-% ***      notice, this list of conditions and the following disclaimer.
-% ***    * Redistributions in binary form must reproduce the above copyright
-% ***      notice, this list of conditions and the following disclaimer in
-% ***      the documentation and/or other materials provided with the distribution
-% ***
-% *** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-% *** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-% *** IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-% *** ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-% *** LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-% *** CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-% *** SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-% *** INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-% *** CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-% *** ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-% *** POSSIBILITY OF SUCH DAMAGE.
-% ***
+
 % =========================================================================
 function matlab2tikz( varargin )
 
@@ -96,7 +172,7 @@ function matlab2tikz( varargin )
   m2t.version = '0.1.4';
   m2t.author = 'Nico Schlömer';
   m2t.authorEmail = 'nico.schloemer@gmail.com';
-  m2t.years = '2008--2011';
+  m2t.years = '2008--2012';
   m2t.website = 'http://www.mathworks.com/matlabcentral/fileexchange/22022-matlab2tikz';
 
   m2t.tikzOptions = cell(0); % for the arrow style -- TODO: see if we can get this removed
@@ -104,10 +180,11 @@ function matlab2tikz( varargin )
                      % used, for example, in equality test for doubles
   m2t.relativePngPath = [];
 
-  % The color RBG-values which will need to be redefined.
-  % Each row of 'm2t.requiredRgbColors' contains the RGB
-  % values of a needed color.
-  m2t.requiredRgbColors = [];
+  % The following color RBG-values which will need to be defined.
+  % 'extraRgbColorNames' contains their designated names, 'extraRgbColorSpecs'
+  % their specifications.
+  m2t.extraRgbColorSpecs = cell(0);
+  m2t.extraRgbColorNames = cell(0);
 
   % the actual contents of the TikZ file go here
   m2t.content = struct( 'name',     [], ...
@@ -139,21 +216,21 @@ function matlab2tikz( varargin )
   m2t.cmdOpts = m2t.cmdOpts.addParamValue( m2t.cmdOpts, 'colormap', colormap, @isnumeric );
 
   % whether to strictly stick to the default MATLAB plot appearance:
-  m2t.cmdOpts = m2t.cmdOpts.addParamValue( m2t.cmdOpts, 'strict', 0, @islogical );
+  m2t.cmdOpts = m2t.cmdOpts.addParamValue( m2t.cmdOpts, 'strict', false, @islogical );
 
-  % don't print any messages
-  m2t.cmdOpts = m2t.cmdOpts.addParamValue( m2t.cmdOpts, 'silent', 0, @islogical );
+  % deprecated parameter -- keep it to allow warning further down
+  m2t.cmdOpts = m2t.cmdOpts.addParamValue( m2t.cmdOpts, 'silent', false, @islogical );
 
   % don't print warning messages
-  m2t.cmdOpts = m2t.cmdOpts.addParamValue( m2t.cmdOpts, 'showInfo', 1, @islogical );
+  m2t.cmdOpts = m2t.cmdOpts.addParamValue( m2t.cmdOpts, 'showInfo', true, @islogical );
 
   % don't print informational messages
-  m2t.cmdOpts = m2t.cmdOpts.addParamValue( m2t.cmdOpts, 'showWarnings', 1, @islogical );
+  m2t.cmdOpts = m2t.cmdOpts.addParamValue( m2t.cmdOpts, 'showWarnings', true, @islogical );
 
   % Whether to save images in PNG format or to natively draw filled squares
   % using TikZ itself.
   % Default it PNG.
-  m2t.cmdOpts = m2t.cmdOpts.addParamValue( m2t.cmdOpts, 'imagesAsPng', 1, @islogical );
+  m2t.cmdOpts = m2t.cmdOpts.addParamValue( m2t.cmdOpts, 'imagesAsPng', true, @islogical );
   m2t.cmdOpts = m2t.cmdOpts.addParamValue( m2t.cmdOpts, 'relativePngPath', [], @ischar );
 
   % width and height of the figure
@@ -169,15 +246,27 @@ function matlab2tikz( varargin )
   % file encoding
   m2t.cmdOpts = m2t.cmdOpts.addParamValue( m2t.cmdOpts, 'encoding' , '', @ischar );
 
-  % math mode in titles and captions
-  % -- this is default "true" as MATLAB may put non-LaTeX compilable structures
-  % in there.
+  % deprecated parameter -- keep it to allow warning further down
   m2t.cmdOpts = m2t.cmdOpts.addParamValue( m2t.cmdOpts, 'mathmode', 1, @islogical );
+
+  % By default strings like axis labels are parsed to match the appearance of
+  % strings as closely as possible to that generated by MATLAB.
+  % If the user wants to have particular strings in the matlab2tikz output that
+  % can't be generated in MATLAB, they can disable string parsing. In that case
+  % all strings are piped literally to the LaTeX output.
+  m2t.cmdOpts = m2t.cmdOpts.addParamValue( m2t.cmdOpts, 'parseStrings', 1, @islogical );
+
+  % In addition to regular string parsing, an additional stage can be enabled
+  % which uses TeX's math mode for more characters like figures and operators.
+  m2t.cmdOpts = m2t.cmdOpts.addParamValue( m2t.cmdOpts, 'parseStringsAsMath', 0, @islogical );
 
   % As opposed to titles, axis labels and such, MATLAB(R) does not interpret tick
   % labels as TeX. matlab2tikz retains this behavior, but if it is desired to
   % interpret the tick labels as TeX, set this option to true.
   m2t.cmdOpts = m2t.cmdOpts.addParamValue( m2t.cmdOpts, 'interpretTickLabelsAsTex', 0, @islogical );
+
+  % Allow a string to be added to the header of the generated TikZ file.
+  m2t.cmdOpts = m2t.cmdOpts.addParamValue( m2t.cmdOpts, 'tikzFileComment', '', @ischar );
 
   m2t.cmdOpts = m2t.cmdOpts.parse( m2t.cmdOpts, varargin{:} );
   % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -189,10 +278,29 @@ function matlab2tikz( varargin )
                           '===============================================================================' ] ) );
   end
 
+  if any( ismember( m2t.cmdOpts.Parameters, 'mathmode' ) )
+      warning( sprintf( [ '\n===============================================================================\n', ...
+                          'You are using the deprecated parameter ''mathmode''.\n', ...
+                          'From now on, please use ''parseStrings'' and ''parseStringsAsMath'' to control\n', ...
+                          'the output.\n', ...
+                          '===============================================================================' ] ) );
+  end
+
+  % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  % inform users of potentially dangerous options
+  if m2t.cmdOpts.Results.parseStringsAsMath
+      userInfo( m2t, [ '\n==========================================================================\n', ...
+                       'You are using the parameter ''parseStringsAsMath''.\n', ...
+                       'This may produce undesirable string output. For full control over output\n', ...
+                       'strings please set the parameter ''parseStrings'' to false.\n', ...
+                       '==========================================================================' ] );
+  end
+
   % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   % add global elements
   m2t.currentHandles.gcf      = m2t.cmdOpts.Results.figurehandle;
   m2t.currentHandles.colormap = get(m2t.currentHandles.gcf,'colormap');
+    % TODO: Shouldn't this use m2t.cmdOpts.Results.colormap, if specified?
 
   % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   % handle output file handle/file name
@@ -338,7 +446,7 @@ function m2t = saveToFile( m2t, fid, fileWasOpen )
   % actually print the stuff
   m2t.content.comment = sprintf( [ 'This file was created by %s v%s.\n', ...
                                    'Copyright (c) %s, %s <%s>\n', ...
-                                   'All rights reserved.\n' ],              ...
+                                   'All rights reserved.\n' ], ...
                                    m2t.name, m2t.version, ...
                                    m2t.years, m2t.author, m2t.authorEmail );
 
@@ -353,20 +461,25 @@ function m2t = saveToFile( m2t, fid, fileWasOpen )
                             ];
   end
 
+  % Add custom comment.
+  m2t.content.comment = [ m2t.content.comment, ...
+                          sprintf( '\n%s\n', m2t.cmdOpts.Results.tikzFileComment )
+                        ];
+
   m2t.content.name = 'tikzpicture';
 
   m2t.content.options = appendOptions( m2t.content.options, ...
                                        m2t.tikzOptions );
 
   % don't forget to define the colors
-  if size(m2t.requiredRgbColors,1)
+  if length(m2t.extraRgbColorNames)
       m2t.content = append( m2t.content, ...
                             sprintf('\n%% defining custom colors\n') ...
                           );
-      for k = 1:size(m2t.requiredRgbColors,1)
+      for k = 1:length(m2t.extraRgbColorNames)
           m2t.content = append( m2t.content, ...
-                                sprintf('\\definecolor{mycolor%d}{rgb}{%g,%g,%g}\n', k,     ...
-                                                          m2t.requiredRgbColors(k,:)) ...
+                                sprintf('\\definecolor{%s}{rgb}{%.15g,%.15g,%.15g}\n', ...
+                                        m2t.extraRgbColorNames{k}, m2t.extraRgbColorSpecs{k}) ...
                               );
       end
       m2t.content = append( m2t.content, sprintf('\n') );
@@ -377,9 +490,9 @@ function m2t = saveToFile( m2t, fid, fileWasOpen )
   % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
   % close the file if necessary
-  %if ~fileWasOpen
+  if ~fileWasOpen
       fclose( fid );
-  %end
+  end
 end
 % =========================================================================
 % *** END OF FUNCTION saveToFile
@@ -430,6 +543,9 @@ function  [ m2t, pgfEnvironments ] = handleAllChildren( m2t, handle )
 
           case 'text'
               [m2t, env] = drawText( m2t, child );
+
+          case 'rectangle'
+              [m2t, env] = drawRectangle( m2t, child );
 
           case { 'uitoolbar', 'uimenu', 'uicontextmenu', 'uitoggletool',...
                  'uitogglesplittool', 'uipushtool', 'hgjavacomponent'}
@@ -483,10 +599,6 @@ function m2t = drawAxes( m2t, handle, alignmentOptions )
   m2t.currentAxesContainer.content  = cell(0);
   m2t.currentAxesContainer.children = cell(0);
 
-  % pass on information about reversed axis (to drawImage)
-  m2t.xAxisReversed = [];
-  m2t.yAxisReversed = [];
-
   % Handle special cases.
   % MATLAB(R) uses 'Tag', Octave 'tag' for their tags. :/
   if strcmp( m2t.env, 'MATLAB' );
@@ -501,7 +613,7 @@ function m2t = drawAxes( m2t, handle, alignmentOptions )
   switch get( handle, tagKeyword )
       case colorbarKeyword
           % Handle a colorbar separately.
-          % Note how m2t.currentHandles.gca does *not* get updated.
+          % Note that m2t.currentHandles.gca does *not* get updated.
           % Within drawColorbar(), m2t.currentHandles.gca is assumed to point
           % to the parent axes.
           [m2t, m2t.currentAxesContainer] = drawColorbar( m2t, handle, alignmentOptions );
@@ -523,21 +635,28 @@ function m2t = drawAxes( m2t, handle, alignmentOptions )
 
   % get the view angle
   view = get( handle, 'View' );
-  is3dPlot = false;
+  m2t.is3dPlot = false;
   if any( view ~= [0,90] )
       m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, ...
-                                                        sprintf( 'view={%g}{%g}', get( handle, 'View') ) ...
+                                                        sprintf( 'view={%.15g}{%.15g}', get( handle, 'View') ) ...
                                                       );
-      is3dPlot = true;
+      m2t.is3dPlot = true;
   end
-
   % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   % get the axes dimensions
   dim = getAxesDimensions( handle, ...
                            m2t.cmdOpts.Results.width, ...
                            m2t.cmdOpts.Results.height );
   % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
+  % Get other axis options (ticks, axis color, label,...).
+  % This is set here such that the axis orientation indicator in m2t is set
+  % before -- if ~isVisible(handle) -- the handle's children are called.
+  [ m2t, hasXGrid ] = getAxisOptions( m2t, handle, 'x' );
+  [ m2t, hasYGrid ] = getAxisOptions( m2t, handle, 'y' );
+  if m2t.is3dPlot
+      [ m2t, hasZGrid ] = getAxisOptions( m2t, handle, 'z' );
+  end
+  % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   if ~isVisible( handle )
       % An invisible axes container *can* have visible children, so don't
       % immediately bail out here.
@@ -553,7 +672,7 @@ function m2t = drawAxes( m2t, handle, alignmentOptions )
           m2t.currentAxesContainer.name = 'axis';
           m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, ...
                                                             { 'hide x axis, hide y axis', ...
-                                                               sprintf('width=%g%s, height=%g%s', dim.x.value, dim.x.unit,   ...
+                                                               sprintf('width=%.15g%s, height=%.15g%s', dim.x.value, dim.x.unit,   ...
                                                                                                   dim.y.value, dim.y.unit ), ...
                                                               'scale only axis' } ...
                                      );
@@ -564,27 +683,17 @@ function m2t = drawAxes( m2t, handle, alignmentOptions )
       m2t.currentAxesContainer = addChildren( m2t.currentAxesContainer, childrenEnvs );
       return
   end
-
-  % add manually given extra axis options
-  if ~isempty( m2t.cmdOpts.Results.extraAxisOptions )
-      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, m2t.cmdOpts.Results.extraAxisOptions );
+  % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  if strcmp( get( handle, 'Box' ), 'off' )
+      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, 'axis lines=left' );
   end
-
   % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   % get scales
-  xScale = get( handle, 'XScale' );
-  yScale = get( handle, 'YScale' );
-  if is3dPlot
-      zScale = get( handle, 'ZScale' );
-  end
-
-  isXLog = strcmp( xScale, 'log' );
-  isYLog = strcmp( yScale, 'log' );
-  if is3dPlot
-      isZLog = strcmp( zScale, 'log' );
-  end
-
-  if  ~isXLog && ~isYLog
+  isXLog = strcmp( get( handle, 'XScale' ), 'log' );
+  isYLog = strcmp( get( handle, 'YScale' ), 'log' );
+  if m2t.is3dPlot
+      m2t.currentAxesContainer.name = 'axis';
+  elseif  ~isXLog && ~isYLog
       m2t.currentAxesContainer.name = 'axis';
   elseif isXLog && ~isYLog
       m2t.currentAxesContainer.name = 'semilogxaxis';
@@ -602,32 +711,22 @@ function m2t = drawAxes( m2t, handle, alignmentOptions )
   % the following is general MATLAB behavior
   m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, 'scale only axis' );
   % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  % axis colors
-  xColor = get( handle, 'XColor' );
-  if ( any(xColor) ) % color not black [0,0,0]
-       [ m2t, col ] = getColor( m2t, handle, xColor, 'patch' );
-       m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, ...
-                                    { ['every outer x axis line/.append style={',col, '}'], ...
-                                      ['every x tick label/.append style={font=\color{',col,'}}' ] } ...
-                                  );
-  end
-  yColor = get( handle, 'YColor' );
-  if ( any(yColor) ) % color not black [0,0,0]
-      [ m2t, col ] = getColor( m2t, handle, yColor, 'patch' );
+  % set the width
+  if dim.x.unit(1)=='\' && dim.x.value==1.0
+      % only return \figurewidth instead of 1.0\figurewidth
       m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, ...
-                                   { [ 'every outer y axis line/.append style={',col, '}' ], ...
-                                     [ 'every y tick label/.append style={font=\color{',col,'}}' ] } ...
-                                 );
+                                   sprintf( 'width=%s', dim.x.unit ) );
+  else
+      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, ...
+                                   sprintf( 'width=%.15g%s', dim.x.value, dim.x.unit ) );
   end
-  if is3dPlot
-      zColor = get( handle, 'ZColor' );
-      if ( any(zColor) ) % color not black [0,0,0]
-          [ m2t, col ] = getColor( m2t, handle, zColor, 'patch' );
-          m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, ...
-                                      { [ 'every outer z axis line/.append style={',col, '}' ], ...
-                                          [ 'every z tick label/.append style={font=\color{',col,'}}' ] } ...
-                                      );
-      end
+  if dim.y.unit(1)=='\' && dim.y.value==1.0
+      % only return \figureheight instead of 1.0\figureheight
+      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, ...
+                                   sprintf( 'height=%s', dim.y.unit ) );
+  else
+      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, ...
+                                   sprintf( 'height=%.15g%s' , dim.y.value, dim.y.unit ) );
   end
   % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   % background color
@@ -641,174 +740,34 @@ function m2t = drawAxes( m2t, handle, alignmentOptions )
       end
   end
   % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  % set the width
-  if dim.x.unit(1)=='\' && dim.x.value==1.0
-      % only return \figurewidth instead of 1.0\figurewidth
-      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, ...
-                                   sprintf( 'width=%s', dim.x.unit ) );
-  else
-      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, ...
-                                   sprintf( 'width=%g%s', dim.x.value, dim.x.unit ) );
-  end
-  if dim.y.unit(1)=='\' && dim.y.value==1.0
-      % only return \figureheight instead of 1.0\figureheight
-      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, ...
-                                   sprintf( 'height=%s', dim.y.unit ) );
-  else
-      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, ...
-                                   sprintf( 'height=%g%s' , dim.y.value, dim.y.unit ) );
-  end
-  % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  % handle the orientation
-  m2t.xAxisReversed = false;
-  if strcmp( get(handle,'XDir'), 'reverse' )
-      m2t.xAxisReversed = true;
-      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, 'x dir=reverse' );
-  end
-
-  m2t.yAxisReversed = false;
-  if strcmp( get(handle,'YDir'), 'reverse' )
-      m2t.yAxisReversed = true;
-      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, 'y dir=reverse' );
-  end
-
-  if is3dPlot
-      m2t.zAxisReversed = false;
-      if strcmp( get(handle,'ZDir'), 'reverse' )
-          m2t.yAxisReversed = true;
-          m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, 'z dir=reverse' );
-      end
-  end
-  % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  % for double axes pairs, unconditionally put the ordinate left for the
-  % first one, right for the second one.
-  if alignmentOptions.isElderTwin
-      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, {'axis y line*=left', 'axis x line*=bottom'} );
-  elseif alignmentOptions.isYoungerTwin
-      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, {'axis y line*=right', 'axis x line*=top'} );
-  end
-  % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  % get axis limits
-  xLim = get( handle, 'XLim' );
-  yLim = get( handle, 'YLim' );
-  m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, ...
-                               { sprintf('xmin=%g, xmax=%g', xLim ), ...
-                                 sprintf('ymin=%g, ymax=%g', yLim ) } ...
-                             );
-  if is3dPlot
-      zLim = get( handle, 'ZLim' );
-      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options,  ...
-                                                        sprintf('zmin=%g, zmax=%g', zLim ) ...
-                                                      );
-  end
-  % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  % get ticks along with the labels
-  [ ticks, tickLabels, hasMinorTicks ] = getTicks( m2t, handle );
-
-  % According to http://www.mathworks.com/help/techdoc/ref/axes_props.html,
-  % the number of minor ticks is automatically determined by MATLAB(R) to
-  % fit the size of the axis. Until we know how to extract this number, use
-  % a reasonable default.
-  matlabDefaultNumMinorTicks = 3;
-  if ~isempty( ticks.x )
-      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, sprintf( 'xtick={%s}', ticks.x ) );
-  end
-  if ~isempty( tickLabels.x )
-      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, sprintf( 'xticklabels={%s}', tickLabels.x ) );
-  end
-  if hasMinorTicks.x
-      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, 'xminorticks=true' );
-      if m2t.cmdOpts.Results.strict
-          m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, sprintf( 'minor x tick num={%d}', matlabDefaultNumMinorTicks ) );
-      end
-  end
-  if ~isempty( ticks.y )
-      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, sprintf( 'ytick={%s}', ticks.y ) );
-  end
-  if ~isempty( tickLabels.y )
-      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, sprintf( 'yticklabels={%s}', tickLabels.y ) );
-  end
-  if hasMinorTicks.y
-      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, 'yminorticks=true' );
-      if m2t.cmdOpts.Results.strict
-          m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, sprintf( 'minor y tick num={%d}', matlabDefaultNumMinorTicks ) );
-      end
-  end
-  if is3dPlot
-      if ~isempty( ticks.z )
-          m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, sprintf( 'ztick={%s}', ticks.z ) );
-      end
-      if ~isempty( tickLabels.z )
-          m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, sprintf( 'zticklabels={%s}', tickLabels.z ) );
-      end
-      if hasMinorTicks.z
-          m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, 'zminorticks=true' );
-          if m2t.cmdOpts.Results.strict
-              m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, sprintf( 'minor z tick num={%d}', matlabDefaultNumMinorTicks ) );
-          end
-      end
-  end
-  % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  % get axis labels
-  axisLabels = getAxisLabels( handle );
-  if ~isempty( axisLabels.x )
-      xlabelText = sprintf( '%s', axisLabels.x );
-      xlabelText = prettyPrint( m2t, xlabelText, axisLabels.xInterpreter );
-      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, sprintf( 'xlabel={%s}', xlabelText ) );
-  end
-  if ~isempty( axisLabels.y )
-      ylabelText = sprintf( '%s', axisLabels.y );
-      ylabelText = prettyPrint( m2t, ylabelText, axisLabels.yInterpreter );
-      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, sprintf( 'ylabel={%s}', ylabelText ) );
-  end
-  if is3dPlot
-      if ~isempty( axisLabels.z )
-          zlabelText = sprintf( '%s', axisLabels.z );
-          zlabelText = prettyPrint( m2t, zlabelText, axisLabels.zInterpreter );
-          m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, sprintf( 'zlabel={%s}', zlabelText ) );
-      end
-  end
-  % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  % get title
+  % title
   title = get( get( handle, 'Title' ), 'String' );
   if ~isempty(title)
       titleText = sprintf( '%s', title );
       titleInterpreter = get( get( handle, 'Title' ), 'Interpreter' );
       titleText = prettyPrint( m2t, titleText, titleInterpreter );
-      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, sprintf( 'title={%s}', titleText ) );
+      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, ...
+                                                        sprintf( 'title={%s}', titleText ) );
   end
   % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  % get grids
-  isGrid = false;
-  if strcmp( get( handle, 'XGrid'), 'on' );
-      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, 'xmajorgrids' );
-      isGrid = true;
+  % For double axes pairs, unconditionally put the ordinate left for the
+  % first one, right for the second one.
+  if alignmentOptions.isElderTwin
+      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, ...
+                                                        {'axis y line*=left', 'axis x line*=bottom'} );
+  elseif alignmentOptions.isYoungerTwin
+      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, ...
+                                                        {'axis y line*=right', 'axis x line*=top'} );
   end
-  if strcmp( get( handle, 'XMinorGrid'), 'on' );
-      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, 'xminorgrids' );
-      isGrid = true;
+  % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  % add manually given extra axis options
+  if ~isempty( m2t.cmdOpts.Results.extraAxisOptions )
+      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, ...
+                                                        m2t.cmdOpts.Results.extraAxisOptions );
   end
-  if strcmp( get( handle, 'YGrid'), 'on' )
-      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, 'ymajorgrids' );
-      isGrid = true;
-  end
-  if strcmp( get( handle, 'YMinorGrid'), 'on' );
-      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, 'yminorgrids' );
-      isGrid = true;
-  end
-  if is3dPlot
-      if strcmp( get( handle, 'ZGrid'), 'on' )
-          m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, 'zmajorgrids' );
-          isGrid = true;
-      end
-      if strcmp( get( handle, 'ZMinorGrid'), 'on' );
-          m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, 'zminorgrids' );
-          isGrid = true;
-      end
-  end
-
-  % set the line style
-  if isGrid
+  % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  % grid line style
+  if hasXGrid || hasYGrid || (exist('hasZGrid','var') && hasZGrid )
       matlabGridLineStyle = get( handle, 'GridLineStyle' );
       % Take over the grid line style in any case when in strict mode.
       % If not, don't add anything in case of default line grid line style
@@ -831,15 +790,12 @@ function m2t = drawAxes( m2t, handle, alignmentOptions )
   end
   % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   % See if there are any legends that need to be plotted.
-  c = get( get(handle,'Parent'), 'Children' ); % siblings of this handle
-
   % Since the legends are at the same level as axes in the hierarchy,
   % we can't work out which relates to which using the tree
   % so we have to do it by looking for a plot inside which the legend sits.
   % This could be done better with a heuristic of finding
   % the nearest legend to a plot, which would cope with legends outside
   % plot boundaries.
-
   if strcmp( m2t.env, 'MATLAB' )
       legendHandle = legend(handle);
       if ~isempty(legendHandle)
@@ -853,27 +809,30 @@ function m2t = drawAxes( m2t, handle, alignmentOptions )
       axisBot  = axisDims(2);
       axisWid  = axisDims(3);
       axisHei  = axisDims(4);
-      for k = 1:size(c)
-          if  strcmp( get(c(k),'Type'), 'axes'   ) && ...
-              strcmp( get(c(k),'Tag' ), 'legend' )
-              legendHandle = c(k);
-              if (legendHandle)
-                  legDims = get( legendHandle, 'Position' );
-                  legLeft = legDims(1);
-                  legBot  = legDims(2);
-                  legWid  = legDims(3);
-                  legHei  = legDims(4);
-                  % TODO The following logic does not work for 3D plots.
-                  %      => Commented out.
-                  %      This creates problems though for stacked plots with legends.
-    %                if (    legLeft > axisLeft ...
-    %                     && legBot > axisBot ...
-    %                     && legLeft+legWid < axisLeft+axisWid ...
-    %                     && legBot+legHei  < axisBot+axisHei )
-                      [ m2t, legendOpts ] = getLegendOpts( m2t, legendHandle );
-                      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, legendOpts );
-    %                end
-              end
+      % siblings of this handle:
+      siblings = get( get(handle,'Parent'), 'Children' );
+      % "siblings" always(?) is a column vector. Iterating over the column
+      % with the for statement below wouldn't return the individual vector
+      % elements but the same column vector, resulting in no legends exported.
+      % So let's make sure "siblings" is a row vector by reshaping it:
+      siblings = reshape( siblings, 1, [] );
+      for sibling = siblings
+          if sibling && strcmp(get(sibling,'Type'), 'axes') && strcmp(get(sibling,'Tag' ), 'legend')
+              legDims = get( sibling, 'Position' );
+              legLeft = legDims(1);
+              legBot  = legDims(2);
+              legWid  = legDims(3);
+              legHei  = legDims(4);
+              % TODO The following logic does not work for 3D plots.
+              %      => Commented out.
+              %      This creates problems though for stacked plots with legends.
+%                if (    legLeft > axisLeft ...
+%                     && legBot > axisBot ...
+%                     && legLeft+legWid < axisLeft+axisWid ...
+%                     && legBot+legHei  < axisBot+axisHei )
+                  [ m2t, legendOpts ] = getLegendOpts( m2t, sibling );
+                  m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, legendOpts );
+%                end
           end
       end
   end
@@ -899,6 +858,82 @@ function tag = getTag( handle )
 
 end
 % ---------------------------------------------------------------------------
+function [ m2t, hasGrid ] = getAxisOptions( m2t, handle, axis )
+  % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  if ~strcmpi(axis,'x') && ~strcmpi(axis,'y') && ~strcmpi(axis,'z')
+      error( 'Illegal axis specifier ''%s''.', axis );
+  end
+  % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  % axis colors
+  color = get( handle, [upper(axis),'Color'] );
+  if ( any(color) ) % color not black [0,0,0]
+       [ m2t, col ] = getColor( m2t, handle, color, 'patch' );
+       m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, ...
+                                    { ['every outer ',axis,' axis line/.append style={',col, '}'], ...
+                                      ['every ',axis,' tick label/.append style={font=\color{',col,'}}' ] } ...
+                                  );
+  end
+  % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  % handle the orientation
+  isAxisReversed = strcmp( get(handle,[upper(axis),'Dir']), 'reverse' );
+  m2t = setfield( m2t, [axis,'AxisReversed'], isAxisReversed );
+  if isAxisReversed
+      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, ...
+                                                        [axis,' dir=reverse'] );
+  end
+  % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  % get axis limits
+  limits = get( handle, [upper(axis),'Lim'] );
+  m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, ...
+                               sprintf( [axis,'min=%.15g, ',axis,'max=%.15g'], limits ) ...
+                             );
+  % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  % get ticks along with the labels
+  [ticks, tickLabels, hasMinorTicks] = getIndividualAxisTicks( m2t, handle, axis );
+
+  % According to http://www.mathworks.com/help/techdoc/ref/axes_props.html,
+  % the number of minor ticks is automatically determined by MATLAB(R) to
+  % fit the size of the axis. Until we know how to extract this number, use
+  % a reasonable default.
+  matlabDefaultNumMinorTicks = 3;
+  if ~isempty( ticks )
+      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, sprintf( [axis,'tick={%s}'], ticks ) );
+  end
+  if ~isempty( tickLabels )
+      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, sprintf( [axis,'ticklabels={%s}'], tickLabels ) );
+  end
+  if hasMinorTicks
+      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, [axis,'minorticks=true'] );
+      if m2t.cmdOpts.Results.strict
+          m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, sprintf( 'minor %s tick num={%d}', axis, matlabDefaultNumMinorTicks ) );
+      end
+  end
+  % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  % get axis label
+  axisLabel = get( get( handle, [upper(axis),'Label'] ), 'String' );
+  if iscell(axisLabel)
+      axisLabel = axisLabel{:};
+  end
+  if ~isempty( axisLabel )
+      labelText = sprintf( '%s', axisLabel );
+      axisLabelInterpreter = get( get( handle, [upper(axis),'Label'] ), 'Interpreter' );
+      labelText = prettyPrint( m2t, labelText, axisLabelInterpreter );
+      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, sprintf( [axis,'label={%s}'], labelText ) );
+  end
+  % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  % get grids
+  hasGrid = false;
+  if strcmp( get( handle, [upper(axis),'Grid']), 'on' );
+      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, [axis,'majorgrids'] );
+      hasGrid = true;
+  end
+  if strcmp( get( handle, [upper(axis),'MinorGrid']), 'on' );
+      m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, [axis,'minorgrids'] );
+      hasGrid = true;
+  end
+  % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  return;
+end
 % =========================================================================
 % *** END OF FUNCTION drawAxes
 % =========================================================================
@@ -963,7 +998,9 @@ function [ m2t, str ] = drawLine( m2t, handle, yDeviation )
   lineWidth = get( handle, 'LineWidth' );
   marker    = get( handle, 'Marker' );
 
-  if ( strcmp(lineStyle,'none') || lineWidth==0 ) && strcmp(marker,'none')
+  hasLines = ~strcmp(lineStyle,'none') & lineWidth>0.0;
+  hasMarkers = ~strcmp(marker,'none');
+  if ~hasLines && ~hasMarkers
       return
   end
 
@@ -984,27 +1021,22 @@ function [ m2t, str ] = drawLine( m2t, handle, yDeviation )
   % plot the actual line data
   % -- Check for any node if it needs to be included at all. For zoomed
   %    plots, lots can be omitted.
-  p      = m2t.currentHandles.gca;
-  xLim   = get( p, 'XLim' );
-  yLim   = get( p, 'YLim' );
-  zLim   = get( p, 'ZLim' );
   xData  = get( handle, 'XData' );
   yData  = get( handle, 'YData' );
   zData  = get( handle, 'ZData' );
-
-  is3dPlot = ~isempty( zData );
-
-  if is3dPlot
+  if ~isempty( zData )
       % Don't try to be smart in parametric 3d plots: Just plot all the data.
       opts = [ '\n', collapse( drawOptions, ',\n' ), '\n' ];
       str = [ str, ...
               plotLine3d( opts, xData, yData, zData ) ];
   else
+      xLim = get( m2t.currentHandles.gca, 'XLim' );
+      yLim = get( m2t.currentHandles.gca, 'YLim' );
       % split the data into logical chunks
       if errorbarMode
-          [xDataCell, yDataCell, yDeviationCell ] = splitLine( m2t, xData, yData, xLim, yLim, yDeviation );
+          [xDataCell, yDataCell, yDeviationCell ] = splitLine( m2t, hasLines, hasMarkers, xData, yData, xLim, yLim, yDeviation );
       else
-          [xDataCell, yDataCell] = splitLine( m2t, xData, yData, xLim, yLim );
+          [xDataCell, yDataCell] = splitLine( m2t, hasLines, hasMarkers, xData, yData, xLim, yLim );
       end
 
       % plot them
@@ -1071,9 +1103,9 @@ function str = plotLine( opts, xData, yData, yDeviation )
 
     % Convert to string array then cell to call sprintf once (and no loops).
     if errorbarMode
-        str_data = cellstr(num2str([xData yData yDeviation],'(%g,%g) +- (0.0,%g)'));
+        str_data = cellstr(num2str([xData yData yDeviation],'(%.15g,%.15g) +- (0.0,%.15g)'));
     else
-        str_data = cellstr(num2str([xData yData],'(%g,%g)'));
+        str_data = cellstr(num2str([xData yData],'(%.15g,%.15g)'));
     end
     str_data = sprintf('%s', str_data{:});
 
@@ -1107,7 +1139,7 @@ function str = plotLine3d( opts, xData, yData, zData )
     zData = zData(:);
 
     % Convert to string array then cell to call sprintf once (and no loops).
-    str_data = cellstr(num2str([xData yData,zData],'(%g,%g,%g)'));
+    str_data = cellstr(num2str([xData yData,zData],'(%.15g,%.15g,%.15g)'));
     str_data = sprintf('%s', str_data{:});
 
     % The process above adds extra white spaces, remove them all
@@ -1132,11 +1164,11 @@ end
 %    * Data set too large.
 %
 % ---------------------------------------------------------------------------
-function [xDataCell, yDataCell, yDeviationCell] = splitLine( m2t, xData, yData, xLim, yLim, yDeviation )
+function [xDataCell, yDataCell, yDeviationCell] = splitLine( m2t, hasLines, hasMarkers, xData, yData, xLim, yLim, yDeviation )
 
   % check if the *optional* argument 'yDeviation' was given
   errorbarMode = 0;
-  if nargin>5
+  if nargin>7
       errorbarMode = 1;
   end
 
@@ -1156,9 +1188,11 @@ function [xDataCell, yDataCell, yDeviationCell] = splitLine( m2t, xData, yData, 
 
   % Split each of the chunks further up along visible segments
   if errorbarMode
-      [xDataCell , yDataCell, yDeviationCell] = splitByVisibility( m2t, xDataCell, yDataCell, xLim, yLim, yDeviationCell );
+      [xDataCell , yDataCell, yDeviationCell] = ...
+         splitByVisibility( m2t, hasLines, hasMarkers, xDataCell, yDataCell, xLim, yLim, yDeviationCell );
   else
-      [xDataCell , yDataCell] = splitByVisibility( m2t, xDataCell, yDataCell, xLim, yLim );
+      [xDataCell , yDataCell] = ...
+         splitByVisibility( m2t, hasLines, hasMarkers, xDataCell, yDataCell, xLim, yLim );
   end
 
   % Split each of the current chunks further with respect to outliers
@@ -1249,10 +1283,11 @@ end
 %      to be opened.
 %
 % -------------------------------------------------------------------------
-function [xDataCellNew , yDataCellNew, yDeviationCellNew] = splitByVisibility( m2t, xDataCell, yDataCell, xLim, yLim, yDeviationCell )
+function [xDataCellNew , yDataCellNew, yDeviationCellNew] = ...
+    splitByVisibility( m2t, hasLines, hasMarkers, xDataCell, yDataCell, xLim, yLim, yDeviationCell )
   % check if the *optional* argument 'yDeviation' was given
   errorbarMode = 0;
-  if nargin>5
+  if nargin > 7
       errorbarMode = 1;
   end
 
@@ -1264,60 +1299,46 @@ function [xDataCellNew , yDataCellNew, yDeviationCellNew] = splitByVisibility( m
 
   cellIndexNew = 0;
   for cellIndex = 1:length(xDataCell)
-      if length( xDataCell{cellIndex} ) == 1 % the "line" is actually just one point
-          % print it unconditionally
+      numPoints = length( xDataCell{cellIndex} );
+
+      % Get which points are insided a (slightly larger) box.
+      relaxedXLim = xLim + [-m2t.tol, m2t.tol];
+      relaxedYLim = yLim + [-m2t.tol, m2t.tol];
+      dataIsInBox = isInBox( [xDataCell{cellIndex}', yDataCell{cellIndex}'], ...
+                              relaxedXLim, relaxedYLim );
+
+      % By default, don't plot any points.
+      shouldPlot = false(numPoints,1);
+      if hasMarkers
+          shouldPlot = shouldPlot | dataIsInBox;
+      end
+      if hasLines
+          % Check if the connecting line is in the box.
+          segvis = segmentVisible( m2t, [xDataCell{cellIndex}', yDataCell{cellIndex}'], ...
+                                   dataIsInBox, xLim, yLim );
+          % Plot points which are next to an edge which is in the box.
+          shouldPlot = shouldPlot | [false; segvis] | [segvis; false];
+      end
+
+      % Split the data in chunks of where 'shouldPlot' is 'true'.
+      k = 1;
+      while k <= numPoints
+          % fast forward to shouldPlot==True
+          while k<=numPoints && ~shouldPlot(k)
+              k = k+1;
+          end
+          kStart = k;
+          % fast forward to shouldPlot==False
+          while k<=numPoints && shouldPlot(k)
+              k = k+1;
+          end
+          kEnd = k-1;
+
           cellIndexNew = cellIndexNew + 1;
-          xDataCellNew{cellIndexNew}(1) = xDataCell{cellIndex}(1);
-          yDataCellNew{cellIndexNew}(1) = yDataCell{cellIndex}(1);
+          xDataCellNew{cellIndexNew} = xDataCell{cellIndex}(kStart:kEnd);
+          yDataCellNew{cellIndexNew} = yDataCell{cellIndex}(kStart:kEnd);
           if errorbarMode
-              yDeviationCellNew{cellIndexNew}(1) = yDeviationCell{cellIndex}(1);
-          end
-
-      else % more than one node in the line -- this is usually the case
-          segvis = segmentVisible( m2t, [xDataCell{cellIndex}', yDataCell{cellIndex}'], xLim, yLim );
-
-          % find data points that compose two invisible segments, by adding
-          % segvis to itself. Value in datapoints are:
-          % 2 if both segment visible
-          % 1 if one segment crosses the boundary
-          % 0 if both segment are not visible
-          % '1's are the edges of visible segments. We may miss the first and
-          % last edges of corresponding visible segments. Plus some magic to
-          % deal with indices off by one (segvis is about intervals, not points)
-          datapoints = segvis(2:end) + segvis(1:end-1);
-          edges = find(datapoints == 1) + 1;
-          vis_indices = find(segvis==1);
-          if ~isempty(vis_indices)
-              if strcmp( getEnvironment(), 'Octave' ) && isVersionBelow( 'Octave', 3, 4 )
-                  % Octave 3.2 contains a bug that affects empty matrices with
-                  % dimensions 1x0 or 0x1 (as opposed to 0x0). Whenever the
-                  % find operation above returned a 1x0 matrix, the following
-                  % error occurs at the concatenation operation below:
-                  %
-                  %   error: number of rows must match (0 != 1)
-                  %
-                  % To fix this, the matrix dimensions are changed to 0x0.
-                  if isequal( size(edges), [1 0] )
-                      edges = [];
-                  end
-              end
-              edges = [ vis_indices(1) edges' vis_indices(end)+1 ];
-          end
-          edges = unique(edges);
-
-          % Sanity check, make sure we have an even number of edges.
-          if mod(length(edges), 2)
-              error('Number of edges is not even. Something went really wrong.\n');
-          end
-
-          % Split data along edges
-          for ee=1:2:length(edges)
-              cellIndexNew = cellIndexNew + 1;
-              xDataCellNew{cellIndexNew} = xDataCell{cellIndex}(edges(ee):edges(ee+1));
-              yDataCellNew{cellIndexNew} = yDataCell{cellIndex}(edges(ee):edges(ee+1));
-              if errorbarMode
-                  yDeviationCellNew{cellIndexNew} = yDeviationCell{cellIndex}(edges(ee):edges(ee+1));
-              end
+              yDeviationCellNew{cellIndexNew} = yDeviationCell{cellIndex}(kStart:kEnd);
           end
       end
   end
@@ -1326,6 +1347,19 @@ end
 % -------------------------------------------------------------------------
 % END FUNCTION splitByVisibility
 % -------------------------------------------------------------------------
+
+% =========================================================================
+% *** FUNCTION isInBox
+% =========================================================================
+function out = isInBox( p, xLim, yLim )
+
+  out = p(:,1) > xLim(1) & p(:,1) < xLim(2) ...
+      & p(:,2) > yLim(1) & p(:,2) < yLim(2);
+
+end
+% =========================================================================
+% *** END FUNCTION isInBox
+% =========================================================================
 
 % -------------------------------------------------------------------------
 % FUNCTION splitByOutliers
@@ -1349,10 +1383,16 @@ function [xDataCellNew , yDataCellNew, yDeviationCellNew] = splitByOutliers( xDa
       yDeviationCellNew = cell(0);
   end
   cellIndexNew = 0;
-  delta = 0.5; % Distance around a plotbox within the range of which points
-                % will be considered close enough, and not moved.
-  xLimLarger = [ xLim(1)-delta, xLim(2)+delta ];
-  yLimLarger = [ yLim(1)-delta, yLim(2)+delta ];
+
+  % The TeX register limit is 16384, and may be exhausted if an outlier is too
+  % far outside of the plot. It's not the absolute value that is key here, but
+  % the relative distance from the bounding box w.r.t. the size of the box.
+  % Deliberately take a factor of 40 here.
+  % This could be extended for log-plots.
+  xWidth = xLim(2) - xLim(1);
+  yWidth = yLim(2) - yLim(1);
+  xLimLarger = xLim + [ -40*xWidth, 40*xWidth ];
+  yLimLarger = yLim + [ -40*yWidth, 40*yWidth ];
 
   for cellIndex = 1:length(xDataCell);
       % Code clarity and to make sure we deal with column vectors
@@ -1369,9 +1409,9 @@ function [xDataCellNew , yDataCellNew, yDeviationCellNew] = splitByOutliers( xDa
 
       % The largest positive value of v determines where the point sits,
       % and to which boundary it must be normalized.
-      v = [ xLim(1)-x, x-xLim(2), yLim(1)-y, y-yLim(2) ];
+      v = [ xLimLarger(1)-x, x-xLimLarger(2), yLimLarger(1)-y, y-yLimLarger(2) ];
       maxVal = max(v,[],2);
-      outliers = find( maxVal > delta)';
+      outliers = find(maxVal > 0.0);
 
       % if nothing to do in this cell, take a shortcut
       if isempty(outliers)
@@ -1391,12 +1431,12 @@ function [xDataCellNew , yDataCellNew, yDeviationCellNew] = splitByOutliers( xDa
           outData = [ x(out); y(out) ];
           if out > 1
               ref = [ x(out-1); y(out-1) ];
-              new = moveCloser( outData, ref, xLimLarger, yLimLarger );
+              new = moveToBoundingBox( outData, ref, xLimLarger, yLimLarger );
               outDataNew(kk, 1:2) = new;
           end
           if out < length(x)
               ref = [ x(out+1); y(out+1) ];
-              new = moveCloser( outData, ref, xLimLarger, yLimLarger );
+              new = moveToBoundingBox( outData, ref, xLimLarger, yLimLarger );
               outDataNew(kk, 3:4) = new;
           end
       end
@@ -1436,20 +1476,29 @@ end
 % -------------------------------------------------------------------------
 % FUNCTION splitByArraySize
 %   TeX parses files line by line with a buffer of size buf_size. If the
-%   plot has too many data points, we may exceed the size of the buffer.
-%   Splitting 'large' plots makes TeX happier. What is a "large" array?
+%   plot has too many data points, the buffer size may be exceeded.
+%   As a work-around, the plot is split into several smaller plots, and this
+%   function does the job.
+%
+%   What is a "large" array?
 %   TeX parser buffer is buf_size=200000 char on Mac TeXLive, let's say 
 %   100000 to be on the safe side.
 %   1 point is represented by 25 characters (estimation): 2 coordinates (10
 %   char), 2 brackets, commma and white space, + 1 extra char.
 %   That gives a magic arbitrary number of 4000 data points per array.
 % -------------------------------------------------------------------------
-function [xDataCellNew , yDataCellNew, yDeviationCellNew] = splitByArraySize( xDataCell, yDataCell, yDeviationCell )
+function [xDataCellNew , yDataCellNew, yDeviationCellNew] = ...
+    splitByArraySize( xDataCell, yDataCell, yDeviationCell )
   % check if the *optional* argument 'yDeviation' was given
   errorbarMode = 0;
   if nargin>2
       errorbarMode = 1;
   end
+
+  % Unconditionally set this to true. This results in one extra point to be
+  % plotted per chunk, which probably doesn't hurt too much. Anways,
+  % TODO Take hasLines as argument to splitByArraySize().
+  hasLines = true;
 
   newArraySize = 4000;
   xDataCellNew = cell(0);
@@ -1457,7 +1506,7 @@ function [xDataCellNew , yDataCellNew, yDeviationCellNew] = splitByArraySize( xD
   if errorbarMode
       yDeviationCellNew = cell(0);
   end
-  cellIndexNew = 0;
+  cellIndexNew = 1;
 
   for cellIndex = 1:length(xDataCell);
 
@@ -1467,76 +1516,33 @@ function [xDataCellNew , yDataCellNew, yDeviationCellNew] = splitByArraySize( xD
           yDeviation = yDeviationCell{cellIndex};
       end
 
-      % Assuming data is never a matrix
-      if (size(xData, 2) > 1)
-          xData = xData';
-      end
-      if (size(yData, 2) > 1)
-          yData = yData';
-      end
-      if errorbarMode && (size(yDeviation, 2) > 1)
-          yDeviation = yDeviation';
-      end
+      chunkStart = 1;
+      len = length(xData);
+      while chunkStart <= len
+          chunkEnd = min( chunkStart + newArraySize - 1, len );
 
-      % If vector does not have to be split, take a shortcut
-      if length(xData < newArraySize)
-          cellIndexNew = cellIndexNew + 1;
-          xDataCellNew{cellIndexNew} = xData;
-          yDataCellNew{cellIndexNew} = yData;
+          % Copy over the data to the new containers.
+          xDataCellNew{cellIndexNew} = xData(chunkStart:chunkEnd);
+          yDataCellNew{cellIndexNew} = yData(chunkStart:chunkEnd);
           if errorbarMode
-                  yDeviationCellNew{cellIndexNew} = yDeviation;
+              yDeviationCellNew{cellIndexNew} = yDeviation(chunkStart:chunkEnd);
           end
-          continue;
-      end
 
-      % mod(length(xData),newArraySize) may not be 0, so need to take care of
-      % remaining data points that fall out of the reshaped array
-      cols = floor(length(xData) ./ newArraySize);
-      xDataReshaped = reshape(xData(1:cols*newArraySize), newArraySize, []);
-      yDataReshaped = reshape(yData(1:cols*newArraySize), newArraySize, []);
-      if errorbarMode
-          yDeviationReshaped = reshape(yDeviation(1:cols*newArraySize), newArraySize, []);
-      end
-      xDataLeft = xData(cols*newArraySize+1:end);
-      yDataLeft = yData(cols*newArraySize+1:end);
-      if errorbarMode
-          yDeviationLeft = yDeviation(cols*newArraySize+1:end);
-      end
+          % If the plot has lines, add an extra (overlap) point to the data
+          % stream; otherwise the line between two data chunks would be broken.
+          if hasLines && chunkEnd~=len
+              xDataCellNew{cellIndexNew} = [ xDataCellNew{cellIndexNew}, ...
+                                             xData(chunkEnd+1) ];
+              yDataCellNew{cellIndexNew} = [ yDataCellNew{cellIndexNew}, ...
+                                             yData(chunkEnd+1) ];
+              if errorbarMode
+                  yDeviationCellNew{cellIndexNew} = [ yDeviationCellNew{cellIndexNew}, ...
+                                                      yDeviation(chunkEnd+1) ];
+              end
+          end
 
-      % Need to add one point to each reshaped row otherwise tikz won't draw
-      % continuous lines (missing interval).
-      xDataExtra= zeros(1,cols);
-      yDataExtra = zeros(1,cols);
-      if errorbarMode
-          yDeviationExtra = zeros(1,cols);
-      end
-      xDataExtra(1:end-1) = xDataReshaped(1,2:end);
-      yDataExtra(1:end-1) = yDataReshaped(1,2:end);
-      if errorbarMode
-          yDeviationExtra(1:end-1) = yDeviationReshaped(1,2:end);
-      end
-      xDataExtra(end) = xDataLeft(1,1);
-      yDataExtra(end) = yDataLeft(1,1);
-      if errorbarMode
-          yDeviationExtra(end) = yDeviationLeft(1,1);
-      end
-
-      % Push split arrays in new cells, with extra point
-      for kk=1:cols
           cellIndexNew = cellIndexNew + 1;
-          xDataCellNew{cellIndexNew} = [ xDataReshaped(:,kk); xDataExtra(kk) ];
-          yDataCellNew{cellIndexNew} = [ yDataReshaped(:,kk); yDataExtra(kk) ];
-          if errorbarMode
-                  yDeviationCellNew{cellIndexNew} = [ yDeviationReshaped(:,kk); yDeviationExtra(kk) ];
-          end
-      end
-      if cols ~= length(xData) ./ newArraySize
-          cellIndexNew = cellIndexNew + 1;
-          xDataCellNew{cellIndexNew} = xDataLeft;
-          yDataCellNew{cellIndexNew} = yDataLeft;
-          if errorbarMode
-                  yDeviationCellNew{cellIndexNew} = yDeviationLeft;
-          end
+          chunkStart = chunkEnd + 1;
       end
   end
 
@@ -1546,71 +1552,58 @@ end
 % -------------------------------------------------------------------------
 
 % -------------------------------------------------------------------------
-% FUNCTION moveCloser
+% FUNCTION moveToBoundingBox
 % Takes one point x outside of a box defined by xLim, yLim, and one other
 % point xRef inside of it.
 % Returns a point xNew that sits on the line xRef---x *and* on the
 % boundary box.
 % -------------------------------------------------------------------------
-function xNew = moveCloser( x, xRef, xLim, yLim )
-
-  alpha = inf;
+function xNew = moveToBoundingBox( x, xRef, xLim, yLim )
 
   % Find out with which border the line x---xRef intersects, and determine
   % the parameter alpha such that x+alpha(xRef-x) sits on the boundary.
   if segmentsIntersect( [x(1), xRef(1), xLim(1), xLim(1)], ... % left boundary
                         [x(2), xRef(2), yLim            ] )
-      alpha = min( alpha, (xLim(1)-x(1)) / (xRef(1)-x(1)) );
-  end
-  if segmentsIntersect( [x(1), xRef(1), xLim            ], ... % bottom boundary
+      alpha = (xLim(1)-x(1)) / (xRef(1)-x(1));
+  elseif segmentsIntersect( [x(1), xRef(1), xLim            ], ... % bottom boundary
                         [x(2), xRef(2), yLim(1), yLim(1)] )
-      alpha = min( alpha, (yLim(1)-x(2)) / (xRef(2)-x(2)) );
-  end
-  if segmentsIntersect( [x(1), xRef(1), xLim(2), xLim(2)], ... % right boundary
+      alpha = (yLim(1)-x(2)) / (xRef(2)-x(2));
+  elseif segmentsIntersect( [x(1), xRef(1), xLim(2), xLim(2)], ... % right boundary
                         [x(2), xRef(2), yLim            ] )
-      alpha = min( alpha, (xLim(2)-x(1)) / (xRef(1)-x(1)) );
-  end
-  if segmentsIntersect( [x(1), xRef(1), xLim            ], ... % top boundary
+      alpha = (xLim(2)-x(1)) / (xRef(1)-x(1));
+  elseif segmentsIntersect( [x(1), xRef(1), xLim            ], ... % top boundary
                         [x(2), xRef(2), yLim(2), yLim(2)] )
-      alpha = min( alpha, (yLim(2)-x(2)) / (xRef(2)-x(2)) );
-  end
-
-  if isinf(alpha)
+      alpha = (yLim(2)-x(2)) / (xRef(2)-x(2));
+  else
       error( 'matlab2tikz:noIntersecton', ...
               [ 'Could not determine were the outside point sits with ', ...
-                'respect to the box. Both x and xRef outside the box?' ] );
+                'respect to the box. Both x and xRef {in,out}side the box?' ] );
   end
 
   % create the new point
-  xNew = xRef + alpha*(x-xRef);
+  xNew = x + alpha*(xRef-x);
 end
 % -------------------------------------------------------------------------
-% END FUNCTION moveCloser
+% END FUNCTION moveToBoundingBox
 % -------------------------------------------------------------------------
 
 
 % -------------------------------------------------------------------------
 % FUNCTION segmentVisible
-%
-% Given a series of points 'p', this routines determines which inter-'p'
-% connections are visible in the box given by 'xLim', 'yLim'.
-%
 % -------------------------------------------------------------------------
-function out = segmentVisible( m2t, p, xLim, yLim )
+function out = segmentVisible( m2t, p, dataIsInBox, xLim, yLim )
+    % Given a bounding box {x,y}Lim, loop through all pairs of subsequent nodes
+    % in p and determine whether the line between the pair crosses the box.
 
-    n   = size( p, 1 ); % number of points
-    out = zeros( n-1, 1 );
-
-    % Find out where (with respect the the box) the points 'p' sit.
-    % Consider the documentation for 'boxWhere' to find out about
-    % the meaning of the return values.
-    boxpos = boxWhere( m2t, p, xLim, yLim );
+    n = size(p, 1); % number of points
+    out = false(n-1, 1);
 
     for kk = 1:n-1
-        if any(boxpos{kk}==1) || any(boxpos{kk+1}==1) % one of the two is strictly inside the box
-            out(kk) = 1;
-        elseif any(boxpos{kk}==2) || any(boxpos{kk+1}==2) % one of the two is strictly outside the box
-            % does the segment intersect with any of the four boundaries?
+        if dataIsInBox(kk) || dataIsInBox(kk+1) % one of the two is inside the box
+            out(kk) = true;
+        else % both are outside
+            % Does the connecting segment intersect with any of the four
+            % boundaries?
             out(kk) =  segmentsIntersect( [p(kk:kk+1,1)',xLim(1),xLim(1)], ...   % with the left?
                                           [p(kk:kk+1,2)',yLim] ) ...
                     || segmentsIntersect( [p(kk:kk+1,1)',xLim],  ...             % with the bottom?
@@ -1619,11 +1612,7 @@ function out = segmentVisible( m2t, p, xLim, yLim )
                                           [p(kk:kk+1,2)',yLim] ) ...
                     || segmentsIntersect( [p(kk:kk+1,1)',xLim],  ...             % with the top?
                                           [p(kk:kk+1,2)',yLim(2),yLim(2)] );
-        else % both neighboring points lie on the boundary
-            % This is kind of tricky as there may be nodes *exactly*
-            % in a corner of the domain. boxpos & commonEntry handle
-            % this, though.
-            out(kk) = ~commonEntry( boxpos{kk},boxpos{kk+1} );
+
         end
     end
 
@@ -1641,7 +1630,7 @@ end
 % -------------------------------------------------------------------------
 function out = segmentsIntersect( x, y )
 
-  % Technically, one writes down the 2x2 equation system to solve the
+  % Technically, one needs to solve the 2x2 equation system
   %
   %   x1 + lambda (x2-x1)  =  x3 + mu (x4-x3)
   %   y1 + lambda (y2-y1)  =  y3 + mu (y4-y3)
@@ -1650,15 +1639,15 @@ function out = segmentsIntersect( x, y )
 
   det = (x(4)-x(3))*(y(2)-y(1)) - (y(4)-y(3))*(x(2)-x(1));
 
-  out = det;
-
-  if det % otherwise the segments are parallel
+  if (det ~= 0.0)
       rhs1   = x(3) - x(1);
       rhs2   = y(3) - y(1);
       lambda = ( -rhs1* (y(4)-y(3)) + rhs2* (x(4)-x(3)) ) / det;
       mu     = ( -rhs1* (y(2)-y(1)) + rhs2* (x(2)-x(1)) ) / det;
-      out    =  0<lambda && lambda<1 ...
-             && 0<mu     && mu    <1;
+      out    =  0.0<lambda && lambda<1.0 ...
+             && 0.0<mu     && mu    <1.0;
+  else % segments are parallel
+      out = false;
   end
 
 end
@@ -2066,7 +2055,7 @@ function [ m2t, str ] = drawPatch( m2t, handle )
                         sprintf(['\\addplot [',drawOpts,'] coordinates{']) );
 
           % Convert to string array then cell to call sprintf once (and no loops).
-          str_data = cellstr(num2str([xData(:,j),yData(:,j)],'(%g,%g)'));
+          str_data = cellstr(num2str([xData(:,j),yData(:,j)],'(%.15g,%.15g)'));
           str_data = sprintf('%s', str_data{:});
           % The process adds extra white spaces, remove them all
           str_data = str_data(~isspace(str_data));
@@ -2077,7 +2066,7 @@ function [ m2t, str ] = drawPatch( m2t, handle )
           % Let's keep an eye on this.
 %          if xData(1,j)~=xData(end,j) || yData(1,j)~=yData(end,j)
 %              str = strcat( str, ...
-%                            sprintf( ' (%g,%g)', xData(1,j), yData(1,j) ) );
+%                            sprintf( ' (%.15g,%.15g)', xData(1,j), yData(1,j) ) );
 %          end
       end
    else % ~isempty( zData )
@@ -2087,7 +2076,7 @@ function [ m2t, str ] = drawPatch( m2t, handle )
                         sprintf(['\\addplot3 [',drawOpts,'] coordinates{']) );
 
           % Convert to string array then cell to call sprintf once (and no loops).
-          str_data = cellstr(num2str([xData(:,j),yData(:,j),zData(:,j)],'(%g,%g,%g)'));
+          str_data = cellstr(num2str([xData(:,j),yData(:,j),zData(:,j)],'(%.15g,%.15g,%.15g)'));
           str_data = sprintf('%s', str_data{:});
           % The process adds extra white spaces, remove them all
           str_data = str_data(~isspace(str_data));
@@ -2096,7 +2085,7 @@ function [ m2t, str ] = drawPatch( m2t, handle )
           % make sure the path is closed
           if xData(1,j)~=xData(end,j) || yData(1,j)~=yData(end,j) || zData(1,j)~=zData(end,j)
               str = strcat( str, ...
-                            sprintf( ' (%g,%g,%g)', xData(1,j), yData(1,j), zData(1,j) ) );
+                            sprintf( ' (%.15g,%.15g,%.15g)', xData(1,j), yData(1,j), zData(1,j) ) );
           end
       end
    end
@@ -2185,9 +2174,10 @@ function [ m2t, str ] = drawImage( m2t, handle )
       end
 
       cmap = get(m2t.currentHandles.gcf, 'ColorMap');
+        % TODO: Shouldn't this be m2t.currentHandles.colormap?
 
       % write the image
-      imwriteWrapperPNG ( colorData, cmap, pngFileName );
+      imwriteWrapperPNG( colorData, cmap, pngFileName );
       % ------------------------------------------------------------------------
 
       xLim = get( m2t.currentHandles.gca, 'XLim' );
@@ -2244,7 +2234,7 @@ function [ m2t, str ] = drawImage( m2t, handle )
       for i = 1:m
           for j = 1:n
               str = strcat( str, ...
-                            sprintf( '\\fill [%s] (axis cs:%g,%g) rectangle (axis cs:%g,%g);\n', ...
+                            sprintf( '\\fill [%s] (axis cs:%.15g,%.15g) rectangle (axis cs:%.15g,%.15g);\n', ...
                                      xcolor{i,j}, Y(j)-hY/2,  X(i)-hX/2, Y(j)+hY/2, X(i)+hX/2  ) );
           end
       end
@@ -2339,7 +2329,7 @@ function [m2t,env] = drawSurface( m2t, handle )
         for i = 1:col
             for j = 1:row
                 str = [ str, ...
-                        sprintf('(%g,%g,%g)', dx(j), dy(i), dz(i,j) ) ];
+                        sprintf('(%.15g,%.15g,%.15g)', dx(j), dy(i), dz(i,j) ) ];
             end
             % insert an empty line to tell Pgfplots about one row ending here
             str = [str, sprintf('\n\n')];
@@ -2351,7 +2341,7 @@ function [m2t,env] = drawSurface( m2t, handle )
         for i = 1:col
             for j = 1:row
                 str = [ str, ...
-                        sprintf('(%g,%g,%g)', dx(i,j), dy(i,j), dz(i,j) ) ];
+                        sprintf('(%.15g,%.15g,%.15g)', dx(i,j), dy(i,j), dz(i,j) ) ];
             end
             % insert an empty line to tell Pgfplots about one row ending here
             str = [str, sprintf('\n\n')];
@@ -2401,31 +2391,93 @@ function [ m2t, str ] = drawText( m2t, handle)
   VerticalAlignment = get( handle, 'VerticalAlignment' );
   % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   % translate them to pgf style
+  style = cell(0);
   switch VerticalAlignment
-    case {'top', 'cap'},         style = 'below';
-    case {'baseline', 'bottom'}, style = 'above';
-    otherwise,                   style = '';
+      case {'top', 'cap'}
+          style = appendOptions( style, 'below' );
+      case {'baseline', 'bottom'}
+          style = appendOptions( style, 'above' );
   end
   switch HorizontalAlignment
-    case 'left',  style = [style, ' right'];
-    case 'right', style = [style, ' left'];
+      case 'left'
+          style = appendOptions( style, 'right' );
+      case 'right'
+          style = appendOptions( style, 'left' );
   end
   % remove invisible border around \node to make the text align precisely
-  style = [style, ', inner sep=0mm'];
+  style = appendOptions( style, 'inner sep=0mm' );
 
-  style = [style ', text=' tcolor];
+  style = appendOptions( style, ['text=' tcolor] );
   if ~strcmp(EdgeColor, 'none')
     [ m2t, ecolor ] = getColor( m2t, handle, EdgeColor, 'patch' );
-    style = [style ', draw=', ecolor];
+    style = appendOptions( style, ['draw=', ecolor] );
   end
   % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   % plot the thing
-  str = sprintf( '\\node[%s]\nat (axis cs:%g, %g) {%s};\n', ...
-                 style, pos(1), pos(2), String );
+  str = sprintf( '\\node[%s]\nat (axis cs:%.15g, %.15g) {%s};\n', ...
+                 collapse(style,', '), pos(1), pos(2), String );
   % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 end
 % =========================================================================
 % *** END FUNCTION drawText
+% =========================================================================
+
+
+% =========================================================================
+% *** FUNCTION drawRectangle
+% =========================================================================
+function [ m2t, str ] = drawRectangle( m2t, handle )
+  str = [];
+
+  % there may be some text objects floating around a Matlab figure which
+  % are handled by other subfunctions (labels etc.) or don't need to be
+  % handled at all
+  if     strcmp(get(handle, 'Visible'), 'off') ...
+      || strcmp(get(handle, 'HandleVisibility'), 'off')
+    return;
+  end
+
+  % TODO handle Curvature = [0.8 0.4]
+
+  % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  lineStyle = get( handle, 'LineStyle' );
+  lineWidth = get( handle, 'LineWidth' );
+  if ( strcmp(lineStyle,'none') || lineWidth==0 )
+      return
+  end
+  % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  % Get draw options.
+  lineOptions = getLineOptions( m2t, lineStyle, lineWidth );
+
+  colorOptions = cell(0);
+  % fill color
+  faceColor  = get( handle, 'FaceColor' );
+  if ~strcmp( faceColor, 'none' )
+      [ m2t, xFaceColor ] = getColor( m2t, handle, faceColor, 'patch' );
+      colorOptions = appendOptions( colorOptions, ...
+                      sprintf( 'fill=%s', xFaceColor ) );
+  end
+  % draw color
+  edgeColor = get( handle, 'EdgeColor' );
+  lineStyle = get( handle, 'LineStyle' );
+  if strcmp( lineStyle, 'none' ) || strcmp( edgeColor, 'none' )
+      colorOptions = appendOptions( colorOptions, 'draw=none' );
+  else
+      [ m2t, xEdgeColor ] = getColor( m2t, handle, edgeColor, 'patch' );
+      colorOptions = appendOptions( colorOptions, sprintf( 'draw=%s', xEdgeColor ) );
+  end
+  % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  pos = get( handle, 'Position' );
+  % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  drawOptions = [ lineOptions, colorOptions ];
+  % plot the thing
+  str = sprintf( '\\draw[%s] (axis cs:%.15g, %.15g) rectangle (axis cs:%.15g, %.15g);\n', ...
+                 collapse(drawOptions,', '), pos(1), pos(2), pos(1)+pos(3), pos(2)+pos(4) ...
+               );
+  % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+end
+% =========================================================================
+% *** END FUNCTION drawRectangle
 % =========================================================================
 
 
@@ -2451,7 +2503,7 @@ function [m2t,surfOpts,plotType] = surfaceOpts( m2t, handle )
   % Set opacity if FaceAlpha < 1 in MATLAB
   faceAlpha = get( handle, 'FaceAlpha');
   if faceAlpha ~= 1 && isnumeric( faceAlpha )
-    surfOptions = appendOptions( surfOptions, sprintf( 'opacity=%g', faceAlpha ) );
+    surfOptions = appendOptions( surfOptions, sprintf( 'opacity=%.15g', faceAlpha ) );
   end
   
   if strcmpi( plotType, 'surf' )
@@ -2500,17 +2552,18 @@ function [ m2t, str ] = drawScatterPlot( m2t, h )
   hasFaceColor    = ~strcmp(markerFaceColor,'none');
   [tikzMarker,markOptions] = translateMarker( m2t, matlabMarker, [], hasFaceColor );
 
-
-  if size(cData,2) == 3
-      % TODO Get this in order as soon as pgfplots can do "scatter rgb".
-%        drawOptions = { 'scatter rgb', ...
-%                        'only marks' };
-  elseif length(cData) == 3
+  if length(cData) == 3
       % No special treatment for the colors or markers are needed.
+      % All markers have the same color.
       [ m2t, xcolor ] = getColor( m2t, h, cData, 'patch' );
       drawOptions = { 'only marks', ...
                       ['mark=' tikzMarker], ...
                       ['color=' xcolor ] };
+  elseif size(cData,2) == 3
+      drawOptions = { 'only marks' ...
+      % TODO Get this in order as soon as pgfplots can do "scatter rgb".
+%                        'scatter rgb' ...
+                    };
   else
       markerOptions = { ['mark=', tikzMarker], ...
                         sprintf('draw=mapped color') };
@@ -2540,15 +2593,18 @@ function [ m2t, str ] = drawScatterPlot( m2t, h )
   for k = 1:length(xData)
       if isempty(zData)
           str = strcat( str, ...
-                        sprintf( ' (%g,%g)', xData(k), yData(k) ) );
+                        sprintf( ' (%.15g,%.15g)', xData(k), yData(k) ) );
       else
           str = strcat( str, ...
-                        sprintf( ' (%g,%g,%g)', xData(k), yData(k), zData(k) ) );
+                        sprintf( ' (%.15g,%.15g,%.15g)', xData(k), yData(k), zData(k) ) );
       end
-      if size(cData,2) == 3
-          str = strcat( str, sprintf( ' [%d,%d,%d]\n', cData(k,:) ) );
-      elseif length(cData) == 3
+      if length(cData) == 3
+          % If size(cData,1)==1, then all the colors are the same and have
+          % already been accounted for above.
           str = strcat( str, sprintf('\n') );
+      elseif size(cData,2) == 3
+          [m2t, col] = rgb2colorliteral( m2t, cData(k,:) );
+          str = strcat( str, sprintf( ' [%s]\n', col ) );
       else
           str = strcat( str, sprintf( ' [%d]\n', cData(k) ) );
       end
@@ -2637,7 +2693,6 @@ function [ m2t, str ] = drawBarseries( m2t, h )
   end
   % -----------------------------------------------------------------------
 
-
   xData = get( h, 'XData' );
   yData = get( h, 'YData' );
 
@@ -2645,6 +2700,12 @@ function [ m2t, str ] = drawBarseries( m2t, h )
   drawOptions = cell(0);
 
   barlayout = get( h, 'BarLayout' );
+  isHoriz = strcmp( get( h, 'Horizontal' ), 'on' );
+  if (isHoriz)
+      barType = 'xbar';
+  else
+      barType = 'ybar';
+  end
   switch barlayout
       case 'grouped'
           % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -2684,8 +2745,8 @@ function [ m2t, str ] = drawBarseries( m2t, h )
           % have the units converted.
           ulength = normalized2physical( m2t );
           drawOptions = [ drawOptions,                                    ...
-                          'ybar',                                                      ...
-                          sprintf( 'bar width=%g%s, bar shift=%g%s',                   ...
+                          barType,                                                      ...
+                          sprintf( 'bar width=%.15g%s, bar shift=%.15g%s',                   ...
                                     m2t.barWidth                *ulength.value, ulength.unit , ...
                                     m2t.barShifts(m2t.barplotId)*ulength.value, ulength.unit  ) ];
           % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -2703,15 +2764,14 @@ function [ m2t, str ] = drawBarseries( m2t, h )
               if m2t.nonbarPlotPresent
                   userWarning( m2t, [ 'Pgfplots can''t deal with stacked bar plots', ...
                                  ' and non-bar plots in one axis environment.', ...
-                                 ' There *may* be unexpected results.'         ] );
-                      % Should this be a userInfo() instead?
+                                 ' The file will probably not compile.'         ] );
               end
               bWFactor = get( h, 'BarWidth' );
-              ulength   = normalized2physical( m2t );
+              ulength  = normalized2physical( m2t );
               % Add 'ybar stacked' to the containing axes environment.
               m2t.currentAxesContainer.options = appendOptions( m2t.currentAxesContainer.options, ...
-                                                                { 'ybar stacked',                          ...
-                                                                  sprintf( 'bar width=%g%s',               ...
+                                                                { [barType,' stacked'],                          ...
+                                                                  sprintf( 'bar width=%.15g%s',               ...
                                                                            ulength.value*bWFactor, ulength.unit ) } ...
                                                               );
               m2t.addedAxisOption = true;
@@ -2755,9 +2815,17 @@ function [ m2t, str ] = drawBarseries( m2t, h )
   str = [ str, ...
           sprintf( '\\addplot[%s] plot coordinates{', drawOpts ) ];
 
-  for k=1:length(xData)
-      str = strcat( str, ...
-                    sprintf( ' (%g,%g)', xData(k), yData(k) ) );
+  if isHoriz
+      % If the bars are horizontal, the values x and y are exchanged.
+      for k=1:length(xData)
+          str = strcat( str, ...
+                        sprintf( ' (%.15g,%.15g)', yData(k), xData(k) ) );
+      end
+  else
+      for k=1:length(xData)
+          str = strcat( str, ...
+                        sprintf( ' (%.15g,%.15g)', xData(k), yData(k) ) );
+      end
   end
   str = [ str, sprintf(' };\n\n') ];
   % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -2822,7 +2890,7 @@ function [ m2t, str ] = drawStemseries( m2t, h )
 
   for k=1:length(xData)
       str = strcat( str, ...
-                    sprintf( ' (%g,%g)', xData(k), yData(k) ) );
+                    sprintf( ' (%.15g,%.15g)', xData(k), yData(k) ) );
   end
   str = [ str, sprintf(' };\n\n') ];
   % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -2885,7 +2953,7 @@ function [ m2t, str ] = drawStairSeries( m2t, h )
 
   for k=1:length(xData)
       str = strcat( str, ...
-                    sprintf( ' (%g,%g)', xData(k), yData(k) ) );
+                    sprintf( ' (%.15g,%.15g)', xData(k), yData(k) ) );
   end
   str = [ str, sprintf(' };\n\n') ];
   % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -2981,7 +3049,7 @@ function [ m2t, str ] = drawQuiverGroup( m2t, h )
   % return the vector field code
   str = [ str, ...
           sprintf( [ '\\addplot [arrow',num2str(m2t.quiverId)  ,...
-                     '] coordinates{ (%g,%g) (%g,%g) };\n'],...
+                     '] coordinates{ (%.15g,%.15g) (%.15g,%.15g) };\n'],...
                    XY ) ];
   % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -3045,7 +3113,7 @@ function [ m2t, str ] = drawErrorBars( m2t, h )
 
       if abs(upDev-loDev) >= 1e-10 % don't use 'm2t.tol' here as is seems somewhat too strict
           error( 'drawErrorBars:uneqDeviations', ...
-                 'Upper and lower error deviations not equal (%g ~= %g); matlab2tikz can''t deal with that yet. Using upper deviations.', upDev, loDev );
+                 'Upper and lower error deviations not equal (%.15g ~= %.15g); matlab2tikz can''t deal with that yet. Using upper deviations.', upDev, loDev );
       end
 
       yDeviations(k) = upDev;
@@ -3160,12 +3228,12 @@ function [ m2t, env ] = drawColorbar( m2t, handle, alignmentOptions )
 
       case {'northoutside','southoutside'}
           cbarOptions = [ cbarOptions,                          ...
-                           sprintf( 'width=%g%s, height=%g%s',  ...
+                           sprintf( 'width=%.15g%s, height=%.15g%s',  ...
                                      parentDim.x.value, parentDim.x.unit,   ...
                                      width.value      , width.unit           ), ...
                            'scale only axis',                           ...
-                           sprintf( 'xmin=%g, xmax=%g', clim ),         ...
-                           sprintf( 'ymin=%g, ymax=%g', [0,1] )         ...
+                           sprintf( 'xmin=%.15g, xmax=%.15g', clim ),         ...
+                           sprintf( 'ymin=%.15g, ymax=%.15g', [0,1] )         ...
                          ];
 
           % MATLAB(R)'s keywords are camel cased (e.g., 'NorthOutside'),
@@ -3186,12 +3254,12 @@ function [ m2t, env ] = drawColorbar( m2t, handle, alignmentOptions )
 
       case {'eastoutside','westoutside'}
           cbarOptions = [ cbarOptions,                          ...
-                           sprintf( 'width=%g%s, height=%g%s',  ...
+                           sprintf( 'width=%.15g%s, height=%.15g%s',  ...
                                      width.value      , width.unit,  ...
                                      parentDim.y.value, parentDim.y.unit ), ...
                            'scale only axis',                           ...
-                           sprintf( 'xmin=%g, xmax=%g', [0,1] ),        ...
-                           sprintf( 'ymin=%g, ymax=%g', clim )          ...
+                           sprintf( 'xmin=%.15g, xmax=%.15g', [0,1] ),        ...
+                           sprintf( 'ymin=%.15g, ymax=%.15g', clim )          ...
                          ];
           if strcmpi( loc, 'eastoutside' )
                cbarOptions = [ cbarOptions,                           ...
@@ -3206,22 +3274,23 @@ function [ m2t, env ] = drawColorbar( m2t, handle, alignmentOptions )
   end
   % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   % get ticks along with the labels
-  [ ticks, tickLabels ] = getTicks( m2t, handle );
-  if ~isempty( ticks.x )
+  [ ticks, tickLabels, hasMinorTicks ] = getIndividualAxisTicks( m2t, handle, 'x' );
+  if ~isempty( ticks )
       cbarOptions = [ cbarOptions,                                    ...
-                       sprintf( 'xtick={%s}', ticks.x ) ];
+                       sprintf( 'xtick={%s}', ticks ) ];
   end
-  if ~isempty( tickLabels.x )
+  if ~isempty( tickLabels )
       cbarOptions = [ cbarOptions,                                    ...
-                       sprintf( 'xticklabels={%s}', tickLabels.x ) ];
+                       sprintf( 'xticklabels={%s}', tickLabels ) ];
   end
-  if ~isempty( ticks.y )
+  [ ticks, tickLabels, hasMinorTicks ] = getIndividualAxisTicks( m2t, handle, 'y' );
+  if ~isempty( ticks )
       cbarOptions = [ cbarOptions,                                    ...
-                      sprintf( 'ytick={%s}', ticks.y ) ];
+                      sprintf( 'ytick={%s}', ticks ) ];
   end
-  if ~isempty( tickLabels.y )
+  if ~isempty( tickLabels )
       cbarOptions = [ cbarOptions,                                    ...
-                       sprintf( 'yticklabels={%s}', tickLabels.y ) ];
+                      sprintf( 'yticklabels={%s}', tickLabels ) ];
   end
   % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   % set the options
@@ -3270,7 +3339,7 @@ function [ m2t, env ] = drawColorbar( m2t, handle, alignmentOptions )
       % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       % plot tiny little badges for the respective colors
       for i=1:m
-          [m2t, badgeColor] = rgb2tikzcol( m2t, cmap(i,:) );
+          [m2t, badgeColor] = rgb2colorliteral( m2t, cmap(i,:) );
 
           % MATLAB(R)'s keywords are camel cased (e.g., 'NorthOutside'), in Octave
           % small cased ('northoutside'). Hence, use lower() for uniformity.
@@ -3287,7 +3356,7 @@ function [ m2t, env ] = drawColorbar( m2t, handle, alignmentOptions )
                   y2 = clim(1) + cbarLength/m *i;
           end
           env = append( env, ...
-                        sprintf( '\\addplot [fill=%s,draw=none] coordinates{ (%g,%g) (%g,%g) (%g,%g) (%g,%g) };\n', ...
+                        sprintf( '\\addplot [fill=%s,draw=none] coordinates{ (%.15g,%.15g) (%.15g,%.15g) (%.15g,%.15g) (%.15g,%.15g) };\n', ...
                                  badgeColor, x1, y1, x2, y1, x2, y2, x1, y2  ) ...
                       );
       end
@@ -3322,20 +3391,21 @@ function [m2t, xcolor] = getColor( m2t, handle, color, mode )
   %    below
   if isreal(color) && length(color)==3 && ~any(isnan(color))
       % everything alright: rgb color here
-      [m2t, xcolor] = rgb2tikzcol( m2t, color );
+      [m2t, xcolor] = rgb2colorliteral( m2t, color );
   else
       % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       switch mode
           case 'patch'
-              [ m2t, colorindex ] = patchcolor2colorindex ( m2t, color, handle );
+              [m2t, colorindex] = patchcolor2colorindex(m2t, color, handle);
           case 'image'
-              [ m2t, colorindex ] = imagecolor2colorindex ( m2t, color, handle );
+              [m2t, colorindex] = imagecolor2colorindex(m2t, color, handle);
           otherwise
               error( [ 'matlab2tikz:getColor',                          ...
                        'Argument ''mode'' has illegal value ''%s''.' ], ...
                        mode );
       end
-      [ m2t, xcolor ] = colorindex2tikzcol( m2t, colorindex );
+      cmap = m2t.currentHandles.colormap;
+      [m2t, xcolor] = rgb2colorliteral(m2t, cmap(colorindex, :));
       % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   end
 
@@ -3343,103 +3413,6 @@ end
 % =========================================================================
 % *** END FUNCTION getColor
 % =========================================================================
-
-
-
-% =========================================================================
-% *** FUNCTION rgb2tikzcol
-% ***
-% *** This function takes and RGB coded color as input and returns a string
-% *** describing the color that can be used in the TikZ file.
-% *** It checks if the color is predefined (by xcolor.sty) or if it needs
-% *** to be custom defined. It keeps all the self-defined colors in
-% *** 'm2t.requiredRgbColors' to avoid redundant definitions.
-% ***
-% =========================================================================
-function [ m2t, xcolor ] = rgb2tikzcol( m2t, rgbcol )
-
-  % make sure rgbcol has shape (1,3), and not (1,1,3) or similar
-  rgbcol = rgbcol(:)';
-
-  [xcolor,errorcode] = rgb2xcolor( rgbcol );
-  if errorcode
-
-      % check if the color has appeared before
-      n  = size(m2t.requiredRgbColors,1);
-      for k = 1:n
-          if isequal( m2t.requiredRgbColors(k,:), rgbcol )
-              % take that former color and return
-              xcolor = sprintf( 'mycolor%d', k );
-              return
-          end
-      end
-
-      % color not found: have a new one defined;
-      m2t.requiredRgbColors = [ m2t.requiredRgbColors; ...
-                                rgbcol ];
-      xcolor = sprintf( 'mycolor%d', n+1 );
-  end
-
-end
-% =========================================================================
-% *** FUNCTION rgb2tikzcol
-% =========================================================================
-
-
-
-% =========================================================================
-% *** FUNCTION colorindex2tikzcol
-% ***
-% *** This function takes a color index of the active MATLAB(R) color map
-% *** and returns a string describing the color that can be used in the
-% *** TikZ file.
-% ***
-% *** Does caching, too.
-% ***
-% =========================================================================
-function [ m2t, xcolor ] = colorindex2tikzcol( m2t, colorindex )
-
-  if ~isfield( m2t, 'colorindex_cache' )
-      % Remember the color rbgvalues which will need to be redefined.
-      % Each row of 'm2t.requiredRgbColors' contains the RGB values of a needed
-      % color.
-      m2t.colorindex_cache = [];
-  end
-
-  cmap = m2t.currentHandles.colormap;
-
-  rgbcol = cmap( colorindex, : );
-  [xcolor,errorcode] = rgb2xcolor( rgbcol );
-
-  if errorcode % non-standard xcolor
-
-      if isempty(m2t.requiredRgbColors)
-          % initialize the matrix
-          m2t.requiredRgbColors = [];
-      end
-      if isempty(m2t.colorindex_cache)
-          m2t.colorindex_cache = zeros( size(cmap,1), 1 );
-      end
-
-      % check if the color has appeared before
-      if m2t.colorindex_cache(colorindex)
-          xcolor = sprintf( 'mycolor%d', m2t.colorindex_cache(colorindex) );
-      else
-          % color not found: have a new one defined
-          n  = size(m2t.requiredRgbColors,1);
-          m2t.requiredRgbColors = [ m2t.requiredRgbColors; ...
-                                    rgbcol ];
-          xcolor = sprintf( 'mycolor%d', n+1 );
-          m2t.colorindex_cache(colorindex) = n+1;
-      end
-
-  end
-
-end
-% =========================================================================
-% *** FUNCTION colorindex2tikzcol
-% =========================================================================
-
 
 
 % =========================================================================
@@ -3652,27 +3625,75 @@ function [ m2t, lOpts ] = getLegendOpts( m2t, handle )
       case 'west'
           position = [dist, 0.5];
           anchor   = 'west';
+      case 'northoutside'
+          position = [0.5, 1+dist];
+          anchor = 'south';
+      case 'southoutside'
+          position = [0.5, -dist];
+          anchor = 'north';
+      case 'eastoutside'
+          position = [1+dist, 0.5];
+          anchor = 'west';
+      case 'westoutside'
+          position = [-dist, 0.5];
+          anchor = 'east';
       case 'northeastoutside'
           position = [1+dist, 1];
           anchor = 'north west';
+      case 'northwestoutside'
+          position = [-dist, 1];
+          anchor = 'north east';
       case 'southeastoutside'
           position = [1+dist, 0];
           anchor = 'south west';
-      case 'best'
-          % TODO: Implement this one.
+      case 'southwestoutside'
+          position = [-dist, 0];
+          anchor = 'south east';
+      case {'best','bestoutside'}
+          % TODO: Implement these.
           % The position could be determined by means of 'Position' and/or
           % 'OuterPosition' of the legend handle; in fact, this could be made
           % a general principle for all legend placements.
-          userWarning( m2t, [ ' Option ''Best'' not yet implemented.',         ...
-                         ' Choosing default.' ] );
-      case 'bestoutside'
-          % TODO: Implement this one.
-          % For comments see above.
-          userWarning( m2t, [ ' Option ''BestOutside'' not yet implemented.',  ...
+          userWarning( m2t, [ sprintf(' Option ''%s'' not yet implemented.',loc),         ...
                          ' Choosing default.' ] );
       otherwise
           userWarning( m2t, [ ' Unknown legend location ''',loc,''''           ...
-                         '. Choosing default.' ] );
+                              '. Choosing default.' ] );
+  end
+  % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  % handle orientation
+  ori  = get( handle, 'Orientation' );
+  cols = [];
+  switch lower( ori )
+      case 'horizontal'
+          cols = length(entries);
+      case 'vertical'
+          % Use default.
+      otherwise
+          userWarning( m2t, [ ' Unknown legend orientation ''',ori,''''           ...
+                              '. Choosing default.' ] );
+  end
+  % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  % handle alignment of legend text and pictograms
+  textalign = [];
+  pictalign = [];
+  % Other than MATLAB, Octave allows to change the alignment of legend text and
+  % pictograms using legend('left') and legend('right')
+  if strcmp( m2t.env, 'Octave' )
+      textpos = get( handle, 'textposition' );
+      switch lower( textpos )
+          case 'left'
+              % pictogram right of flush right text
+              textalign = 'left';
+              pictalign = 'right';
+          case 'right'
+              % pictogram left of flush left text (default)
+              textalign = 'right';
+              pictalign = 'left';
+          otherwise
+              userWarning( m2t, [ ' Unknown legend text position ''',textpos,'''' ...
+                                  '. Choosing default.' ] );
+      end
   end
   % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -3681,9 +3702,14 @@ function [ m2t, lOpts ] = getLegendOpts( m2t, handle )
   % append to legend options
   if ~isempty(anchor)
       lStyle = appendOptions( lStyle, ...
-                              { sprintf( 'at={(%g,%g)}',position ), ...
+                              { sprintf( 'at={(%.15g,%.15g)}',position ), ...
                                 sprintf( 'anchor=%s', anchor ) ...
                               } ...
+                            );
+  end
+  if ~isempty(cols)
+      lStyle = appendOptions( lStyle, ...
+                              sprintf( 'legend columns=%d', cols) ...
                             );
   end
 
@@ -3696,8 +3722,17 @@ function [ m2t, lOpts ] = getLegendOpts( m2t, handle )
   end
   % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  % make sure the entries are flush left (default MATLAB behavior)
-  lStyle = appendOptions( lStyle, 'nodes=right' );
+  % alignment of legend text and pictograms, if available
+  if ~isempty( textalign ) && ~isempty( pictalign )
+      lStyle = appendOptions( lStyle, ...
+                              { sprintf( 'nodes=%s', textalign ), ...
+                                sprintf( 'legend plot pos=%s', pictalign ), ...
+                              } ...
+                            );
+  else
+      % make sure the entries are flush left (default MATLAB behavior)
+      lStyle = appendOptions( lStyle, 'nodes=right' );
+  end
 
   if ~isempty( lStyle )
       lOpts = appendOptions( lOpts, ...
@@ -3711,15 +3746,18 @@ end
 % =========================================================================
 
 
-
-% =========================================================================
-% *** FUNCTION getTicks
+% -------------------------------------------------------------------------
+% *** FUNCTION getIndividualAxisTicks
 % ***
 % *** Return axis tick marks pgfplot style. Nice: Tick lengths and such
 % *** details are taken care of by Pgfplots.
 % ***
-% =========================================================================
-function [ ticks, tickLabels, hasMinorTicks ] = getTicks( m2t, handle )
+% -------------------------------------------------------------------------
+function [ticks, tickLabels, hasMinorTicks] = getIndividualAxisTicks( m2t, handle, axis )
+
+  if ~strcmpi(axis,'x') && ~strcmpi(axis,'y') && ~strcmpi(axis,'z')
+      error( 'Illegal axis specifier ''%s''.', axis );
+  end
 
   if m2t.cmdOpts.Results.interpretTickLabelsAsTex
       labelInterpreter = 'tex';
@@ -3728,82 +3766,45 @@ function [ ticks, tickLabels, hasMinorTicks ] = getTicks( m2t, handle )
       labelInterpreter = 'none';
   end
 
-  xTickLabel = cellstr( get( handle, 'XTickLabel' ) );
-  for k = 1:length(xTickLabel)
-      xTickLabel(k) = { prettyPrint( m2t, xTickLabel(k), labelInterpreter) };
-  end
-  xTickMode = get( handle, 'XTickMode' );
-  if strcmp(xTickMode,'auto') && ~m2t.cmdOpts.Results.strict
-      % If the ticks are set automatically, and strict conversion is
-      % not required, then let pgfplots take care of the ticks.
-      % In most cases, this looks a lot better anyway.
-      ticks.x      = [];
-      tickLabels.x = [];
-  else % strcmp(xTickMode,'manual') || m2t.cmdOpts.Results.strict
-      xTick      = get( handle, 'XTick' );
-      isXAxisLog = strcmp( get(handle,'XScale'), 'log' );
-      [ticks.x, tickLabels.x] = getAxisTicks( m2t, xTick, xTickLabel, isXAxisLog );
-      % overwrite if empty
-      if isempty(xTickLabel)
-          tickLabels.x = '\empty';
-      end
-  end
-  hasMinorTicks.x = strcmp( get( handle, 'XMinorTick' ), 'on' );
+  % Create the keywords, e.g., 'XTickLabel', 'XScale', etc., that are used to
+  % extract the information from the figure.
+  keywordTickLabel = [ upper(axis), 'TickLabel' ];
+  keywordTickMode  = [ upper(axis), 'TickMode' ];
+  keywordTick      = [ upper(axis), 'Tick' ];
+  keywordScale     = [ upper(axis), 'Scale' ];
+  keywordMinorTick = [ upper(axis), 'MinorTick' ];
 
-  yTickLabel = cellstr( get( handle, 'YTickLabel' ) );
-  for k = 1:length(yTickLabel)
-      yTickLabel(k) = { prettyPrint( m2t, yTickLabel(k), labelInterpreter) };
+  tickLabel = cellstr( get( handle, keywordTickLabel ) );
+  for k = 1:length(tickLabel)
+      tickLabel(k) = { prettyPrint( m2t, tickLabel(k), labelInterpreter) };
   end
-  yTickMode = get( handle, 'YTickMode' );
-  if strcmp(yTickMode,'auto') && ~m2t.cmdOpts.Results.strict
+  tickMode = get( handle, keywordTickMode );
+  if strcmp(tickMode,'auto') && ~m2t.cmdOpts.Results.strict
       % If the ticks are set automatically, and strict conversion is
       % not required, then let pgfplots take care of the ticks.
       % In most cases, this looks a lot better anyway.
-      ticks.y      = [];
-      tickLabels.y = [];
-  else % strcmp(yTickMode,'manual') || m2t.cmdOpts.Results.strict
-      yTick      = get( handle, 'YTick' );
-      isYAxisLog = strcmp( get(handle,'YScale'), 'log' );
-      [ticks.y, tickLabels.y] = getAxisTicks( m2t, yTick, yTickLabel, isYAxisLog );
-      % overwrite if empty
-      if isempty(yTickLabel)
-          tickLabels.y = '\empty';
-      end
-  end
-  hasMinorTicks.y = strcmp( get( handle, 'YMinorTick' ), 'on' );
-
-  zTickLabel = cellstr( get( handle, 'ZTickLabel' ) );
-  for k = 1:length(zTickLabel)
-      zTickLabel(k) = { prettyPrint( m2t, zTickLabel(k), labelInterpreter) };
-  end
-  zTickMode = get( handle, 'ZTickMode' );
-  if strcmp(yTickMode,'auto') && ~m2t.cmdOpts.Results.strict
-      % If the ticks are set automatically, and strict conversion is
-      % not required, then let pgfplots take care of the ticks.
-      % In most cases, this looks a lot better anyway.
-      ticks.z      = [];
-      tickLabels.z = [];
+      ticks      = [];
+      tickLabels = [];
   else % strcmp(zTickMode,'manual') || m2t.cmdOpts.Results.strict
-      zTick      = get( handle, 'ZTick' );
-      isZAxisLog = strcmp( get(handle,'ZScale'), 'log' );
-      [ticks.z, tickLabels.z] = getAxisTicks( m2t, zTick, zTickLabel, isZAxisLog );
+      tick      = get( handle, keywordTick );
+      isAxisLog = strcmp( get(handle,keywordScale), 'log' );
+      [ticks, tickLabels] = matlabTicks2pgfplotsTicks( m2t, tick, tickLabel, isAxisLog );
       % overwrite if empty
-      if isempty(zTickLabel)
-          tickLabels.z = '\empty';
+      if length(tickLabel)==1 && isempty(tickLabel{1})
+          tickLabels = '\empty';
       end
   end
-  hasMinorTicks.z = strcmp( get( handle, 'ZMinorTick' ), 'on' );
+  hasMinorTicks = strcmp( get( handle, keywordMinorTick ), 'on' );
 
-  return;
 end
 % -------------------------------------------------------------------------
-% *** FUNCTION getAxisTicks
+% *** FUNCTION matlabTicks2pgfplotsTicks
 % ***
 % *** Converts MATLAB style ticks and tick labels to pgfplots style
 % *** ticks and tick labels (if at all necessary).
 % ***
 % -------------------------------------------------------------------------
-function [ticks, tickLabels] = getAxisTicks( m2t, tick, tickLabel, isLogAxis )
+function [ticks, tickLabels] = matlabTicks2pgfplotsTicks( m2t, tick, tickLabel, isLogAxis )
 
   if isempty( tick )
       ticks      = [];
@@ -3835,7 +3836,8 @@ function [ticks, tickLabels] = getAxisTicks( m2t, tick, tickLabel, isLogAxis )
   % the tick values themselves).
   plotLabelsNecessary = 0;
 
-  if isLogAxis
+  k = find( tick, 1 ); % get an index with non-zero tick value
+  if isLogAxis || isempty( k ) % only a 0-tick
       scalingFactor = 1;
   else
       % When plotting axis, MATLAB might scale the axes by a factor of ten,
@@ -3848,7 +3850,6 @@ function [ticks, tickLabels] = getAxisTicks( m2t, tick, tickLabel, isLogAxis )
       % value t.
       % Try to find the scaling factor here. This is then used to check
       % whether or not explicit {x,y}TickLabels are really necessary.
-      k = find( tick, 1 ); % get an index with non-zero tick value
       s = str2double( tickLabel{k} );
       scalingFactor = tick(k)/s;
       % check if the factor is indeed a power of 10
@@ -3869,7 +3870,7 @@ function [ticks, tickLabels] = getAxisTicks( m2t, tick, tickLabel, isLogAxis )
       end
       if isnan(s)  ||  abs(tick(k)-s*scalingFactor) > m2t.tol
           plotLabelsNecessary = 1;
-          break
+          break;
       end
   end
   % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -3896,9 +3897,6 @@ end
 % -------------------------------------------------------------------------
 % *** END FUNCTION getAxisTicks
 % -------------------------------------------------------------------------
-% =========================================================================
-% *** END FUNCTION getTicks
-% =========================================================================
 
 
 % =========================================================================
@@ -3934,7 +3932,7 @@ end
 
 
 % =========================================================================
-% *** FUNCTION rgb2xcolor
+% *** FUNCTION rgb2colorliteral
 % ***
 % *** Translates and rgb value to a xcolor literal -- if possible!
 % *** If not, it returns the empty string.
@@ -3944,77 +3942,65 @@ end
 % *** Take a look at xcolor.sty for the color definitions.
 % ***
 % =========================================================================
-function [xcolorLiteral,errorcode] = rgb2xcolor( rgb )
+function [m2t, colorLiteral] = rgb2colorliteral( m2t, rgb )
+  % TODO Implement mixtures with colors other than 'black' such as red!50!green.
 
-  if isequal( rgb, [1,0,0] )
-      xcolorLiteral = 'red';
-      errorcode = 0;
-  elseif isequal( rgb, [0,1,0] )
-      xcolorLiteral = 'green';
-      errorcode = 0;
-  elseif isequal( rgb, [0,0,1] )
-      xcolorLiteral = 'blue';
-      errorcode = 0;
-  elseif isequal( rgb, [0.75,0.5,0.25] )
-      xcolorLiteral = 'brown';
-      errorcode = 0;
-  elseif isequal( rgb, [0.75,1,0] )
-      xcolorLiteral = 'lime';
-      errorcode = 0;
-  elseif isequal( rgb, [1,0.5,0] )
-      xcolorLiteral = 'orange';
-      errorcode = 0;
-  elseif isequal( rgb, [1,0.75,0.75] )
-      xcolorLiteral = 'pink';
-      errorcode = 0;
-  elseif isequal( rgb, [0.75,0,0.25] )
-      xcolorLiteral = 'purple';
-      errorcode = 0;
-  elseif isequal( rgb, [0,0.5,0.5] )
-      xcolorLiteral = 'teal';
-      errorcode = 0;
-  elseif isequal( rgb, [0.5,0,0.5] )
-      xcolorLiteral = 'violet';
-      errorcode = 0;
-  elseif isequal( rgb, [0,0,0] )
-      xcolorLiteral = 'black';
-      errorcode = 0;
-  elseif isequal( rgb, [0.5,0.5,0.5] )
-      xcolorLiteral = 'gray';
-      errorcode = 0;
-  elseif isequal( rgb, [0.75,0.75,0.75] )
-      xcolorLiteral = 'lightgray';
-      errorcode = 0;
-  elseif isequal( rgb, [1,1,1] )
-      xcolorLiteral = 'white';
-      errorcode = 0;
-  else
-      xcolorLiteral = '';
-      errorcode = 1;
-  end
+  xcolColorNames = { 'red', 'green', 'blue', 'brown', ...
+                     'lime', 'orange', 'pink', 'purple', ...
+                     'teal', 'violet', 'black', 'darkgray', ...
+                     'gray', 'lightgray', 'white' };
+  xcolColorSpecs = { [1,0,0], [0,1,0], [0,0,1], [0.75,0.5,0.25], ...
+                     [0.75,1,0], [1,0.5,0], [1,0.75,0.75], [0.75,0,0.25], ...
+                     [0,0.5,0.5], [0.5,0,0.5], [0,0,0], [0.25,0.25,0.25], ...
+                     [0.5,0.5,0.5], [0.75,0.75,0.75], [1,1,1] };
 
 % The colors 'cyan', 'magenta', 'yellow', and 'olive' within xcolor.sty
 % are defined in the CMYK color space, with an approximation in RGB.
 % Unfortunately, the approximation is not very close (particularly for
 % cyan), so just redefine those colors.
-% ------------------------------------
-%    elseif isequal( rgb, [0,1,1] )
-%        xcolorLiteral = 'cyan';
-%        errorcode = 0;
-%    elseif isequal( rgb, [1,0,1] )
-%        xcolorLiteral = 'magenta';
-%        errorcode = 0;
-%    elseif isequal( rgb, [1,1,0] )
-%        xcolorLiteral = 'yellow';
-%        errorcode = 0;
-%    elseif isequal( rgb, [0.5,0.5,0] )
-%        xcolorLiteral = 'olive';
-%        errorcode = 0;
-% ------------------------------------
+%    'cyan', 'magenta', 'yellow', 'olive'
+%    [0,1,1], [1,0,1], [1,1,0], [0.5,0.5,0]
+
+  % Check 'rgb' against all xcolor literals and the already defined colors.
+  colorNames = [xcolColorNames, m2t.extraRgbColorNames];
+  colorSpecs = [xcolColorSpecs, m2t.extraRgbColorSpecs];
+
+  numCols = length(colorSpecs);
+
+  % Check if RGB is a multiple of a predefined color.
+  for k = 1:numCols
+      if colorSpecs{k}(1) ~= 0.0
+          alpha = rgb(1) / colorSpecs{k}(1);
+      elseif colorSpecs{k}(2) ~= 0.0
+          alpha = rgb(2) / colorSpecs{k}(2);
+      elseif colorSpecs{k}(3) ~= 0.0
+          alpha = rgb(3) / colorSpecs{k}(3);
+      else % colorSpecs{k} = [0,0,0]
+          alpha = 0.0;
+      end
+      if isequal( rgb, alpha * colorSpecs{k} )
+          if alpha == 1.0
+              colorLiteral = colorNames{k};
+              return
+          elseif alpha == 0.0
+              colorLiteral = 'black';
+              return
+          elseif 0.0 < alpha && alpha < 1.0 && round(alpha*100) == alpha*100
+              % Not sure if that last condition is necessary.
+              colorLiteral = [ colorNames{k}, sprintf('!%g!black', alpha*100) ];
+              return
+          end
+      end
+  end
+
+  % Color was not found in the default set. Need to define it.
+  colorLiteral = sprintf( 'mycolor%d', length(m2t.extraRgbColorNames)+1 );
+  m2t.extraRgbColorNames = [ m2t.extraRgbColorNames, colorLiteral ];
+  m2t.extraRgbColorSpecs = [ m2t.extraRgbColorSpecs, rgb ];
 
 end
 % =========================================================================
-% *** FUNCTION rgb2xcolor
+% *** FUNCTION rgb2colorliteral
 % =========================================================================
 
 
@@ -4032,7 +4018,8 @@ end
 function newstr = collapse( cellstr, delimiter )
 
   if ~iscellstr( cellstr ) && ~isnumeric( cellstr{1} )
-      cellstr  % display value of cellstr as debug information
+      % display value of cellstr as debug information
+      disp( cellstr )
       error( 'Expected cellstr or numeric.' );
   end
 
@@ -4064,36 +4051,6 @@ end
 
 
 % =========================================================================
-% *** FUNCTION getAxisLabels
-% =========================================================================
-function axisLabels = getAxisLabels( handle )
-
-  axisLabels.x = get( get( handle, 'XLabel' ), 'String' );
-  if iscell(axisLabels.x)
-      axisLabels.x = axisLabels.x{:};
-  end
-  axisLabels.xInterpreter = get( get( handle, 'XLabel' ), 'Interpreter' );
-
-  axisLabels.y = get( get( handle, 'YLabel' ), 'String' );
-  if iscell(axisLabels.y)
-      axisLabels.y = axisLabels.y{:};
-  end
-  axisLabels.yInterpreter = get( get( handle, 'YLabel' ), 'Interpreter' );
-
-  axisLabels.z = get( get( handle, 'ZLabel' ), 'String' );
-  if iscell(axisLabels.z)
-      axisLabels.z = axisLabels.z{:};
-  end
-  axisLabels.zInterpreter = get( get( handle, 'ZLabel' ), 'Interpreter' );
-
-end
-% =========================================================================
-% *** END FUNCTION getAxisLabels
-% =========================================================================
-
-
-
-% =========================================================================
 % *** FUNCTION my_num2str
 % ***
 % *** Returns a number to a string in a *short* form.
@@ -4105,7 +4062,7 @@ function str = my_num2str( num )
       error( 'num2str_short: Invalid input.' )
   end
 
-  str = num2str( num, '%g' );
+  str = num2str( num, '%.15g' );
 
 end
 % =========================================================================
@@ -4168,8 +4125,8 @@ end
 %    % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %
 %    % finally, set the scaling
-%    scaling.x = sprintf( '%gmm', physicalLength.x / q.x );
-%    scaling.y = sprintf( '%gmm', physicalLength.y / q.y );
+%    scaling.x = sprintf( '%.15gmm', physicalLength.x / q.x );
+%    scaling.y = sprintf( '%.15gmm', physicalLength.y / q.y );
 %
 %
 %    % The only way to reliably get the aspect ratio of the axes is
@@ -4241,6 +4198,7 @@ function dimension = getAxesDimensions( handle, ...
       dimension.y.value = height;
   end
 
+  return;
 end
 % ---------------------------------------------------------------------------
 function [width, height, unit] = getNaturalAxesDimensions( handle )
@@ -4250,16 +4208,16 @@ function [width, height, unit] = getNaturalAxesDimensions( handle )
 
       % Convert the MATLAB unit strings into TeX unit strings.
       switch units
-              case 'pixels'
-                      units = 'px';
-              case 'centimeters'
-                      units = 'cm';
-              case 'inches'
-                      units = 'in';
-              case 'points'
-                      units = 'pt';
-              case 'characters'
-                      units = 'em';
+          case 'pixels'
+                  units = 'px';
+          case 'centimeters'
+                  units = 'cm';
+          case 'inches'
+                  units = 'in';
+          case 'points'
+                  units = 'pt';
+          case 'characters'
+                  units = 'em';
       end
 
   switch daspectmode
@@ -4352,7 +4310,7 @@ function out = extractValueUnit( str )
     if length(t{1}) == 1
         out.value = 1.0; % such as in '1.0\figurewidth'
         out.unit  = strtrim( t{1}{1} );
-    elseif length(t{1}) == 2 && length(t{1}{1}) == 0
+    elseif length(t{1}) == 2 && isempty(t{1}{1})
         % MATLAB(R) does this:
         % length(t{1})==2 always, but the first field may be empty.
         out.value = 1.0;
@@ -4369,8 +4327,6 @@ end
 % =========================================================================
 % *** END FUNCTION getAxesDimensions
 % =========================================================================
-
-
 
 
 % =========================================================================
@@ -4390,69 +4346,6 @@ function newstr = escapeCharacters( str )
 end
 % =========================================================================
 % *** END FUNCTION escapeCharacters
-% =========================================================================
-
-
-
-% =========================================================================
-% *** FUNCTION boxWhere
-% ***
-% *** Given one or more points in 2D space 'p' and a retangular box given
-% *** by 'xLim', 'yLim', this routine determines where the point sits with
-% *** respect to the box.
-% ***
-% *** Possibilities:
-% ***      1 ...... inside
-% ***      2 ...... outside
-% ***     -1 ...... left boundary
-% ***     -2 ...... lower boundary
-% ***     -3 ...... right boundary
-% ***     -4 ...... top boundary
-% ***
-% *** If a node happens to sit in the corner of a box, return *two* values.
-% ***
-% =========================================================================
-function l = boxWhere( m2t, p, xLim, yLim )
-
-  n = size(p,1);
-
-  l = cell(n,1);
-
-  for k = 1:n
-
-      if    p(k,1)>xLim(1) && p(k,1)<xLim(2) ...   % inside
-         && p(k,2)>yLim(1) && p(k,2)<yLim(2);
-          l{k} = 1;
-      elseif    p(k,1)<xLim(1) || p(k,1)>xLim(2) ...  % outside
-             || p(k,2)<yLim(1) || p(k,2)>yLim(2);
-          l{k} = 2;
-      else % is on boundary -- but which one?
-
-          if abs(p(k,1)-xLim(1)) < m2t.tol
-              l{k} = [ l{k}, -1 ];
-          end
-          if abs(p(k,2)-yLim(1)) < m2t.tol
-              l{k} = [ l{k}, -2 ];
-          end
-          if abs(p(k,1)-xLim(2)) < m2t.tol
-              l{k} = [ l{k}, -3 ];
-          end
-          if abs(p(k,2)-yLim(2)) < m2t.tol
-              l{k} = [ l{k}, -4 ];
-          end
-
-          if isempty(l{k})
-              error( 'matlab2tikz:boxWhere',                    ...
-                     [ 'Point appears to neither sit inside, ', ...
-                       'nor outside, nor on the boundary of the box.' ] );
-          end
-      end
-
-  end
-
-end
-% =========================================================================
-% *** END FUNCTION boxWhere
 % =========================================================================
 
 
@@ -5289,7 +5182,7 @@ end
 % =========================================================================
 % *** FUNCTION getEnvironment
 % =========================================================================
-function env = getEnvironment
+function env = getEnvironment()
   env = '';
   % Check if we are in MATLAB or Octave.
   % `ver' in MATLAB gives versioning information on all installed packages
@@ -5359,6 +5252,12 @@ end
 % =========================================================================
 function string = prettyPrint( m2t, string, interpreter )
 
+  % If the user set the matlab2tikz parameter 'parseStrings' to false, no
+  % parsing of strings takes place, thus making the user 100% responsible.
+  if ~m2t.cmdOpts.Results.parseStrings
+      return
+  end
+
   % Make sure we have a valid interpreter set up
   if ~any( strcmpi( interpreter, {'latex', 'tex', 'none'} ))
       userWarning( m2t, 'Don''t know interpreter ''%s''. Default handling.', interpreter );
@@ -5388,6 +5287,8 @@ function string = prettyPrint( m2t, string, interpreter )
           string = strrep( string, '%', '\%' );
           string = strrep( string, '_', '\_' );
           string = strrep( string, '^', '\textasciicircum{}' );
+          string = strrep( string, '#', '\#' );
+          string = strrep( string, '&', '\&' );
 
           % Make sure to return a string and not a cellstr.
           if iscellstr( string )
@@ -5407,7 +5308,7 @@ end
 function parsed = parseTexString ( m2t, string )
 
   % Convert cell string to regular string, otherwise MATLAB complains
-  if iscell( string )
+  if iscellstr( string )
       string = string{:};
   end
 
@@ -5609,8 +5510,8 @@ function string = parseTexSubstring ( m2t, string )
   end
 
   % Some further processing makes the output behave more like TeX math mode,
-  % but only if the matlab2tikz parameter mathmode=true.
-  if m2t.cmdOpts.Results.mathmode
+  % but only if the matlab2tikz parameter parseStringsAsMath=true.
+  if m2t.cmdOpts.Results.parseStringsAsMath
 
       % Some characters should be in math mode: =-+/,.()<>0-9
       expr = '(\\text)\{([^}=\-+/,.()<>0-9]*)([=\-+/,.()<>0-9]+)([^}]*)\}';

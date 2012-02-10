@@ -81,6 +81,12 @@ for i = 1:opt.num_samples
     gp_hypers.mean = 0;
     gp_hypers.lik = log(0.01);
     gp_hypers.cov = log( [ 1 1] );%log([ones(1, D) 1]);    
+    
+%if ~exist('X','var') % if no initial hyper-parameters are given
+  % set them to "good" heuristic values (look at statistics of the data)
+  %lh = repmat([log(2*std(x)) 0 -1]',1,E);
+  %lh(D+1,:) = log(std(target));
+  %lh(D+2,:) = log(std(target)/10);    
 
     % Fit the model, but not the likelihood hyperparam (which stays fixed).
     %gp_hypers = minimize(gp_hypers, @gp_fixedlik, -max_iters, ...
