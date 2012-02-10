@@ -40,13 +40,13 @@ if nargin<5
     opt = struct();
 end
 
-default_opt = struct('gamma_const', (exp(1)-1)^(-1), ... % numerical scaling factor
+opt = struct('gamma_const', (exp(1)-1)^(-1), ... % numerical scaling factor
                     'allowed_cond_error',10^-14, ... % allowed conditioning error
                     'sds_tr_input_scales', false,...
                     'delta_update', false);
 % sds_tr_input_scales represents the posterior standard deviations in the
 % input scales for tr. If false, a delta function posterior is assumed.            
-opt = set_defaults( opt, default_opt );
+%opt = set_defaults( opt, default_opt );
 
 log_r_s = samples.log_r;
 
