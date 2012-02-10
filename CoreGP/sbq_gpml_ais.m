@@ -74,7 +74,8 @@ max_iters = 100;
 covfunc = @covSEiso;
 gp_hypers.mean = 0;
 gp_hypers.lik = log(0.01);
-gp_hypers.cov = log( [ 1 1] );%log([ones(1, D) 1]);    
+%gp_hypers.cov = log( [ 1 1] );%log([ones(1, D) 1]);    
+gp_hypers.cov = log( [ mean(sqrt(diag(prior.covariance)))/2 1] ); 
 
 %if ~exist('X','var') % if no initial hyper-parameters are given
   % set them to "good" heuristic values (look at statistics of the data)

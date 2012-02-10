@@ -99,7 +99,7 @@ two_humps_1d.dimension = 1;
 two_humps_1d.prior.mean = 0;
 two_humps_1d.prior.covariance = 10^2;
 likelihood.mean1 = -10; likelihood.mean2 = 10;
-likelihood.covariance1 = .05; likelihood.covariance2 = .05;
+likelihood.covariance1 = .25; likelihood.covariance2 = .25;
 scale_factor = 0.05;  % Rescale so it looks nice for plots.
 two_humps_1d.log_likelihood_fn = ...
     @(x) logsumexp([logmvnpdf( x, likelihood.mean1, likelihood.covariance1 ), ...
@@ -123,8 +123,8 @@ two_humps_4d.prior.mean = zeros(1, two_humps_4d.dimension);
 two_humps_4d.prior.covariance = diag(ones(two_humps_4d.dimension, 1) .* 10^2);
 likelihood.mean1 = -10 .* ones(1, two_humps_4d.dimension);
 likelihood.mean2 = 10 .* ones(1, two_humps_4d.dimension);
-likelihood.covariance1 = 0.1 .* diag(ones(two_humps_4d.dimension,1));
-likelihood.covariance2 = 0.1 .* diag(ones(two_humps_4d.dimension,1));
+likelihood.covariance1 = 0.4 .* diag(ones(two_humps_4d.dimension,1));
+likelihood.covariance2 = 0.4 .* diag(ones(two_humps_4d.dimension,1));
 two_humps_4d.log_likelihood_fn = ...
     @(x) logsumexp([logmvnpdf( x, likelihood.mean1, likelihood.covariance1 ), ...
                     logmvnpdf( x, likelihood.mean2, likelihood.covariance2 )]')';

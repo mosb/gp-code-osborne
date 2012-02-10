@@ -83,7 +83,7 @@ for i = opt.init_pts + 1:opt.num_samples
         gp_hypers.mean = [];%0;
         gp_hypers.lik = log(0.01);
         %gp_hypers.cov = log( [ 1 1] );%log([ones(1, D) 1]);    
-        gp_hypers.cov = log( [ mean(sqrt(diag(prior.covariance)))/10 1] ); 
+        gp_hypers.cov = log( [ mean(sqrt(diag(prior.covariance)))/2 1] ); 
     end
   
     % Fit the model, but not the likelihood hyperparam (which stays fixed).
@@ -163,7 +163,7 @@ for i = opt.init_pts + 1:opt.num_samples
             % Call DIRECT to hopefully optimize faster than by exhaustive search.
             problem.f = objective_fn;
             direct_opts.maxevals = opt.exp_loss_evals;
-            direct_opts.showits = 0;
+            direct_opts.showits = 1;
             [exp_loss_min, next_sample_point] = Direct(problem, bounds, direct_opts);
             next_sample_point = next_sample_point';
         end

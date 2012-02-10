@@ -28,7 +28,7 @@ if nargin<4
     opt = struct();
 end
 
-default_opt = struct('num_c', 100,... % number of candidate points
+default_opt = struct('num_c', 200,... % number of candidate points
                     'gamma_const', (exp(1)-1)^(-1), ... % numerical scaling factor
                     'num_box_scales', 5, ... % defines the box over which to take candidates
                     'allowed_cond_error',10^-14, ... % allowed conditioning error
@@ -85,7 +85,7 @@ lower_bound = max(lower_bound, prior.mean - opt.num_box_scales*prior_sds);
 upper_bound = max(samples.locations) + 2*min_input_scales;
 upper_bound = min(upper_bound, prior.mean + opt.num_box_scales*prior_sds);
 
-opt.num_c = min(opt.num_c, num_samples);
+opt.num_c = max(opt.num_c, num_samples);
 num_c = opt.num_c;
 
 % find the candidate points, far removed from existing samples
