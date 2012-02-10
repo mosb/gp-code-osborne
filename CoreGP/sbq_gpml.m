@@ -161,13 +161,36 @@ for i = opt.init_pts + 1:opt.num_samples
             [exp_loss_min, next_sample_point] = ...
                 plot_1d_minimize(objective_fn, bounds, samples, log_var_ev);
         else
-            % Call DIRECT to hopefully optimize faster than by exhaustive search.
-            problem.f = objective_fn;
-            direct_opts.maxevals = opt.exp_loss_evals;
-            direct_opts.showits = 1;
-            bounds = bounds .* (0.9 + 0.1 * rand);
-            [exp_loss_min, next_sample_point] = Direct(problem, bounds, direct_opts);
-            next_sample_point = next_sample_point';
+            % do local search around each of the candidate points, which
+            % are, by design, far removed from existing evaluations.
+            
+            optim_opts = ...
+                optimset('GradObj','off',...
+                'Display','off', ...
+                'MaxFunEvals', opt.exp_loss_evals,...
+                'LargeScale', 'off',...
+                'Algorithm','interior-point'...
+                );
+            
+            start_pts = r_gp_params.candidate_locations;
+            num_start_pts = size(start_pts,1);
+            
+            mins = nan(num_start_pts,1);
+            end_points = nan(num_start_pts,1);
+            for start_i = 1:num_start_pts
+                
+                start_pt = start_pts(start_i);
+                start_lb = start_pt - 3 * r_gp_params.quad_input_scales;
+                start_ub = start_pt + 3 * r_gp_params.quad_input_scales;
+                [end_points(start_i), mins(start_i)] = ...
+                    fmincon(objective_fn,start_pt, ...
+                    [],[],[],[],...
+                    start_lb,start_ub,[],...
+                    optim_opts);
+            end
+            
+            [exp_loss_min, min_start_i] = min(mins);
+            next_sample_point = end_points(min_start_i);
         end
     end
     
