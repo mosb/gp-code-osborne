@@ -35,7 +35,9 @@ function [xpc_unc, tm_a, tv_a] = expected_uncertainty_evidence...
 %   * Ups_sc_s
 %   * minty_del
 %   * tr_sqd_output_scale
-                        
+      
+new_sample_location = new_sample_location(:)';  % Hack for fmincon.
+
 if nargin<5
     opt = struct();
 end

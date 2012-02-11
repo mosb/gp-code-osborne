@@ -138,7 +138,7 @@ for i = opt.init_pts + 1:opt.num_samples
         - logmvnpdf(zeros(1,D), zeros(1,D), diag(ones(D,1).*exp(gp_hypers.cov(1:end - 1))))/2;
     fprintf('Output variance: '); disp(exp(converted_output_scale));
     fprintf('Lengthscales: '); disp(exp(gp_hypers.cov(1:end - 1)));    
-    r_gp_params.quad_output_scale = converted_output_scale;
+    r_gp_params.quad_output_scale = exp(converted_output_scale);
     r_gp_params.quad_input_scales(1:D) = exp(gp_hypers.cov(1:end - 1));
     [log_ev, log_var_ev, r_gp_params] = log_evidence(samples, prior, r_gp_params, opt);
     

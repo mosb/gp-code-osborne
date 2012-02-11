@@ -57,7 +57,8 @@ opt = set_defaults( opt, default_opt );
 % ==================================
 samples.locations = sample_locs;
 for i = 1:opt.num_samples
-    samples.log_r(i,:) = log_likelihood_fn(samples.locations(i,:));   % Sample the integrand at the new point.
+    % Sample the integrand at the new point.
+    samples.log_r(i,:) = log_likelihood_fn(samples.locations(i,:));
 end
 samples.scaled_r = exp(samples.log_r - max(samples.log_r));
     
@@ -77,11 +78,6 @@ gp_hypers.lik = log(0.01);
 %gp_hypers.cov = log( [ 1 1] );%log([ones(1, D) 1]);    
 gp_hypers.cov = log( [ mean(sqrt(diag(prior.covariance)))/2 1] ); 
 
-%if ~exist('X','var') % if no initial hyper-parameters are given
-  % set them to "good" heuristic values (look at statistics of the data)
-  %lh = repmat([log(2*std(x)) 0 -1]',1,E);
-  %lh(D+1,:) = log(std(target));
-  %lh(D+2,:) = log(std(target)/10);
 
 % Fit the model, but not the likelihood hyperparam (which stays fixed).
 gp_hypers = minimize(gp_hypers, @gp_fixedlik, -max_iters, ...
@@ -138,7 +134,7 @@ converted_output_scale = gp_hypers.cov(end) ...
     - logmvnpdf(zeros(1,D), zeros(1,D), diag(ones(D,1).*exp(gp_hypers.cov(1:end - 1))))/2;
 fprintf('Output variance: '); disp(exp(converted_output_scale));
 fprintf('Lengthscales: '); disp(exp(gp_hypers.cov(1:end - 1)));    
-r_gp_params.quad_output_scale = converted_output_scale;
+r_gp_params.quad_output_scale = exp(converted_output_scale);
 r_gp_params.quad_input_scales(1:D) = exp(gp_hypers.cov(1:end - 1));
 [log_ev, log_var_ev, r_gp_params] = log_evidence(samples, prior, r_gp_params, opt);
 

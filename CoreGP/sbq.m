@@ -227,14 +227,14 @@ for i = 1:opt.num_samples
             start_pts = r_gp_params.candidate_locations;
             num_start_pts = size(start_pts,1);
             
-            mins = nan(num_start_pts,1);
-            end_points = nan(num_start_pts,1);
+            mins = nan(num_start_pts,D);
+            end_points = nan(num_start_pts,D);
             for start_i = 1:num_start_pts
                 
-                start_pt = start_pts(start_i);
+                start_pt = start_pts(start_i,:);
                 start_lb = start_pt - 3 * r_gp_params.quad_input_scales;
                 start_ub = start_pt + 3 * r_gp_params.quad_input_scales;
-                [end_points(start_i), mins(start_i)] = ...
+                [end_points(start_i, :), mins(start_i)] = ...
                     fmincon(objective_fn,start_pt, ...
                     [],[],[],[],...
                     start_lb,start_ub,[],...
