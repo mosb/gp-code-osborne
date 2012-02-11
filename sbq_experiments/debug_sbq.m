@@ -1,4 +1,4 @@
-function debug_sbq(problem_number, nsamples, outdir)
+function debug_sbq(method_number, problem_number, nsamples, outdir)
 % This function is designed to let a shell script start one experiment.
 % Thus everything is idexed by integers.
 %
@@ -8,11 +8,11 @@ function debug_sbq(problem_number, nsamples, outdir)
 
 
 % Set defaults.
-if nargin < 1; problem_number = 1; end
-if nargin < 2; nsamples = 5; end
-if nargin < 3; outdir = 'results/'; end
+if nargin < 1; method_number = 3; end
+if nargin < 2; problem_number = 1; end
+if nargin < 3; nsamples = 5; end
+if nargin < 4; outdir = 'results/'; end
 
-method_number = 6;
 repitition = 11;
 
 problems = define_integration_problems();

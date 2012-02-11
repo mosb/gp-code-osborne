@@ -59,6 +59,7 @@ for p_ix = 1:num_problems
                     var_log_ev_table(m_ix, p_ix, s_ix, r) = results.var_log_evidences(s_ix);
                     true_log_ev_table(m_ix, p_ix, s_ix, r) = results.problem.true_log_evidence;
                 end
+                samples{m_ix, p_ix} = results.samples;
                 if any(isnan(results.mean_log_evidences(min_samples:end))) ...
                         || any(isnan(results.var_log_evidences((min_samples:end))))
                     fprintf('N');
@@ -259,7 +260,7 @@ for p_ix = 1:num_problems
                                  color(m_ix,:), edgecolor, 1, opacity); hold on;
             z_handle(m_ix) = plot( plotted_sample_set, ...
                 mean_predictions(m_ix, plotted_sample_set), '-', ...
-                'Color', sqrt(color( m_ix, :) ), 'LineWidth', 1); hold on;
+                'Color', color( m_ix, :), 'LineWidth', 1); hold on;
         end
 
         true_log_evidence = squeeze(true_log_ev_table( 1, p_ix, ...
@@ -273,6 +274,37 @@ for p_ix = 1:num_problems
         %legend([z_handle, truth_handle], {method_names{:}, 'True value'} );
 
         filename = sprintf('varplot_%s.tikz', strrep(cur_problem_name, ' ', '_'));
+        matlab2tikz( [plotdir filename], 'height', '\fheight', ...
+            'width', '\fwidth', 'showInfo', false, 'showWarnings', false );
+        fprintf(autocontent, figure_string, [plotdirshort filename]);    
+    catch e
+        e
+    end
+end
+
+
+% Plot sample pathcs
+% ===============================================================
+
+chosen_repetition = 1;
+for p_ix = 1:num_problems
+    cur_problem_name = problem_names{p_ix};
+    figure; clf;
+    try
+        for m_ix = 1:num_methods
+            cur_samples = samples{m_ix, p_ix};
+            if isfield(cur_samples, 'locations')
+                cur_samples = cur_samples.locations;
+            end
+            z_handle(m_ix) = plot( cur_samples(:,1), '.', ...
+                'Color', color( m_ix, :), 'LineWidth', 1); hold on;
+        end
+
+        xlabel('Number of samples');
+        ylabel('sample location');
+        title(cur_problem_name);
+        
+        filename = sprintf('sampleplot_%s.tikz', strrep(cur_problem_name, ' ', '_'));
         matlab2tikz( [plotdir filename], 'height', '\fheight', ...
             'width', '\fwidth', 'showInfo', false, 'showWarnings', false );
         fprintf(autocontent, figure_string, [plotdirshort filename]);    
