@@ -1,5 +1,5 @@
 function [log_mean_evidence, log_var_evidence, r_gp_params] = ...
-    log_evidence(samples, prior, r_gp_params, opt)
+    log_evidence(samples, prior, l_gp_hypers, logl_gp_hypers, opt)
 % Returns the log-mean-evidence, and a structure r_gp_params to ease its
 % future computation.
 %
@@ -79,11 +79,8 @@ del_sqd_output_scale = 0.1 * r_sqd_output_scale;
 del_sqd_lambda = del_sqd_output_scale* ...
     prod(2*pi*del_input_scales.^2)^(-0.5);
 
-lower_bound = min(samples.locations) - 2*min_input_scales;
-lower_bound = max(lower_bound, prior.mean - opt.num_box_scales*prior_sds);
-
-upper_bound = max(samples.locations) + 2*min_input_scales;
-upper_bound = min(upper_bound, prior.mean + opt.num_box_scales*prior_sds);
+lower_bound = prior.mean - opt.num_box_scales*prior_sds;
+upper_bound = prior.mean + opt.num_box_scales*prior_sds;
 
 opt.num_c = max(opt.num_c, num_samples);
 num_c = opt.num_c;
@@ -183,8 +180,7 @@ ups_inv_K_del = solve_chol(R_del_sc, ups_del_sc)';
 
 % ups2_s = int int K(hs, hs') K(hs', hs_s) prior(hs) prior(hs') dhs dhs'
 ups2_r_s = r_sqd_output_scale^2 * ...
-    prod(2*pi*ups2_detvar_stack_r)^(-0.5) * ...
-    prod(2*pi*ups2_var_stack_r)^(-0.5) * ...
+    prod(2*pi*(2*pi*ups2_detvar_stack_r.*ups2_var_stack_r))^(-0.5) * ...
     exp(-0.5 * ...
     sum(bsxfun(@rdivide, hs_sc_minus_mean_stack(1:num_samples, :, :).^2, ...
     ups2_var_stack_r),3));
@@ -277,6 +273,8 @@ lowr.UT = true;
 lowr.TRANSA = true;
 uppr.UT = true;
 
+invK_tl_s = solve_chol(R_tl_s, tl_s);
+
 K_inv_K_r_sc_s = linsolve(R_r_s,linsolve(R_r_s, K_r_s_sc, lowr), uppr)';
 mean_r_sc =  K_inv_K_r_sc_s * r_s;
 mean_tr_sc = K_inv_K_r_sc_s * tr_s;
@@ -364,7 +362,7 @@ log_var_evidence = 2*max_log_r_s + log(var_ev);
 % Store a lot of stuff in the r_gp_params structure.
 % Ups_del_r has a different name in other files. 
 Ups_sc_s = Ups_del_r;
-names = {'candidate_locations', 'R_r_s', 'K_r_s', 'ups_r_s', ...
+names = {'candidate_locations', 'R_r_s', 'K_r_s', 'invK_tl_s', 'ups_r_s', ...
     'R_del_sc', 'K_del_sc', 'ups_del_sc', 'delta_tr_sc', 'jitters_r_s', ...
     'log_mean_second_moment', 'Ups_sc_s', 'minty_del', 'del_inv_K', ...
     'sqd_dist_stack_s', 'tr_sqd_output_scale'};

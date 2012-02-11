@@ -1,13 +1,16 @@
-function [mean_log_evidences, var_log_evidences, samples, gp_hypers] = ...
+function [mean_log_evidences, var_log_evidences, samples, tl_gp_hypers] = ...
     sbq(log_likelihood_fn, prior, opt)
 % Take samples samples_mat so as to best estimate the
-% evidence, an integral over exp(log_r_fn) against the prior in prior_struct.
+% evidence, an integral over exp(log_l_fn) against the prior in prior_struct.
 % 
 % OUTPUTS
-% - mean_log_evidences: our mean estimates for the log of the evidence
-% - var_log_evidences: the variances for the log of the evidence
-% - samples: n*d matrix of hyperparameter samples
-% - gp_hypers
+% - mean_log_evidences: our mean estimates for the log of the evidence;
+%       the ith element corresponds to our mean after i samples
+% - var_log_evidences: the variances for the log of the evidence;
+%       the ith element corresponds to our variance after i samples
+% - samples: n*d matrix of hyperparameter samples - tl_gp_hypers: the
+% (quadrature) hyperparameters of the gp fitted to the log-likelihood
+% surface
 % 
 % INPUTS
 % - start_pt: 1*n vector expressing starting point for algorithm
@@ -57,19 +60,19 @@ default_opt = struct('num_samples', 300, ...
                      'num_retrains', 5, ...
                      'num_box_scales', 5, ...
                      'train_gp_time', 50 * D, ...
-                     'parallel', true, ...
+                     'parallel', logl_logue, ...
                      'train_gp_num_samples', 5 * D, ...
                      'train_gp_print', false, ...
                      'exp_loss_evals', 50 * D, ...
                      'start_pt', zeros(1, D), ...
-                     'print', true, ...
+                     'print', logl_logue, ...
                      'plots', false, ...
                      'set_ls_var_method', 'laplace');%'lengthscale');
 opt = set_defaults( opt, default_opt );
 
 % GP training options.
 gp_train_opt.optim_time = opt.train_gp_time;
-gp_train_opt.noiseless = true;
+gp_train_opt.noiseless = logl_logue;
 gp_train_opt.prior_mean = 0;
 % print to screen diagnostic information about gp training
 gp_train_opt.print = opt.train_gp_print;
@@ -96,8 +99,9 @@ for i = 1:opt.num_samples
     % Update sample struct.
     % ==================================
     samples.locations(i,:) = next_sample_point;          % Record the current sample location.
-    samples.log_r(i,:) = log_likelihood_fn(next_sample_point);   % Sample the integrand at the new point.
-    samples.scaled_r = exp(samples.log_r - max(samples.log_r));
+    samples.log_l(i,:) = log_likelihood_fn(next_sample_point);   % Sample the integrand at the new point.
+    samples.scaled_l = exp(samples.log_l - max(samples.log_l));
+    samples.tl = log_transform(samples.scaled_l);
     
     
     % Retrain GP
@@ -107,62 +111,75 @@ for i = 1:opt.num_samples
 
         % Set up GP without training it, because there's not enough data.
         gp_train_opt.optim_time = 0;
-        [gp_hypers, quad_r_gp] = train_gp('sqdexp', 'constant', [], ...
-                                     samples.locations, samples.scaled_r, gp_train_opt);
+        [l_gp, quad_l_gp] = train_gp('sqdexp', 'constant', [], ...
+                                     samples.locations, samples.scaled_l, ...
+                                     gp_train_opt);
+                                 
+        [tl_gp, quad_tl_gp] = train_gp('sqdexp', 'constant', [], ...
+                                     samples.locations, samples.tl, ...
+                                     gp_train_opt);
+                                 
+                                 
         gp_train_opt.optim_time = opt.train_gp_time;
         
     elseif retrain_now
         % Retrain gp.
-        [gp_hypers, quad_r_gp] = train_gp('sqdexp', 'constant', gp_hypers, ...
-                                     samples.locations, samples.scaled_r, gp_train_opt);
+        [l_gp, quad_l_gp] = train_gp('sqdexp', 'constant', l_gp, ...
+                                     samples.locations, samples.scaled_l, ...
+                                     gp_train_opt);
+                                 
+        [tl_gp, quad_tl_gp] = train_gp('sqdexp', 'constant', tl_gp, ...
+                                     samples.locations, samples.tl, ...
+                                     gp_train_opt);            
+                                 
         retrain_inds(1) = [];   % Move to next retraining index. 
     else
         % for hypersamples that haven't been moved, update
-        gp_hypers = revise_gp(samples.locations, samples.scaled_r, ...
-                         gp_hypers, 'update', i);
+        l_gp = revise_gp(samples.locations, samples.scaled_l, ...
+                         l_gp, 'update', i);
+                     
+        tl_gp = revise_gp(samples.locations, samples.tl, ...
+                         tl_gp, 'update', i);
     end
     
-    % Put the values of the best quadrature parameters into the current GP.
-    % NB: disp_hyperparams exponentiates the actual hyperparameters e.g.
-    % the log-input-scales. 
-    [best_hypersample, best_hypersample_struct] = disp_hyperparams(gp_hypers);
-    r_gp_params.quad_output_scale = best_hypersample_struct.output_scale;
-    r_gp_params.quad_input_scales = best_hypersample_struct.input_scales;
-    r_gp_params.quad_noise_sd = best_hypersample_struct.noise_sd;
-    r_gp_params.quad_mean = 0;    
-
+    % Put the values of the best hyperparameters into dedicated structures.
+    l_gp_hypers = best_hyperparams(l_gp);
+    tl_gp_hypers = best_hyperparams(tl_gp);
+    % hyperparameters for gp over delta, the difference between log-gp-mean-r and
+    % gp-mean-log-r
+    del_gp_hypers = del_hyperparams(tl_gp_hypers);
     
     % Update our posterior uncertainty about the lengthscale hyperparameters.
     % =========================================================================
     % Only if we've just updated the quadrature hyperparams.
     if i == 1 || retrain_now
-        % We firstly assume that the input scales over the transformed r
+        % We firstly assume that the input scales over the logl_logansformed r
         % surface are the same as for the r surface. We are secondly going to
         % assume that the posterior for the log-input scales over the
-        % transformed r surface is a Gaussian. We take its mean to be the ML
+        % logl_logansformed r surface is a Gaussian. We take its mean to be the ML
         % value.  Its covariance is set immediately below:
         if strcmp(opt.set_ls_var_method, 'lengthscale')
             % Diagonal covariance whose diagonal elements are equal
-            % to the squared input scales of a GP (quad_r_gp) fitted to the
-            % likelihood of the transformed r surface as a function of log-input
+            % to the squared input scales of a GP (quad_l_gp) fitted to the
+            % likelihood of the logl_logansformed r surface as a function of log-input
             % scales.
-            opt.sds_tr_input_scales = ...
-                quad_r_gp.quad_input_scales(gp_hypers.input_scale_inds);
+            opt.sds_tl_log_input_scales = ...
+                quad_tl_gp.quad_input_scales(tl_gp.input_scale_inds);
         elseif strcmp(opt.set_ls_var_method, 'laplace')
             % Diagonal covariance whose diagonal elements set by using the laplace
             % method around the maximum likelihood value.
 
             % Assume the mean is the same as the mode.
-            laplace_mode = log(r_gp_params.quad_input_scales);
+            laplace_mode = tl_gp_hypers.log_input_scales;
 
             % Specify the likelihood function which we'll be taking the hessian of:
             like_func = @(log_in_scale) exp(log_gp_lik2( samples.locations, ...
-                samples.scaled_r, ...
-                gp_hypers, ...
-                log(r_gp_params.quad_noise_sd), ...
+                samples.scaled_logl, ...
+                tl_gp, ...
+                log(ev_params.quad_noise_sd), ...
                 log_in_scale, ...
-                log(r_gp_params.quad_output_scale), ...
-                r_gp_params.quad_mean));
+                log(ev_params.quad_output_scale), ...
+                ev_params.quad_mean));
 
             % Find the Hessian
             laplace_sds = Inf;
@@ -183,7 +200,7 @@ for i = 1:opt.num_samples
                 good_sds = sqrt(diag(prior.covariance));
                 laplace_sds(bad_sd_ixs) = good_sds(bad_sd_ixs);
             end
-            opt.sds_tr_input_scales = laplace_sds;
+            opt.sds_tl_log_input_scales = laplace_sds;
 
             if opt.plots && D == 1
                 plot_hessian_approx( like_func, laplace_sds, laplace_mode );
@@ -191,7 +208,9 @@ for i = 1:opt.num_samples
         end
     end
     
-    [log_ev, log_var_ev, r_gp_params] = log_evidence(samples, prior, r_gp_params, opt);
+    [log_ev, log_var_ev, ev_params] = ...
+        log_evidence(samples, prior, ...
+        l_gp_hypers, tl_gp_hypers, del_gp_hypers, opt);
 
     
     % Choose the next sample point.
@@ -200,11 +219,14 @@ for i = 1:opt.num_samples
         
         % Define the criterion to be optimized.
         objective_fn = @(new_sample_location) expected_uncertainty_evidence...
-                (new_sample_location', samples, prior, r_gp_params, opt);
+                (new_sample_location(:)', samples, prior, ...
+                l_gp_hypers, tl_gp_hypers, del_gp_hypers, ev_params, opt);
             
         % Define the box with which to bound the selection of samples.
-        lower_bound = prior.mean - opt.num_box_scales*sqrt(diag(prior.covariance))';
-        upper_bound = prior.mean + opt.num_box_scales*sqrt(diag(prior.covariance))';
+        lower_bound = prior.mean - ...
+            opt.num_box_scales*sqrt(diag(prior.covariance))';
+        upper_bound = prior.mean + ...
+            opt.num_box_scales*sqrt(diag(prior.covariance))';
         bounds = [lower_bound; upper_bound]';            
             
         if opt.plots && D == 1    
@@ -232,7 +254,7 @@ for i = 1:opt.num_samples
         fprintf('evidence: %g +- %g\n', exp(log_ev), sqrt(exp(log_var_ev)));
     end
     
-    % Convert the distribution over the evidence into a distribution over the
+    % Convert the dislogl_logibution over the evidence into a dislogl_logibution over the
     % log-evidence by moment matching.  This is just a hack for now!!!
     mean_log_evidences(i) = log_ev;
     var_log_evidences(i) = log( exp(log_var_ev) / exp(log_ev)^2 + 1 );
