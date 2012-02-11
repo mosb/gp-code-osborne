@@ -11,6 +11,42 @@ function problems = define_integration_problems()
 % log_likelihood_fn
 % true_log_evidence (can be nan for unknown)
 
+
+simple_test_1d.name = 'simple test';
+simple_test_1d.description = 'Mike''s simple test';
+simple_test_1d.dimension = 1;
+simple_test_1d.prior.mean = 0;
+simple_test_1d.prior.covariance = 1;
+r_mean1 = 1; r_sd1 = 1; r_mean2 = 4; r_sd2 = 1;
+normf = @(x,m,sd) (2*pi*sd^2)^(-0.5)*exp(-0.5*(x-m).^2/sd^2);
+simple_test_1d.log_likelihood_fn = ...
+    @(x) log(normf(x,r_mean1,r_sd1)+normf(x,r_mean2,r_sd2));
+simple_test_1d.true_log_evidence = ...
+   logsumexp([log_volume_between_two_gaussians(simple_test_1d.prior.mean, ...
+                                     simple_test_1d.prior.covariance, ...
+                                     r_mean1, r_sd1^2), ...
+              log_volume_between_two_gaussians(simple_test_1d.prior.mean, ...
+                                     simple_test_1d.prior.covariance, ...
+                                     r_mean2, r_sd2^2)]);
+
+simple_test_xfrm_1d.name = 'simple test transformed';
+simple_test_xfrm_1d.description = 'Mike''s simple test, translated';
+simple_test_xfrm_1d.dimension = 1;
+simple_test_xfrm_1d.prior.mean = 200;
+simple_test_xfrm_1d.prior.covariance = 1;
+r_mean1 = 201; r_sd1 = 1; r_mean2 = 204; r_sd2 = 1;
+normf = @(x,m,sd) (2*pi*sd^2)^(-0.5)*exp(-0.5*(x-m).^2/sd^2);
+simple_test_xfrm_1d.log_likelihood_fn = ...
+    @(x) log(normf(x,r_mean1,r_sd1)+normf(x,r_mean2,r_sd2));
+simple_test_xfrm_1d.true_log_evidence = ...
+   logsumexp([log_volume_between_two_gaussians(simple_test_xfrm_1d.prior.mean, ...
+                                     simple_test_xfrm_1d.prior.covariance, ...
+                                     r_mean1, r_sd1^2), ...
+              log_volume_between_two_gaussians(simple_test_xfrm_1d.prior.mean, ...
+                                     simple_test_xfrm_1d.prior.covariance, ...
+                                     r_mean2, r_sd2^2)]);
+
+
 easy_1d.name = 'easy 1d';
 easy_1d.description = 'A trivial function as a sanity check: a 1D Gaussian.';
 easy_1d.dimension = 1;
@@ -57,7 +93,7 @@ easy_10d.true_log_evidence = ...
                                  
                                  
 easy_20d.name = 'easy 20d';
-easy_20d.description = 'A trivial function as a sanity check: a 10D isotropic Gaussian.';
+easy_20d.description = 'A trivial function as a sanity check: a 20D isotropic Gaussian.';
 easy_20d.dimension = 20;
 easy_20d.prior.mean = .9 .* ones(1, easy_20d.dimension);
 easy_20d.prior.covariance = diag(1.1 .* ones(easy_20d.dimension,1));
@@ -219,6 +255,8 @@ friedman_7d.true_log_evidence = NaN;
 
 % Specify problems.
 problems = {};
+problems{end+1} = simple_test_1d;
+problems{end+1} = simple_test_xfrm_1d;
 problems{end+1} = easy_1d;
 problems{end+1} = bumpy_1d;
 problems{end+1} = bumpy_1d_exp;
