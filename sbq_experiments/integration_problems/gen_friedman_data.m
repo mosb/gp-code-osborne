@@ -18,4 +18,6 @@ for i = 1:num_samples
     y(i) = noiseless_func(X(i, :)) + randn;
 end
     
+y = y';
+
 save( 'friedman_data.mat', 'X', 'y');

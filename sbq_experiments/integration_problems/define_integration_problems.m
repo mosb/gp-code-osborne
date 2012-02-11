@@ -116,8 +116,8 @@ two_spikes_1d.true_log_evidence = ...
               + log(scale_factor);
       
           
-two_hills_1d.name = 'two humps 1d';
-two_hills_1d.description = 'Two widely separated skinny humps, designed to foil MCMC';
+two_hills_1d.name = 'two hills 1d';
+two_hills_1d.description = 'Two smooth Gaussians';
 two_hills_1d.dimension = 1;
 two_hills_1d.prior.mean = 0;
 two_hills_1d.prior.covariance = 10^2;
@@ -161,7 +161,7 @@ two_spikes_4d.true_log_evidence = ...
 
                                  
 two_hills_4d.name = 'two hills 4d';
-two_hills_4d.description = 'Two smooth hills';
+two_hills_4d.description = 'Two smooth Gaussian hills';
 two_hills_4d.dimension = 4;
 two_hills_4d.prior.mean = zeros(1, two_hills_4d.dimension);
 two_hills_4d.prior.covariance = diag(ones(two_hills_4d.dimension, 1) .* 10^2);
@@ -193,6 +193,30 @@ funnel_2d.log_likelihood_fn = @(x) arrayfun( @(a,b,c)logmvnpdf(a,b,c), zeros(siz
 funnel_2d.true_log_evidence = -2.7480;
 
 
+
+friedman_3d.name = 'friedman 3d';
+friedman_3d.description = 'isotropic recreation of BMC paper experiment.';
+friedman_3d.dimension = 3;
+friedman_3d.prior.mean = zeros(1, friedman_3d.dimension);
+friedman_3d.prior.covariance = diag(ones(friedman_3d.dimension, 1) .* 4);
+friedman_data = load('friedman_data.mat');
+friedman_3d.log_likelihood_fn = ...
+    @(log_hypers)gp_log_likelihood(log_hypers, ...
+                                   friedman_data.X, friedman_data.y, @covSEiso);
+friedman_3d.true_log_evidence = NaN;
+
+
+friedman_7d.name = 'friedman 7d';
+friedman_7d.description = 'Recreation of BMC paper experiment.';
+friedman_7d.dimension = 7;
+friedman_7d.prior.mean = zeros(1, friedman_7d.dimension);
+friedman_7d.prior.covariance = diag(ones(friedman_7d.dimension, 1) .* 4);
+friedman_data = load('friedman_data.mat');
+friedman_7d.log_likelihood_fn = ...
+    @(log_hypers)gp_log_likelihood(log_hypers, ...
+                                   friedman_data.X, friedman_data.y, @covSEard);
+friedman_7d.true_log_evidence = NaN;
+
 % Specify problems.
 problems = {};
 problems{end+1} = easy_1d;
@@ -201,9 +225,11 @@ problems{end+1} = bumpy_1d_exp;
 problems{end+1} = two_spikes_1d;
 problems{end+1} = two_hills_1d;
 problems{end+1} = funnel_2d;
+problems{end+1} = friedman_3d;
 problems{end+1} = easy_4d;
 problems{end+1} = two_spikes_4d;
 problems{end+1} = two_hills_4d;
+problems{end+1} = friedman_7d;
 %problems{end+1} = easy_10d;
 %problems{end+1} = easy_20d;
 
