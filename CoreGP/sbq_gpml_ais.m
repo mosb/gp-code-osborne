@@ -67,14 +67,13 @@ samples.scaled_r = exp(samples.log_r - max(samples.log_r));
 % ===========================   
 inference = @infExact;
 likfunc = @likGauss;
-meanfunc = {'meanConst'};
+meanfunc = {'meanZero'};
 max_iters = 100;
 
 % Init GP Hypers each time to prevent getting lost in some weird place.
-% todo: init from some heuristics.
 covfunc = @covSEiso;
-gp_hypers.mean = 0;
-gp_hypers.lik = log(0.01);
+gp_hypers.mean = [];
+gp_hypers.lik = log(0.01);  % function values go between 0 and 1.
 %gp_hypers.cov = log( [ 1 1] );%log([ones(1, D) 1]);    
 gp_hypers.cov = log( [ mean(sqrt(diag(prior.covariance)))/2 1] ); 
 
@@ -104,9 +103,7 @@ if strcmp(opt.set_ls_var_method, 'laplace')
     laplace_sds = Inf;
     try
         laplace_sds = sqrt(-1./hessdiag( like_func, laplace_mode));
-    catch e; 
-        e;
-    end
+    catch e; e; end
 
     % A little sanity checking, since at first the length scale won't be
     % sensible.
@@ -130,9 +127,10 @@ exp(gp_hypers.cov(1:end - 1))
 
 % Convert gp_hypers to r_gp_params.  GPML and Mike's code have different 
 % normalization constants.
-converted_output_scale = gp_hypers.cov(end) ...
-    - logmvnpdf(zeros(1,D), zeros(1,D), diag(ones(D,1).*exp(gp_hypers.cov(1:end - 1))))/2;
-fprintf('Output variance: '); disp(exp(converted_output_scale));
+log_conversion_constant = ...
+    -logmvnpdf(zeros(1,D), zeros(1,D), diag(ones(D,1).*exp(gp_hypers.cov(1:end - 1))))/2;
+converted_output_scale = gp_hypers.cov(end) + log_conversion_constant;
+opt.sds_tr_input_scales = opt.sds_tr_input_scales * exp(log_conversion_constant);fprintf('Output variance: '); disp(exp(converted_output_scale));
 fprintf('Lengthscales: '); disp(exp(gp_hypers.cov(1:end - 1)));    
 r_gp_params.quad_output_scale = exp(converted_output_scale);
 r_gp_params.quad_input_scales(1:D) = exp(gp_hypers.cov(1:end - 1));
@@ -145,7 +143,7 @@ var_log_evidences(1) = log( exp(log_var_ev) / exp(log_ev)^2 + 1 );
 end
 
 function l = gpml_likelihood( log_in_scale, gp_hypers, inference, meanfunc, covfunc, likfunc, X, y)
-% Just replaces the lengthscales.
+    % Just replaces the lengthscales.
     gp_hypers.cov(1:end-1) = log_in_scale;
     l = exp(-gp_fixedlik(gp_hypers, inference, meanfunc, covfunc, likfunc, X, y));
 end

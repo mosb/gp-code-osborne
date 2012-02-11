@@ -12,7 +12,7 @@ function problems = define_integration_problems()
 % true_log_evidence (can be nan for unknown)
 
 
-simple_test_1d.name = 'simple test';
+simple_test_1d.name = 'simple';
 simple_test_1d.description = 'Mike''s simple test';
 simple_test_1d.dimension = 1;
 simple_test_1d.prior.mean = 0;
@@ -29,26 +29,42 @@ simple_test_1d.true_log_evidence = ...
                                      simple_test_1d.prior.covariance, ...
                                      r_mean2, r_sd2^2)]);
 
-simple_test_xfrm_1d.name = 'simple test transformed';
-simple_test_xfrm_1d.description = 'Mike''s simple test, translated';
-simple_test_xfrm_1d.dimension = 1;
-simple_test_xfrm_1d.prior.mean = 200;
-simple_test_xfrm_1d.prior.covariance = 1;
+simple_test_trans_1d.name = 'simple translated';
+simple_test_trans_1d.description = 'Mike''s simple test, translated';
+simple_test_trans_1d.dimension = 1;
+simple_test_trans_1d.prior.mean = 200;
+simple_test_trans_1d.prior.covariance = 1;
 r_mean1 = 201; r_sd1 = 1; r_mean2 = 204; r_sd2 = 1;
 normf = @(x,m,sd) (2*pi*sd^2)^(-0.5)*exp(-0.5*(x-m).^2/sd^2);
-simple_test_xfrm_1d.log_likelihood_fn = ...
+simple_test_trans_1d.log_likelihood_fn = ...
     @(x) log(normf(x,r_mean1,r_sd1)+normf(x,r_mean2,r_sd2));
-simple_test_xfrm_1d.true_log_evidence = ...
-   logsumexp([log_volume_between_two_gaussians(simple_test_xfrm_1d.prior.mean, ...
-                                     simple_test_xfrm_1d.prior.covariance, ...
+simple_test_trans_1d.true_log_evidence = ...
+   logsumexp([log_volume_between_two_gaussians(simple_test_trans_1d.prior.mean, ...
+                                     simple_test_trans_1d.prior.covariance, ...
                                      r_mean1, r_sd1^2), ...
-              log_volume_between_two_gaussians(simple_test_xfrm_1d.prior.mean, ...
-                                     simple_test_xfrm_1d.prior.covariance, ...
+              log_volume_between_two_gaussians(simple_test_trans_1d.prior.mean, ...
+                                     simple_test_trans_1d.prior.covariance, ...
                                      r_mean2, r_sd2^2)]);
-
+                                 
+simple_test_scale_1d.name = 'simple scaled';
+simple_test_scale_1d.description = 'Mike''s simple test, stretched';
+simple_test_scale_1d.dimension = 1;
+simple_test_scale_1d.prior.mean = 0;
+simple_test_scale_1d.prior.covariance = 100;
+r_mean1 = 10; r_sd1 = 10; r_mean2 = 40; r_sd2 = 10;
+normf = @(x,m,sd) (2*pi*sd^2)^(-0.5)*exp(-0.5*(x-m).^2/sd^2)*10;
+simple_test_scale_1d.log_likelihood_fn = ...
+    @(x) log(normf(x,r_mean1,r_sd1)+normf(x,r_mean2,r_sd2));
+simple_test_scale_1d.true_log_evidence = ...
+   logsumexp([log_volume_between_two_gaussians(simple_test_scale_1d.prior.mean, ...
+                                     simple_test_scale_1d.prior.covariance, ...
+                                     r_mean1, r_sd1^2), ...
+              log_volume_between_two_gaussians(simple_test_scale_1d.prior.mean, ...
+                                     simple_test_scale_1d.prior.covariance, ...
+                                     r_mean2, r_sd2^2)]) + log(10);                       
 
 easy_1d.name = 'easy 1d';
-easy_1d.description = 'A trivial function as a sanity check: a 1D Gaussian.';
+easy_1d.description = 'A smooth 1D Gaussian.';
 easy_1d.dimension = 1;
 easy_1d.prior.mean = .9;
 easy_1d.prior.covariance = 1.1;
@@ -63,7 +79,7 @@ easy_1d.true_log_evidence = ...
 
                                  
 easy_4d.name = 'easy 4d';
-easy_4d.description = 'A trivial function as a sanity check: a 4D isotropic Gaussian.';
+easy_4d.description = 'A smooth 4D isotropic Gaussian.';
 easy_4d.dimension = 4;
 easy_4d.prior.mean = .9 .* ones(1, easy_4d.dimension);
 easy_4d.prior.covariance = diag(1.1 .* ones(easy_4d.dimension,1));
@@ -78,7 +94,7 @@ easy_4d.true_log_evidence = ...
                                  
                                  
 easy_10d.name = 'easy 10d';
-easy_10d.description = 'A trivial function as a sanity check: a 10D isotropic Gaussian.';
+easy_10d.description = 'A smooth 10D isotropic Gaussian.';
 easy_10d.dimension = 10;
 easy_10d.prior.mean = .9 .* ones(1, easy_10d.dimension);
 easy_10d.prior.covariance = diag(1.1 .* ones(easy_10d.dimension,1));
@@ -93,7 +109,7 @@ easy_10d.true_log_evidence = ...
                                  
                                  
 easy_20d.name = 'easy 20d';
-easy_20d.description = 'A trivial function as a sanity check: a 20D isotropic Gaussian.';
+easy_20d.description = 'A smooth 20D isotropic Gaussian.';
 easy_20d.dimension = 20;
 easy_20d.prior.mean = .9 .* ones(1, easy_20d.dimension);
 easy_20d.prior.covariance = diag(1.1 .* ones(easy_20d.dimension,1));
@@ -108,9 +124,7 @@ easy_20d.true_log_evidence = ...
 
                                  
 bumpy_1d.name = 'bumpy 1d';
-bumpy_1d.description = ['A sanity check for estimating variance: '...
-                              'a highly varying function, hard to estimate.' ...
-                              'This function should cause high uncertainty' ];
+bumpy_1d.description = 'a highly varying function';
 bumpy_1d.dimension = 1;
 bumpy_1d.prior.mean = .9;
 bumpy_1d.prior.covariance = 1.1;
@@ -119,9 +133,7 @@ bumpy_1d.true_log_evidence = brute_force_integrate_1d(bumpy_1d);
 
 
 bumpy_1d_exp.name = 'bumpy 1d exp';
-bumpy_1d_exp.description = ['A sanity check for estimating variance: '...
-                              'exp of a highly varying function, hard to estimate.'...
-                              'Should cause high uncertainty' ];
+bumpy_1d_exp.description = 'exp of a highly varying function';
 bumpy_1d_exp.dimension = 1;
 bumpy_1d_exp.prior.mean = .9;
 bumpy_1d_exp.prior.covariance = 1.1;
@@ -130,7 +142,7 @@ bumpy_1d_exp.true_log_evidence = brute_force_integrate_1d(bumpy_1d_exp);
 
                                  
 two_spikes_1d.name = 'two spikes 1d';
-two_spikes_1d.description = 'Two widely separated skinny humps, designed to foil MCMC';
+two_spikes_1d.description = 'Two widely separated skinny humps';
 two_spikes_1d.dimension = 1;
 two_spikes_1d.prior.mean = 0;
 two_spikes_1d.prior.covariance = 10^2;
@@ -176,7 +188,7 @@ two_hills_1d.true_log_evidence = ...
           
           
 two_spikes_4d.name = 'two spikes 4d';
-two_spikes_4d.description = 'Two widely separated skinny humps, designed to foil MCMC';
+two_spikes_4d.description = 'Two widely separated skinny humps';
 two_spikes_4d.dimension = 4;
 two_spikes_4d.prior.mean = zeros(1, two_spikes_4d.dimension);
 two_spikes_4d.prior.covariance = diag(ones(two_spikes_4d.dimension, 1) .* 10^2);
@@ -217,7 +229,7 @@ two_hills_4d.true_log_evidence = ...
                                      likelihood.mean2, likelihood.covariance2)]);                                  
                                  
 funnel_2d.name = 'funnel 2d';
-funnel_2d.description = 'Radford Neal''s funnel plot, designed to be hard for MH';
+funnel_2d.description = 'Radford Neal''s funnel plot';
 funnel_2d.dimension = 2;
 funnel_2d.prior.mean = zeros(1, funnel_2d.dimension );
 funnel_2d.prior.covariance = 25.*diag(ones(funnel_2d.dimension,1));
@@ -231,7 +243,7 @@ funnel_2d.true_log_evidence = -2.7480;
 
 
 friedman_3d.name = 'friedman 3d';
-friedman_3d.description = 'isotropic recreation of BMC paper experiment.';
+friedman_3d.description = 'isotropic BMC paper experiment.';
 friedman_3d.dimension = 3;
 friedman_3d.prior.mean = zeros(1, friedman_3d.dimension);
 friedman_3d.prior.covariance = diag(ones(friedman_3d.dimension, 1) .* 4);
@@ -243,7 +255,7 @@ friedman_3d.true_log_evidence = NaN;
 
 
 friedman_7d.name = 'friedman 7d';
-friedman_7d.description = 'Recreation of BMC paper experiment.';
+friedman_7d.description = 'BMC paper experiment.';
 friedman_7d.dimension = 7;
 friedman_7d.prior.mean = zeros(1, friedman_7d.dimension);
 friedman_7d.prior.covariance = diag(ones(friedman_7d.dimension, 1) .* 4);
@@ -256,7 +268,8 @@ friedman_7d.true_log_evidence = NaN;
 % Specify problems.
 problems = {};
 problems{end+1} = simple_test_1d;
-problems{end+1} = simple_test_xfrm_1d;
+problems{end+1} = simple_test_trans_1d;
+problems{end+1} = simple_test_scale_1d;
 problems{end+1} = easy_1d;
 problems{end+1} = bumpy_1d;
 problems{end+1} = bumpy_1d_exp;

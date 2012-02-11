@@ -111,16 +111,13 @@ for i = opt.init_pts + 1:opt.num_samples
         laplace_sds = Inf;
         try
             laplace_sds = sqrt(-1./hessdiag( like_func, laplace_mode));
-            %[grad,err,finaldelta] = gradest(fun,x0)
-        catch e; 
-            e;
-        end
+        catch e; e; end
 
         % A little sanity checking, since at first the length scale won't be
         % sensible.
         bad_sd_ixs = isnan(laplace_sds) | isinf(laplace_sds) | (abs(imag(laplace_sds)) > 0);
         if any(bad_sd_ixs)
-            warning('Non-negative curvature, setting lengthscale variance to prior variance');
+            warning('Non-negative curvature, setting lengthscale variance to prior variance.');
             good_sds = sqrt(diag(prior.covariance));
             laplace_sds(bad_sd_ixs) = good_sds(bad_sd_ixs);
         end
@@ -134,8 +131,10 @@ for i = opt.init_pts + 1:opt.num_samples
     
     % Convert gp_hypers to r_gp_params.  GPML and Mike's code have different 
     % normalization constants.
-    converted_output_scale = gp_hypers.cov(end) ...
-        - logmvnpdf(zeros(1,D), zeros(1,D), diag(ones(D,1).*exp(gp_hypers.cov(1:end - 1))))/2;
+    log_conversion_constant = ...
+        -logmvnpdf(zeros(1,D), zeros(1,D), diag(ones(D,1).*exp(gp_hypers.cov(1:end - 1))))/2;
+    converted_output_scale = gp_hypers.cov(end) + log_conversion_constant;
+    opt.sds_tr_input_scales = opt.sds_tr_input_scales * exp(log_conversion_constant);
     fprintf('Output variance: '); disp(exp(converted_output_scale));
     fprintf('Lengthscales: '); disp(exp(gp_hypers.cov(1:end - 1)));    
     r_gp_params.quad_output_scale = exp(converted_output_scale);
@@ -161,36 +160,11 @@ for i = opt.init_pts + 1:opt.num_samples
             [exp_loss_min, next_sample_point] = ...
                 plot_1d_minimize(objective_fn, bounds, samples, log_var_ev);
         else
-            % do local search around each of the candidate points, which
+            % Do a local search around each of the candidate points, which
             % are, by design, far removed from existing evaluations.
-            
-            optim_opts = ...
-                optimset('GradObj','off',...
-                'Display','off', ...
-                'MaxFunEvals', opt.exp_loss_evals,...
-                'LargeScale', 'off',...
-                'Algorithm','interior-point'...
-                );
-            
-            start_pts = r_gp_params.candidate_locations;
-            num_start_pts = size(start_pts,1);
-            
-            mins = nan(num_start_pts,1);
-            end_points = nan(num_start_pts,1);
-            for start_i = 1:num_start_pts
-                
-                start_pt = start_pts(start_i);
-                start_lb = start_pt - 3 * r_gp_params.quad_input_scales;
-                start_ub = start_pt + 3 * r_gp_params.quad_input_scales;
-                [end_points(start_i), mins(start_i)] = ...
-                    fmincon(objective_fn,start_pt, ...
-                    [],[],[],[],...
-                    start_lb,start_ub,[],...
-                    optim_opts);
-            end
-            
-            [exp_loss_min, min_start_i] = min(mins);
-            next_sample_point = end_points(min_start_i);
+            [exp_loss_min, next_sample_point] = ...
+                min_around_points(objective_fn, r_gp_params.candidate_locations, ...
+                3 * r_gp_params.quad_input_scales, opt.exp_loss_evals);
         end
     end
     
@@ -206,15 +180,9 @@ end
 
 
 function l = gpml_likelihood( log_in_scale, gp_hypers, inference, meanfunc, covfunc, likfunc, X, y)
-% Just replaces the lengthscales.
+% This function coJust replaces the lengthscales.
     gp_hypers.cov(1:end-1) = log_in_scale;
     l = exp(-gp_fixedlik(gp_hypers, inference, meanfunc, covfunc, likfunc, X, y));
 end
 
-
-function l = gpml_likelihood_grad( log_in_scale, gp_hypers, inference, meanfunc, covfunc, likfunc, X, y)
-% Just replaces the lengthscales.
-    gp_hypers.cov(1:end-1) = log_in_scale;
-    l = exp(-gp_fixedlik(gp_hypers, inference, meanfunc, covfunc, likfunc, X, y));
-end
 

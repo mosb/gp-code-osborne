@@ -54,9 +54,6 @@ log_r_s = samples.log_r;
 
 [num_s, num_hps] = size(samples.locations);
 
-% David asking Mike:  Should this be here?
-% Mike says: yes, the expecetd variance depends on the squared mean for the
-% integral over the likelihood, for which we need hs_c.
 hs_sc = [samples.locations; r_gp_params.candidate_locations];
 hs_sca = [hs_sc; new_sample_location];
 hs_sa = [samples.locations; new_sample_location];

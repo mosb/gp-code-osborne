@@ -1,11 +1,4 @@
 function debug_sbq(method_number, problem_number, nsamples, outdir)
-% This function is designed to let a shell script start one experiment.
-% Thus everything is idexed by integers.
-%
-% David Duvenaud
-% Feb 2012
-% =================
-
 
 % Set defaults.
 if nargin < 1; method_number = 3; end

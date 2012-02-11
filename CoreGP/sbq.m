@@ -179,7 +179,7 @@ for i = 1:opt.num_samples
                 | (abs(imag(laplace_sds)) > 0)...
                 | laplace_sds > 20;
             if any(bad_sd_ixs)
-                warning('Infinite or positive lengthscales, Setting lengthscale variance to prior variance');
+                warning('Infinite or positive lengthscales, Setting lengthscale variance to prior variance.');
                 good_sds = sqrt(diag(prior.covariance));
                 laplace_sds(bad_sd_ixs) = good_sds(bad_sd_ixs);
             end
@@ -213,36 +213,11 @@ for i = 1:opt.num_samples
             [exp_loss_min, next_sample_point] = ...
                 plot_1d_minimize(objective_fn, bounds, samples, log_var_ev);
         else
-            % do local search around each of the candidate points, which
+            % Do a local search around each of the candidate points, which
             % are, by design, far removed from existing evaluations.
-            
-            optim_opts = ...
-                optimset('GradObj','off',...
-                'Display','off', ...
-                'MaxFunEvals', opt.exp_loss_evals,...
-                'LargeScale', 'off',...
-                'Algorithm','interior-point'...
-                );
-            
-            start_pts = r_gp_params.candidate_locations;
-            num_start_pts = size(start_pts,1);
-            
-            mins = nan(num_start_pts,D);
-            end_points = nan(num_start_pts,D);
-            for start_i = 1:num_start_pts
-                
-                start_pt = start_pts(start_i,:);
-                start_lb = start_pt - 3 * r_gp_params.quad_input_scales;
-                start_ub = start_pt + 3 * r_gp_params.quad_input_scales;
-                [end_points(start_i, :), mins(start_i)] = ...
-                    fmincon(objective_fn,start_pt, ...
-                    [],[],[],[],...
-                    start_lb,start_ub,[],...
-                    optim_opts);
-            end
-            
-            [exp_loss_min, min_start_i] = min(mins);
-            next_sample_point = end_points(min_start_i);
+            [exp_loss_min, next_sample_point] = ...
+                min_around_points(objective_fn, r_gp_params.candidate_locations, ...
+                3 * r_gp_params.quad_input_scales, opt.exp_loss_evals);
         end
     end
     

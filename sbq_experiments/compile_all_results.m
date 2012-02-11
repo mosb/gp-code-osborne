@@ -146,8 +146,8 @@ edgecolor = 'none';
 
 % Print legend.
 % =====================
-method_names = cellfun( @(name) strrep( name, '_', ' '), method_names, ...
-                       'UniformOutput', false);
+%method_names = cellfun( @(name) strrep( name, '_', ' '), method_names, ...
+%                       'UniformOutput', false);
 figure; clf;
 for m_ix = 1:num_methods
     z_handle(m_ix) = plot( 1, 1, '-', 'Color', sqrt(color( m_ix, 1:3) ), 'LineWidth', 1); hold on;
