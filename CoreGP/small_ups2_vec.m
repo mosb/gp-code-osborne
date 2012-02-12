@@ -11,10 +11,7 @@ function vec = small_ups2_vec(sqd_dist_stack_Bmu, gp_A_hypers, gp_B_hypers, prio
 L = diag(prior.covariance);
 
 W_A = exp(2*gp_A_hypers.log_input_scales);
-A_sqd_output_scale = exp(2*gp_A_hypers.log_output_scale);
-
 W_B = exp(2*gp_B_hypers.log_input_scales);
-B_sqd_output_scale = exp(2*gp_B_hypers.log_output_scale);
 
 const_ups2_log_input_scales = ...
     log(sqrt(W_A + 2*L));
@@ -23,6 +20,6 @@ ups2_log_input_scales = log(sqrt(W_B + L - L*(W_A + 2*L)^(-1)*L));
 % A_sqd_output_scale appears twice, as there were two covariances in the
 % original integral
 vec =   gaussian_mat(0, ...
-            A_sqd_output_scale, const_ups2_log_input_scales) * ...
+            gp_A_hypers.log_output_scale, const_ups2_log_input_scales) * ...
         gaussian_mat(sqd_dist_stack_Bmu, ...
-            B_sqd_output_scale, ups2_log_input_scales);
+            gp_B_hypers.log_output_scale, ups2_log_input_scales);

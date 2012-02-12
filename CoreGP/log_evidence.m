@@ -104,6 +104,13 @@ l_s = exp(samples.log_l - max_log_l);
 % Compute our covariance matrices and their cholesky factors
 % ======================================================
 
+% input hyperparameters are for a sqd exp covariance, whereas in all that
+% follows we use a gaussian covariance. We correct the output scales
+% appropriately.
+l_gp_hypers = sqdexp2gaussian(l_gp_hypers);
+tl_gp_hypers = sqdexp2gaussian(tl_gp_hypers);
+del_gp_hypers = sqdexp2gaussian(del_gp_hypers);
+
 % squared distances are expensive to compute, so we store them for use in
 % the functions below, rather than having each function compute them
 % afresh.

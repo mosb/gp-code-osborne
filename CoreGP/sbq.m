@@ -197,7 +197,8 @@ for i = 1:opt.num_samples
                 | laplace_sds > 20;
             if any(bad_sd_ixs)
                 warning('Infinite or positive lengthscales, Setting lengthscale variance to prior variance.');
-                good_sds = sqrt(diag(prior.covariance));
+                % we want sds on the log of the input scales
+                good_sds = log(sqrt(diag(prior.covariance)));
                 laplace_sds(bad_sd_ixs) = good_sds(bad_sd_ixs);
             end
             opt.sds_tl_log_input_scales = laplace_sds;

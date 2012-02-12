@@ -104,6 +104,13 @@ range_sa = [1:num_s,num_sca];
 % location
 % ======================================================
 
+% input hyperparameters are for a sqd exp covariance, whereas in all that
+% follows we use a gaussian covariance. We correct the output scales
+% appropriately.
+l_gp_hypers = sqdexp2gaussian(l_gp_hypers);
+tl_gp_hypers = sqdexp2gaussian(tl_gp_hypers);
+del_gp_hypers = sqdexp2gaussian(del_gp_hypers);
+
 % load existing covariance matrix and its cholesky factor
 R_tl_s = ev_params.R_tl_s;
 K_tl_s = ev_params.K_tl_s;
@@ -115,7 +122,7 @@ K_tl_s_a = gaussian_mat(sqd_dist_stack_s_a, tl_gp_hypers);
 
 % remove the jitter associated with the closest datum to to x_a -- only
 % required if we start using large amounts of jitter
-if any(ev_params.jitters_tl_s > 1e-4)
+if any(ev_params.jitters_tl_s./diag(K_tl_s) > 1e-4)
     [K_tl_s, R_tl_s] = ...
         jitter_correction(ev_params.jitters_tl_s, K_tl_s_a', K_tl_s, R_tl_s);
 end
@@ -147,21 +154,24 @@ if opt.sds_tl_log_input_scales
         V_theta = V_theta';
     end   
     
-    % hyperparameters for gp over the transformed likelihood, tl, assumed to
-    % have zero mean
+    % hyperparameters for gp over the transformed likelihood, tl, assumed
+    % to have zero mean
     tl_input_scales = exp(tl_gp_hypers.log_input_scales);
 
-    % Dtheta_ prefix denotes the derivative of a quantity: each plate in
-    % the stack is the derivative with respect to a different log input
-    % scale
-    
     sqd_tl_input_scales_stack = reshape(tl_input_scales.^2, 1, 1, num_dims);
+    
+    % Dtheta_K_tl_a_s is the gradient of the tl Gaussian covariance over
+    % the transformed likelihood between x_a and x_s: each plate in the
+    % stack is the derivative with respect to a different log input scale
     Dtheta_K_tl_a_s = tr(bsxfun(@times, K_tl_s_a, ...
-        bsxfun(@rdivide, ...
+        -1 + bsxfun(@rdivide, ...
         sqd_dist_stack_s_a, ...
         sqd_tl_input_scales_stack)));
+    % Dtheta_K_tl_a_s is the gradient of the Gaussian covariance over the
+    % transformed likelihood between x_a and x_s: each plate in the stack
+    % is the derivative with respect to a different log input scale
     Dtheta_K_tl_s = bsxfun(@times, K_tl_s, ...
-        bsxfun(@rdivide, ...
+        -1 + bsxfun(@rdivide, ...
         ev_params.sqd_dist_stack_s, ...
         sqd_tl_input_scales_stack));
     
