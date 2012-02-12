@@ -1,8 +1,8 @@
 function vec = small_ups_vec(sqd_dist_stack_Amu, gp_A_hypers, prior)
 % Returns the column vector
-% % ups_s = int K(hs, hs_s) prior(hs) dhs
-% = N(hs_s, mu, W_A + L);
-% where hs_s is an element of A (forming the rows), which is modelled by a
+% % ups_s = int K(x, x_s) prior(x) dx
+% = N(x_s, mu, W_A + L);
+% where x_s is an element of A (forming the rows), which is modelled by a
 % GP with sqd input scales W_A. 
 % the prior is Gaussian with mean mu and variance L.
 

@@ -1,6 +1,9 @@
 function out = ...
     gaussian_mat(sqd_dist_stack, gp_hypers, log_input_scales, log_det_input_scales)
-% return the gram matrix of a Gaussian covariance. 
+% out = gaussian_mat(sqd_dist_stack, gp_hypers, log_input_scales,
+%     log_det_input_scales)
+%
+% returns the gram matrix of a Gaussian covariance. 
 %
 % OUTPUTS
 % - out: the covariance matrix.
@@ -20,6 +23,7 @@ switch nargin
     case 2
         log_output_scale = gp_hypers.log_output_scale;
         log_input_scales = gp_hypers.log_input_scales;
+        log_det_input_scales = log_input_scales;
     case 3
         log_output_scale = gp_hypers;
         log_det_input_scales = log_input_scales;

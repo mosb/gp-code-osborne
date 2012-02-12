@@ -3,25 +3,25 @@ randn('state', 0);
 rand('twister', 0);  
     
 % Set up a simple toy function to test SQB.
-r_mean1 = 1;
-r_sd1 = 1;
-r_mean2 = 4;
-r_sd2 = 1;
+r_mean1 = 2000;
+r_sd1 = 1000;
+r_mean2 = 4000;
+r_sd2 = 1000;
 normf = @(x,m,sd) (2*pi*sd^2)^(-0.5)*exp(-0.5*(x-m).^2/sd^2);
 log_r_fn = @(x) log(normf(x,r_mean1,r_sd1)+normf(x,r_mean2,r_sd2));
 
 % Set parameters of SBQ
 
-prior_struct.mean = 0;
-prior_struct.covariance = 1;
+prior_struct.mean = 1000;
+prior_struct.covariance = 1000^2;
 opt.print = 2;
 opt.num_retrains = 5;
 opt.train_gp_time = 20;
 opt.num_samples = 30;
-opt.plots = false;
+opt.plots = true;
 opt.parallel = false;
 opt.set_ls_var_method = 'laplace';
-opt.start_pt = -3;
+opt.start_pt = -2000;
 
 [log_ev, log_var_ev, samples, r_gp] = sbq(log_r_fn, prior_struct, opt);
 sample_locations = samples.locations;

@@ -19,9 +19,8 @@ function [min_loss, next_sample_point] = ...
     
     % make a plot of the gp
     figure(666);clf;
-    gamma = (exp(1) - 1)^(-1);
-    tr = log(exp(samples.log_r-max(samples.log_r))/gamma + 1);
-    gp_plot(test_pts, m, sqrt(V), samples.locations, tr);
+    tl = samples.tl;
+    gp_plot(test_pts, m, sqrt(V), samples.locations, tl);
     
     % Plot the function.
     figure(1234); clf;
