@@ -60,7 +60,7 @@ for i = 1:opt.num_samples
     samples.log_l(i,:) = log_likelihood_fn(samples.locations(i,:));
 end
 samples.scaled_l = exp(samples.log_l - max(samples.log_l));
-samples.tl = log_transform(samples.scaled_l);
+samples.tl = log_transform(samples.scaled_l, 10);
 
 
 % Train GPs
@@ -73,7 +73,7 @@ covfunc = @covSEiso;
 
 % Init GP Hypers.
 init_hypers.mean = [];
-init_hypers.lik = log(0.01);  % Values go between 0 and 1, so no need to scale.
+init_hypers.lik = log(0.000001);  % Values go between 0 and 1, so no need to scale.
 init_lengthscales = mean(sqrt(diag(prior.covariance)))/2;
 init_output_variance = .1;
 init_hypers.cov = log( [init_lengthscales init_output_variance] ); 
@@ -86,13 +86,13 @@ gp_hypers = minimize(gp_hypers, @gp_fixedlik, -max_iters, ...
                      samples.locations, samples.scaled_l);
 l_gp_hypers.log_output_scale = gp_hypers.cov(end);
 l_gp_hypers.log_input_scales(1:D) = gp_hypers.cov(1:end - 1);
-                 
-                 
+
+
 fprintf('Fitting GP to log-observations...\n');
 gp_hypers_log = init_hypers;
 gp_hypers_log = minimize(gp_hypers_log, @gp_fixedlik, -max_iters, ...
                          inference, meanfunc, covfunc, likfunc, ...
-                         samples.locations, samples.log_l);                   
+                         samples.locations, samples.tl);                   
 tl_gp_hypers.log_output_scale = gp_hypers_log.cov(end);
 tl_gp_hypers.log_input_scales(1:D) = gp_hypers_log.cov(1:end - 1);
 del_gp_hypers.log_output_scale = gp_hypers_log.cov(end);
@@ -102,8 +102,14 @@ del_gp_hypers.log_input_scales(1:D) = gp_hypers_log.cov(1:end - 1) ./ 2;
 fprintf('Output variance: '); disp(exp(l_gp_hypers.log_output_scale));
 fprintf('Lengthscales: '); disp(exp(l_gp_hypers.log_input_scales));
 
-fprintf('Output variance of logL: '); disp(exp(l_gp_hypers.log_output_scale));
-fprintf('Lengthscales on logL: '); disp(exp(l_gp_hypers.log_input_scales));
+gpml_plot( gp_hypers, samples.locations, samples.scaled_l);
+title('GP on untransformed values');
+
+fprintf('Output variance of logL: '); disp(exp(tl_gp_hypers.log_output_scale));
+fprintf('Lengthscales on logL: '); disp(exp(tl_gp_hypers.log_input_scales));
+
+gpml_plot( gp_hypers_log, samples.locations, samples.tl);
+title('GP on log( exp(scaled) + 1) values');
 
 [log_mean_evidence, log_var_evidence] = log_evidence(samples, prior, ...
     l_gp_hypers, tl_gp_hypers, del_gp_hypers, opt);
@@ -111,5 +117,5 @@ fprintf('Lengthscales on logL: '); disp(exp(l_gp_hypers.log_input_scales));
 % Convert the distribution over the evidence into a distribution over the
 % log-evidence by moment matching.  This is just a hack for now!!!
 mean_log_evidences(1) = log_mean_evidence;
-var_log_evidences(1) = log( exp(log_var_evidence) / exp(log_ev)^2 + 1 );
+var_log_evidences(1) = log( exp(log_var_evidence) / exp(log_mean_evidence)^2 + 1 );
 end

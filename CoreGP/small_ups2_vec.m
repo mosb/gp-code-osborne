@@ -8,14 +8,14 @@ function vec = small_ups2_vec(sqd_dist_stack_Bmu, gp_A_hypers, gp_B_hypers, prio
 % GP with sqd input scales W_B. 
 % The prior is Gaussian with mean mu and variance L.
 
-L = diag(prior.covariance);
+L = diag(prior.covariance)';
 
 W_A = exp(2*gp_A_hypers.log_input_scales);
 W_B = exp(2*gp_B_hypers.log_input_scales);
 
 const_ups2_log_input_scales = ...
     log(sqrt(W_A + 2*L));
-ups2_log_input_scales = log(sqrt(W_B + L - L*(W_A + 2*L)^(-1)*L));
+ups2_log_input_scales = log(sqrt(W_B + L - (L / (diag(W_A) + diag(2*L))*L')));
 
 % A_sqd_output_scale appears twice, as there were two covariances in the
 % original integral

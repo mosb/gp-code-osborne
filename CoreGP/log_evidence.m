@@ -71,8 +71,8 @@ x_s = samples.locations;
 opt.num_c = max(opt.num_c, num_s);
 
 % candidate locations will be constrained to a box defined by the prior
-lower_bound = prior.mean - opt.num_box_scales*sqrt(diag(prior.covariance));
-upper_bound = prior.mean + opt.num_box_scales*sqrt(diag(prior.covariance));
+lower_bound = prior.mean - opt.num_box_scales*sqrt(diag(prior.covariance))';
+upper_bound = prior.mean + opt.num_box_scales*sqrt(diag(prior.covariance))';
 
 % candidate locations are taken to be as far away from each other and
 % existing sample locations as possible, according to a Mahalanobis

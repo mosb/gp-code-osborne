@@ -6,7 +6,7 @@ function vec = small_ups_vec(sqd_dist_stack_Amu, gp_A_hypers, prior)
 % GP with sqd input scales W_A. 
 % the prior is Gaussian with mean mu and variance L.
 
-prior_var = diag(prior.covariance);
+prior_var = diag(prior.covariance)';
 
 A_sqd_input_scales = exp(2*gp_A_hypers.log_input_scales);
 ups_log_input_scales = ...

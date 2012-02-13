@@ -10,7 +10,7 @@
 % ===========================
 
 
-function approx_lengthscale_integrate_demo
+function integrate_hypers_figure
 
 
 

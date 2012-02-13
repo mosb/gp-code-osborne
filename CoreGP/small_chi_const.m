@@ -5,7 +5,7 @@ function const = small_chi_const(gp_A_hypers, prior)
 % where A is modelled by a GP with sqd input scales W_A. 
 % the prior is Gaussian with mean mu and variance L.
 
-prior_var = diag(prior.covariance);
+prior_var = diag(prior.covariance)';
 
 A_sqd_input_scales = exp(2*gp_A_hypers.log_input_scales);
 chi_log_input_scales = ...
