@@ -17,8 +17,8 @@ N_new = size(sqd_dist_stack_col, 1);
 N_old = size(K_old, 1);
 
 K_new = nan(N_new);
-diag_K = diag_inds(K_old);
-K(diag_K(1:N_old)) = diag(K_old);
+diag_K = diag_inds(K_new);
+K_new(diag_K(1:N_old)) = diag(K_old);
 K_col = gaussian_mat(sqd_dist_stack_col, varargin{:});
     
 range_new = N_old+1:N_new;
