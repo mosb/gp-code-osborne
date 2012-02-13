@@ -11,7 +11,7 @@ tabledirshort = 'tables/';
 plotdir = [paper_dir plotdirshort];
 tabledir = [paper_dir tabledirshort];
 
-min_samples = 30; % The minimum number of examples before we start making plots.
+min_samples = 3; % The minimum number of examples before we start making plots.
 
 fprintf('Compiling all results...\n');
 autocontent_filename = [paper_dir 'autocontent.tex'];

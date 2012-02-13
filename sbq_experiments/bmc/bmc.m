@@ -1,4 +1,4 @@
-function [mean_log_evidence, var_log_evidence, samples, sample_vals] = ...
+function [mean_log_evidence, var_log_evidence, sample_locs, sample_vals] = ...
     bmc(loglik_fn, prior, opt)
 % Naive Bayesian Monte Carlo.  Chooses samples based on AIS.
 %
@@ -32,12 +32,17 @@ if nargin < 3
 end
 
 % Get sample locations from a run of AIS.
-[ais_mean_log_evidence, ais_var_log_evidence, samples, sample_vals] = ...
+[ais_mean_log_evidence, ais_var_log_evidence, sample_locs, sample_vals] = ...
     ais_mh(loglik_fn, prior, opt);
 
 % Now call BMC using the exp of those samples.
 [mean_evidence, var_evidence] = ...
-    bmc_integrate(samples, exp(sample_vals), prior);
+    bmc_integrate(sample_locs, exp(sample_vals - max(sample_vals)), prior);
+
+% Todo: move these into the conversion eqns for better numerical stability.
+% Also, possibly move the scaling into bmc_integrate.
+mean_evidence = mean_evidence * exp( max(sample_vals));
+var_evidence = var_evidence * exp(2*max(sample_vals));
 
 % Convert the distribution over the evidence into a distribution over the
 % log-evidence by moment matching.

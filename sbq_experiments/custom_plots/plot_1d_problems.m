@@ -5,10 +5,11 @@ if nargin < 1
 end
 mkdir( plotdir );
 
-addpath(genpath(pwd));
+%addpath(genpath(pwd));
 problems = define_integration_problems();
 num_problems = length(problems);
 
+n = 1000;
 for p_ix = 1:num_problems
     problem = problems{p_ix};
     if problem.dimension == 1
@@ -16,13 +17,21 @@ for p_ix = 1:num_problems
         fprintf('Plotting %s...\n', problem.name );
         xrange = linspace(problem.prior.mean - 2*sqrt(problem.prior.covariance), ...
                           problem.prior.mean + 2*sqrt(problem.prior.covariance), ...
-                          1000)';
+                          n)';
         h_prior = plot(xrange,...
             mvnpdf(xrange, problem.prior.mean, problem.prior.covariance), 'g', 'LineWidth', 1); hold on;
-        h_ll = plot(xrange, exp(problem.log_likelihood_fn(xrange)), 'b', 'LineWidth', 1);
-        h_post = plot(xrange, exp(problem.log_likelihood_fn(xrange)) ...
+        like_func_vals = ...
+            exp(problem.log_likelihood_fn(...
+            [xrange zeros(n, problem.dimension - 1)]));
+        like_func_vals = like_func_vals ./ max(like_func_vals) ...
+            .* mvnpdf(0, 0, problem.prior.covariance(1));
+        
+        h_ll = plot(xrange, like_func_vals, 'b', 'LineWidth', 1);
+        h_post = plot(xrange, like_func_vals ...
                       .*mvnpdf(xrange, problem.prior.mean, problem.prior.covariance), ...
                       'r', 'LineWidth', 1);
+                  
+       
         %legend([h_prior h_ll h_post], {'Prior', 'Likelihood', 'Posterior'});
         title(problem.name);
         
@@ -33,11 +42,11 @@ for p_ix = 1:num_problems
         set(gca,'xticklabel',[]);        
         
         set(gcf,'units','centimeters')
-        set(gcf,'Position',[1 1 40 15])
-        savepng(gcf, [plotdir problem.name] );
+        %set(gcf,'Position',[1 1 4 4])
+        %savepng(gcf, [plotdir problem.name] );
         
-        filename = sprintf('plots/%s.tikz', strrep( problem.name, ' ', '_' ));
-        matlab2tikz( filename, 'height', '\fheight', 'width', '\fwidth', 'showInfo', false, 'showWarnings', false );
-        fprintf('\\input{%s}\n', filename);
+        filename = sprintf('plots/%s', strrep( problem.name, ' ', '_' ));
+        %matlab2tikz( filename, 'height', '\fheight', 'width', '\fwidth', 'showInfo', false, 'showWarnings', false );
+        %fprintf('\\input{%s}\n', filename);
     end
 end

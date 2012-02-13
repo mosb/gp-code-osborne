@@ -23,10 +23,11 @@ N = length(y);
 
 if nargin < 4; covfunc = @covSEiso; end
 if nargin < 5
-    hypers_init.mean = [];
-    hypers_init.lik = log(0.01);
-    %hypers_init.cov = log( [ 1 1] );%log([ones(1, D) 1]);
-    hypers_init.cov = log( [ mean(sqrt(diag(prior.covariance)))/2 1] ); 
+    init_hypers.mean = [];
+    init_hypers.lik = log(0.01);  % Values go between 0 and 1, so no need to scale.
+    init_lengthscales = mean(sqrt(diag(prior.covariance)))/2;
+    init_output_variance = .1;
+    init_hypers.cov = log( [init_lengthscales init_output_variance] );
 end
 if nargin < 6; learn_hypers = true; end
 
@@ -40,11 +41,13 @@ if learn_hypers
     max_iters = 100;
 
     % Fit the model, but not the likelihood hyperparam (which stays fixed).
-    [hypers, nlZ] = minimize(hypers_init, @gp_fixedlik, -max_iters, ...
-                        inference, meanfunc, covfunc, likfunc, X, y');                
-    exp_hypers = [ exp(hypers.cov)]
+    hypers = minimize(init_hypers, @gp_fixedlik, -max_iters, ...
+                      inference, meanfunc, covfunc, likfunc, X, y');                
+    
+    fprintf('Output variance: '); disp(exp(hypers.cov(end)));
+    fprintf('Lengthscales: '); disp(exp(hypers.cov(1:end-1)));
 else
-    hypers = hypers_init;
+    hypers = init_hypers;
 end
 
 % Fill in gram matrix

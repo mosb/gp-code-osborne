@@ -56,7 +56,9 @@ end
 
 default_opt = struct('num_c', 200,... % number of candidate points
                      'num_box_scales', 5, ... % defines the box over which to take candidates
-                    'allowed_cond_error',10^-14); % allowed conditioning error
+                     'allowed_cond_error',10^-14, ... % allowed conditioning error
+                     'gamma_l', (exp(1)-1)^(-1) ... % log_transform scaling factor.   
+                     );
 opt = set_defaults( opt, default_opt );
 
 % Load likelihood samples and their locations
@@ -95,10 +97,11 @@ num_sc = size(x_sc, 1);
 max_log_l = max(samples.log_l);
 l_s = exp(samples.log_l - max_log_l);
 
-% gamma_l is correct for after l_s has already been divided by
+% gamma_l is corrected for after l_s has already been divided by
 % exp(max_log_l_s). tl_s is its correct value, but log(gamma_l) has
 % effectively had max_log_l_s subtracted from it. 
-[tl_s, gamma_l] = log_transform(l_s);
+gamma_l = opt.gamma_l;
+tl_s = log_transform(l_s, gamma_l);
 
 
 % Compute our covariance matrices and their cholesky factors
@@ -316,5 +319,6 @@ ev_params = struct(...
   'del_inv_K' , del_inv_K_del, ...
   'delta_tl_sc' , delta_tl_sc, ...
   'minty_del' , minty_del, ...
-  'log_mean_second_moment', log_mean_second_moment ...
-    );
+  'log_mean_second_moment', log_mean_second_moment, ...
+  'gamma_l', gamma_l ...
+   );

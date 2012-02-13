@@ -85,7 +85,8 @@ l_s = exp(log_l_s);
 % gamma_l is correct for after l_s has already been divided by
 % exp(max_log_l_s). tl_s is its correct value, but log(gamma_l) has
 % effectively had max_log_l_s subtracted from it. 
-[tl_s, gamma_l] = log_transform(l_s);
+gamma_l = ev_params.gamma_l;
+tl_s = log_transform(l_s);
 
 x_s = samples.locations;
 x_c = ev_params.candidate_locations;

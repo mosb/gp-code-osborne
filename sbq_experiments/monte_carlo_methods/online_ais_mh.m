@@ -19,6 +19,6 @@ for i = 1:opt.num_variance_estimation_runs
     all_mean_log_evidences(i,:) = make_online_slow(@ais_mh, loglik_fn, prior, opt);
 end
 
-var_log_evidences = v2 =  var(all_mean_log_evidences);
+var_log_evidences = var(all_mean_log_evidences);
 
 end
