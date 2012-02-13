@@ -273,7 +273,7 @@ function log_l = log_gp_lik2(X_data, y_data, gp, log_noise, ...
     % and part of train_gp.m
     sample(gp.meanPos) = mean;
     sample(gp.noise_ind) = log_noise;
-    sample(gp.input_scale_inds) = log_in_scale;
+    sample(gp.input_scale_inds) = bound(log_in_scale, -100, 100);
     sample(gp.output_scale_ind) = log_out_scale;
     gp.hypersamples(1).hyperparameters = sample;
     
