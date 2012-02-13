@@ -138,7 +138,7 @@ K_tl = gaussian_mat(sqd_dist_stack_s, tl_gp_hypers);
 R_tl = chol(K_tl);
 inv_K_tl_tl = solve_chol(R_tl, tl_s);
 % The covariance over the transformed likelihood between x_sc and x_s
-K_tl_sc = gaussian_mat(sqd_dist_stack_s_sc, l_gp_hypers);
+K_tl_sc = gaussian_mat(sqd_dist_stack_s_sc, tl_gp_hypers);
 
 % The gram matrix over delta and its cholesky factor
 K_del = gaussian_mat(sqd_dist_stack_sc, del_gp_hypers);

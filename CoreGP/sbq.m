@@ -193,8 +193,8 @@ for i = 1:opt.num_samples
             % sensible.
             bad_sd_ixs = isnan(laplace_sds) ...
                 | isinf(laplace_sds) ...
-                | (abs(imag(laplace_sds)) > 0)...
-                | laplace_sds > 20;
+                | (abs(imag(laplace_sds)) > 0);%...
+                %| laplace_sds > 20;
             if any(bad_sd_ixs)
                 warning('Infinite or positive lengthscales, Setting lengthscale variance to prior variance.');
                 % we want sds on the log of the input scales
@@ -255,7 +255,7 @@ for i = 1:opt.num_samples
         fprintf('evidence: %g +- %g\n', exp(log_ev), sqrt(exp(log_var_ev)));
     end
     
-    % Convert the dislogl_logibution over the evidence into a dislogl_logibution over the
+    % Convert the distribution over the evidence into a distribution over the
     % log-evidence by moment matching.  This is just a hack for now!!!
     mean_log_evidences(i) = log_ev;
     var_log_evidences(i) = log( exp(log_var_ev) / exp(log_ev)^2 + 1 );

@@ -2,7 +2,7 @@ function plot_hessian_approx( like_func, laplace_sds, x0 )
 
     % Plot the log-likelihood surface.
     figure(11); clf;
-    hrange = linspace(-5, 5, 1000 );
+    hrange = linspace(-10, 10, 1000 );
     for t = 1:length(hrange)
         vals(t) = like_func(hrange(t));
     end
