@@ -1,5 +1,5 @@
 function [expected_Z, variance] = ...
-    bmc_integrate(X, y, prior, covfunc, hypers_init, learn_hypers)
+    bmc_integrate(X, y, prior, covfunc, init_hypers, learn_hypers)
 % Uses Bayesian Monte Carlo to compute the expected area under a function.
 %
 % Arguments:
@@ -51,8 +51,8 @@ else
 end
 
 % Fill in gram matrix
-K = covfunc( hypers.cov, X ) + diag(ones(N,1)) .* exp(2*hypers.lik);
-
+K = covfunc( hypers.cov, X );% + diag(ones(N,1)) .* exp(2*hypers.lik);
+K = improve_covariance_conditioning(K);
 % Formulas from Carl and Zoubin's paper for the mean and variance.
 w_lengths = exp(hypers.cov(1));
 w_0 = exp(2*hypers.cov(2));

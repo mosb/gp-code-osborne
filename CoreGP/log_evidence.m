@@ -240,7 +240,7 @@ minty_del_l = del_inv_K_del * Ups_inv_K_del_l * l_s;
 ups_inv_K_del = solve_chol(R_del, ups_del)';
 minty_del = ups_inv_K_del * delta_tl_sc;
 
-% the correction factor due to r being non-negative
+% the correction factor due to l being non-negative
 correction = minty_del_l + gamma_l * minty_del;
 
 % the mean evidence

@@ -181,7 +181,7 @@ plotted_sample_set = min_samples:num_sample_sizes;
 %figure_string = '\n\\begin{figure}\n\\centering\\setlength\\fheight{14cm}\\setlength\\fwidth{12cm}\\input{%s}\n\\end{figure}\n';
 figure_string = '\\psfragfig{%s}\n';
 
-
+if 0
 for p_ix = 1:num_problems
     cur_problem_name = problem_names{p_ix};
     figure; clf;
@@ -373,7 +373,7 @@ for p_ix = 1:num_problems
         e
     end
 end
-
+end
 fprintf(autocontent, '\n\n\\end{document}');
 fclose(autocontent);
 

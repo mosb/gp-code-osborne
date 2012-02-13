@@ -5,8 +5,5 @@ function [ gaussian ] = sqdexp2gaussian( sqd_exp )
 
 gaussian = sqd_exp;
 gaussian.log_output_scale = ...
-    2 * sqd_exp.log_output_scale - 0.5 * log(gaussian_mat(0, gaussian));
-
-
+    2 * sqd_exp.log_output_scale - 0.5 * log(gaussian_mat(0, sqd_exp));
 end
-
