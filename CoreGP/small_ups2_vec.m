@@ -15,7 +15,7 @@ W_B = exp(2*gp_B_hypers.log_input_scales);
 
 const_ups2_log_input_scales = ...
     log(sqrt(W_A + 2*L));
-ups2_log_input_scales = log(sqrt(W_B + L - (L / (diag(W_A) + diag(2*L))*L')));
+ups2_log_input_scales = log(sqrt( W_B + L - L.^2 ./ (W_A + 2*L) ));
 
 % A_sqd_output_scale appears twice, as there were two covariances in the
 % original integral
