@@ -33,7 +33,7 @@ ais_method.opt = [];
 
 bmc_method.nicename = 'Vanilla Bayesian Monte Carlo';
 bmc_method.uniquename = 'vanilla bayesian monte carlo v1';
-bmc_method.acronym = 'BMC';
+bmc_method.acronym = 'BMC AIS';
 bmc_method.function = @online_bmc; %@bmc;
 bmc_method.opt = [];
 

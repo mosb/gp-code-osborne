@@ -43,4 +43,10 @@ end
 % log-evidence by moment matching.
 var_log_evidence = log( var_evidence / mean_evidence^2 + 1 );
 mean_log_evidence = log(mean_evidence);% - 0.5*var_log_evidence;
+
+if var_log_evidence < 0
+    warning('variance of log evidence negative');
+    fprintf('variance of log evidence: %g\n', var_log_evidence);
+    var_log_evidence = eps;
+end
 end

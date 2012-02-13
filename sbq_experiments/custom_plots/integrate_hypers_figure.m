@@ -16,11 +16,11 @@ function approx_lengthscale_integrate_demo
 
 % Plot our function.
 N = 200;
-xrange = linspace( -2, 30, N )';
+xrange = linspace( 4, 20, N )';
 
 % Choose function sample points.
-function_sample_points = [ 0 6 12 16 ];
-y = [ 1 2 0 2]';
+function_sample_points = [ 6 12 16 20.5 ];
+y = [ 0 5 5 4]';
 
 
 % Model function with a GP.
@@ -64,20 +64,20 @@ edges2 = [posterior(xrange)+2*sqrt(posterior_variance(xrange) + extra_var); flip
 hc2 = fill([xrange; flipdim(xrange,1)], edges2, [6 8 6]/8, 'EdgeColor', 'none'); hold on;
 hc1 = fill([xrange; flipdim(xrange,1)], edges, [6 6 8]/8, 'EdgeColor', 'none'); hold on;
 h1 = plot( xrange, posterior(xrange), 'b-', 'Linewidth', 2); hold on;
-h2 = plot( function_sample_points, y, '.', 'Marker', '.', ...
- 'MarkerSize', 10, ...
- 'Color', [0.6 0.6 0.6]); hold on;
+h2 = plot( function_sample_points, y, 'kd', 'Marker', 'd', ...
+ 'MarkerSize', 5, 'Linewidth', 2 );
+ %'Color', [0.6 0.6 0.6]..
 
 % Add axes, legend, make the plot look nice, and save it.
 
 set(gcf, 'Units', 'centimeters');
-set(gcf, 'Position', [1, 1, 30, 15]);
+set(gcf, 'Position', [1, 1, 15, 6]);
 xlim( [xrange(1) - 0.04, xrange(end)]);
-legend_handle = legend( [h2 h1 hc1 hc2], {'Data', 'GP Posterior Mean', 'GP Posterior Uncertainty', 'GP Posterior Uncertainty integrating lengthscale '}, 'Location', 'SouthEast');
-%set( gca, 'XTick', [] );
-%set( gca, 'yTick', [] );
-%set( gca, 'XTickLabel', '' );
-%set( gca, 'yTickLabel', '' );
+legend_handle = legend( [h2 h1 hc1 hc2], {'Data', 'mean', 'variance', 'variance integrating lengthscale '}, 'Location', 'SouthEast');
+set( gca, 'XTick', [] );
+set( gca, 'yTick', [] );
+set( gca, 'XTickLabel', '' );
+set( gca, 'yTickLabel', '' );
 xlabel( '$x$' );
 ylabel( '$f(x)$\qquad' );
 set(get(gca,'XLabel'),'Rotation',0,'Interpreter','latex', 'Fontsize', 16);
@@ -86,15 +86,12 @@ set(get(gca,'YLabel'),'Rotation',0,'Interpreter','latex', 'Fontsize', 16);
 
 set(gca, 'TickDir', 'out')
 set(gca, 'Box', 'off');
-%set(fh, 'color', 'white');
+set(gcf, 'color', 'white');
 set(gca, 'YGrid', 'off');
 legend boxoff
 
-
-savepng('test');
-drawnow;
-pause(0.001);
-
+savepng('int_hypers');
+saveeps('int_hypers');
 
 if 0
 
@@ -178,19 +175,4 @@ savepng('variances');
 end
 end
 
-function savepng( name )
-    handle = gcf;
-    % Make changing paper type possible
-    set(handle,'PaperType','<custom>');
 
-    % Set units to all be the same
-    set(handle,'PaperUnits','inches');
-    set(handle,'Units','inches');
-
-    % Set the page size and position to match the figure's dimensions
-    paperPosition = get(handle,'PaperPosition');
-    position = get(handle,'Position');
-    set(handle,'PaperPosition',[0,0,position(3:4)]);
-    set(handle,'PaperSize',position(3:4));
-    print( gcf, sprintf('-r%d', ceil(72*(4/3))), '-dpng', [ name '.png'] );
-end

@@ -42,16 +42,16 @@ D = numel(prior.mean);
 
 % Set unspecified fields to default values.
 default_opt = struct('num_samples', 300, ...
-                     'exp_loss_evals', 50 * D, ...
+                     'exp_loss_evals', 150 * D, ...
                      'start_pt', zeros(1, D), ...
-                     'init_pts', 10 * D, ...  % Number of points to start with.
+                     'num_prior_pts', 10, ...  % Start with samples from prior.
                      'plots', false, ...
                      'set_ls_var_method', 'laplace');
 opt = set_defaults( opt, default_opt );
 
 
 % Initialize with some random points.
-for i = 1:opt.init_pts
+for i = 1:opt.num_prior_pts
     next_sample_point = mvnrnd(prior.mean, prior.covariance);
     samples.locations(i,:) = next_sample_point;
     samples.log_r(i,:) = log_likelihood_fn(next_sample_point);
@@ -60,7 +60,7 @@ end
 % Start of actual SBQ algorithm
 % =======================================
 next_sample_point = opt.start_pt;
-for i = opt.init_pts + 1:opt.num_samples
+for i = opt.num_prior_pts + 1:opt.num_samples
 
     % Update sample struct.
     % ==================================
@@ -160,11 +160,9 @@ for i = opt.init_pts + 1:opt.num_samples
             [exp_loss_min, next_sample_point] = ...
                 plot_1d_minimize(objective_fn, bounds, samples, log_var_ev);
         else
-            % Do a local search around each of the candidate points, which
-            % are, by design, far removed from existing evaluations.
+            % Search within the prior box.
             [exp_loss_min, next_sample_point] = ...
-                min_around_points(objective_fn, r_gp_params.candidate_locations, ...
-                3 * r_gp_params.quad_input_scales, opt.exp_loss_evals);
+                min_in_box( objective_fn, prior, opt.exp_loss_evals );
         end
     end
     

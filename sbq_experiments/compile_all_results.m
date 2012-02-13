@@ -17,10 +17,16 @@ fprintf('Compiling all results...\n');
 autocontent_filename = [paper_dir 'autocontent.tex'];
 fprintf('All content listed in %s\n', autocontent_filename);
 autocontent = fopen(autocontent_filename, 'w');
-fprintf(autocontent, '\\documentclass{article}\\usepackage{preamble}\\usepackage{morefloats}\\usepackage{pgfplots}\\newlength\\fheight\\newlength\\fwidth \\begin{document}');
+fprintf(autocontent, ['\\documentclass{article}\n' ...
+    '\\usepackage{preamble}\n' ...
+    '\\usepackage{morefloats}\n' ...'
+    '\\usepackage{pgfplots}\n' ...
+    '\\newlength\\fheight\\newlength\\fwidth\n' ...
+    '\\begin{document}\n\n' ...
+    '\\input{tables/integrands.tex\n}']);
 addpath(genpath(pwd))
-if ~exist([pwd '/' plotdir], 'dir'); mkdir(plotdir); end
-if ~exist([pwd '/' tabledir], 'dir'); mkdir(tabledir); end
+%if ~exist([pwd '/' plotdir], 'dir'); mkdir(plotdir); end
+%if ~exist([pwd '/' tabledir], 'dir'); mkdir(tabledir); end
 
 % Get experimental configuration from the definition scripts.
 problems = define_integration_problems();
@@ -119,14 +125,16 @@ for p_ix = 1:num_problems
         mean_prediction = mean_log_ev_table( m_ix, p_ix, s, r );
         var_prediction = var_log_ev_table( m_ix, p_ix, s, r );
         try
-            log_liks(m_ix, p_ix) = logmvnpdf(true_log_evidence, mean_prediction, var_prediction);
+            log_liks(m_ix, p_ix) = logmvnpdf(true_log_evidence, ...
+                                             mean_prediction, var_prediction);
         catch
             log_liks(m_ix, p_ix) = NaN;
         end
     end
 end
 latex_table( [tabledir, 'truth_prob.tex'], -log_liks', problem_names, ...
-     method_names, sprintf('neg log density of truth at %i samples', sample_sizes(end)) );
+     method_names, sprintf('neg log density of truth at %i samples', ...
+                           sample_sizes(end)) );
 fprintf(autocontent, '\\input{%s}\n', [tabledirshort, 'truth_prob.tex']);
 
 
@@ -150,19 +158,29 @@ edgecolor = 'none';
 %                       'UniformOutput', false);
 figure; clf;
 for m_ix = 1:num_methods
-    z_handle(m_ix) = plot( 1, 1, '-', 'Color', sqrt(color( m_ix, 1:3) ), 'LineWidth', 1); hold on;
+    z_handle(m_ix) = plot( 0, 0, '-', 'Color', sqrt(color( m_ix, 1:3) ), 'LineWidth', 1); hold on;
 end
 truth_handle = plot( 1, 1, 'k-', 'LineWidth', 1); hold on;
 h_l = legend([z_handle, truth_handle], {method_names{:}, 'True value'} );
-filename = 'legend.tikz';
-matlab2tikz( [plotdir filename], 'height', '\fheight', 'width', '\fwidth', 'showInfo', false, 'showWarnings', false );
-fprintf(autocontent, '\n\\begin{figure}\n\\centering\\setlength\\fheight{3cm}\\setlength\\fwidth{3cm}\\input{%s}\n\\end{figure}\n', [plotdirshort filename]);    
+filename = 'legend';
+axis off;
+%matlab2tikz( [plotdir filename], 'height', '\fheight', 'width', '\fwidth', 'showInfo', false, 'showWarnings', false );
+%fprintf(autocontent, '\n\\begin{figure}\n\\centering\\setlength\\fheight{3cm}\\setlength\\fwidth{3cm}\\input{%s}\n\\end{figure}\n', [plotdirshort filename]);    
+set_fig_units_cm( 4, 5 )
+matlabfrag([plotdir filename]);
+fprintf(autocontent, '\\psfragfig{%s}\n', [plotdirshort filename]);    
 
+
+label_fontsize = 10;
+
+%zlabel('Z','fontsize',12,'userdata','matlabfrag:$\mathcal Z$')
 
 % Plot log likelihood of true answer, versus number of samples
 % ===============================================================
 plotted_sample_set = min_samples:num_sample_sizes;
-figure_string = '\n\\begin{figure}\n\\centering\\setlength\\fheight{14cm}\\setlength\\fwidth{12cm}\\input{%s}\n\\end{figure}\n';
+%figure_string = '\n\\begin{figure}\n\\centering\\setlength\\fheight{14cm}\\setlength\\fwidth{12cm}\\input{%s}\n\\end{figure}\n';
+figure_string = '\\psfragfig{%s}\n';
+
 
 for p_ix = 1:num_problems
     cur_problem_name = problem_names{p_ix};
@@ -183,9 +201,10 @@ for p_ix = 1:num_problems
                     'Color', color( m_ix, :), 'LineWidth', 1); hold on;
             end
         end
-        xlabel('Number of samples');
-        ylabel('Neg Log Density of True Value');
-        title(cur_problem_name);
+        
+        xlabel('Number of samples', 'fontsize', label_fontsize);
+        ylabel('Neg Log Density of True Value', 'fontsize', label_fontsize);
+        title(cur_problem_name, 'fontsize', label_fontsize);
         %legend(z_handle, method_names);
         %ylim([-3 3 ]);
         good_methods = 1:num_methods; good_methods(2) = [];
@@ -194,9 +213,11 @@ for p_ix = 1:num_problems
         max1 = max(max((neg_log_liks(good_methods, plotted_sample_set))));
         ylim( [min1 max1] );
 
-        filename = sprintf('log_of_truth_plot_%s.tikz', strrep(cur_problem_name, ' ', '_'));
-        matlab2tikz( [plotdir filename], 'height', '\fheight', 'width', ...
-            '\fwidth', 'showInfo', false, 'showWarnings', false );
+        filename = sprintf('log_of_truth_plot_%s', strrep(cur_problem_name, ' ', '_'));
+        %matlab2tikz( [plotdir filename], 'height', '\fheight', 'width', ...
+        %    '\fwidth', 'showInfo', false, 'showWarnings', false );
+        set_fig_units_cm( 8, 6 );
+        matlabfrag([plotdir filename]);
         fprintf(autocontent, figure_string, [plotdirshort filename]);    
     catch e
         %e
@@ -230,9 +251,11 @@ for p_ix = 1:num_problems
         %legend(z_handle, method_names);
         %ylim([-3 3 ]);
 
-        filename = sprintf('se_plot_%s.tikz', strrep(cur_problem_name, ' ', '_'));
-        matlab2tikz( [plotdir filename], 'height', '\fheight', ...
-            'width', '\fwidth', 'showInfo', false, 'showWarnings', false );
+        filename = sprintf('se_plot_%s', strrep(cur_problem_name, ' ', '_'));
+        %matlab2tikz( [plotdir filename], 'height', '\fheight', 'width', ...
+        %    '\fwidth', 'showInfo', false, 'showWarnings', false );
+        set_fig_units_cm( 8, 6 );
+        matlabfrag([plotdir filename]);
         fprintf(autocontent, figure_string, [plotdirshort filename]);    
     catch e
         %e
@@ -273,9 +296,11 @@ for p_ix = 1:num_problems
         ylim( [min(min((mean_predictions(:, plotted_sample_set)))), max(max((mean_predictions(:, plotted_sample_set)))) + 1] );
         %legend([z_handle, truth_handle], {method_names{:}, 'True value'} );
 
-        filename = sprintf('varplot_%s.tikz', strrep(cur_problem_name, ' ', '_'));
-        matlab2tikz( [plotdir filename], 'height', '\fheight', ...
-            'width', '\fwidth', 'showInfo', false, 'showWarnings', false );
+        filename = sprintf('varplot_%s', strrep(cur_problem_name, ' ', '_'));
+        %matlab2tikz( [plotdir filename], 'height', '\fheight', 'width', ...
+        %    '\fwidth', 'showInfo', false, 'showWarnings', false );
+        set_fig_units_cm( 8, 6 );
+        matlabfrag([plotdir filename], 'renderer', 'opengl', 'dpi', 200);
         fprintf(autocontent, figure_string, [plotdirshort filename]);    
     catch e
         e
@@ -283,12 +308,14 @@ for p_ix = 1:num_problems
 end
 
 
-% Plot sample pathcs
+
+
+% Plot sample paths
 % ===============================================================
 
 chosen_repetition = 1;
 for p_ix = 1:num_problems
-    cur_problem_name = problem_names{p_ix};
+    cur_problem = problems{p_ix};
     figure; clf;
     try
         for m_ix = 1:num_methods
@@ -296,23 +323,56 @@ for p_ix = 1:num_problems
             if isfield(cur_samples, 'locations')
                 cur_samples = cur_samples.locations;
             end
-            z_handle(m_ix) = plot( cur_samples(:,1), '.', ...
-                'Color', color( m_ix, :), 'LineWidth', 1); hold on;
+            if ~isempty(cur_samples)
+%                z_handle(m_ix) = plot( cur_samples(:,1), '.', ...
+ %                   'Color', color( m_ix, :), 'LineWidth', 1); hold on;
+                % Plot the sample locations.
+                start_ix = 1;
+                end_ix = length(cur_samples(:,1));
+                h_samples = plot3( (start_ix:end_ix)', ...
+                   cur_samples(start_ix:end_ix,1), ...
+                   zeros( end_ix - start_ix + 1, 1 ), '.', ...
+                   'Color', color( m_ix, :));   hold on;      
+            end
         end
+        
+        bounds = ylim;
+        xrange = linspace( bounds(1), bounds(2), 1000)';
+        n = length(xrange);        
+        
+        % Plot the prior.
+        h_prior = plot3(repmat(end_ix + 1,n,1), xrange,...
+            mvnpdf(xrange, cur_problem.prior.mean(1), cur_problem.prior.covariance(1)), 'k', 'LineWidth', 2); hold on;
 
+        % Plot the true function.
+        like_func_vals = ...
+            exp(cur_problem.log_likelihood_fn(...
+            [xrange zeros(n, cur_problem.dimension - 1)]));
+        % Rescale to match prior.
+        like_func_vals = like_func_vals ./ max(like_func_vals) ...
+            .* mvnpdf(0, 0, cur_problem.prior.covariance(1));
+        
+        true_plot_depth = end_ix;
+        h_ll = plot3(repmat(true_plot_depth,n,1), xrange, like_func_vals, 'g', 'LineWidth', 2);
+        
         xlabel('Number of samples');
         ylabel('sample location');
-        title(cur_problem_name);
+        title(cur_problem.name);
+        xlim( [ 0 true_plot_depth ] );
+        grid on;
+        set(gca,'ydir','reverse')
+        view(-72, 42);
         
-        filename = sprintf('sampleplot_%s.tikz', strrep(cur_problem_name, ' ', '_'));
-        matlab2tikz( [plotdir filename], 'height', '\fheight', ...
-            'width', '\fwidth', 'showInfo', false, 'showWarnings', false );
+        filename = sprintf('sampleplot_%s', strrep(cur_problem.name, ' ', '_'));
+        %matlab2tikz( [plotdir filename], 'height', '\fheight', 'width', ...
+        %    '\fwidth', 'showInfo', false, 'showWarnings', false );
+        set_fig_units_cm( 8, 6 );
+        matlabfrag([plotdir filename]);
         fprintf(autocontent, figure_string, [plotdirshort filename]);    
     catch e
         e
     end
 end
-
 
 fprintf(autocontent, '\n\n\\end{document}');
 fclose(autocontent);

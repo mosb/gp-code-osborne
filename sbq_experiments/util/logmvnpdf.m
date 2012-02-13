@@ -14,11 +14,11 @@ end
 function ld = logdet(K)
     % returns the log-determinant of posdef matrix K.
     
-    % This is horribly slow.
+    % This is probably horribly slow.
     ld = NaN;
     try
         ld = 2*sum(log(diag(chol(K))));
     catch e
-        e
+        e;
     end
 end

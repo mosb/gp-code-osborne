@@ -123,21 +123,20 @@ easy_20d.true_log_evidence = ...
                                      likelihood.mean, likelihood.covariance);                                 
 
                                  
-bumpy_1d.name = 'bumpy 1d';
-bumpy_1d.description = 'a highly varying function';
-bumpy_1d.dimension = 1;
-bumpy_1d.prior.mean = .9;
-bumpy_1d.prior.covariance = 1.1;
-bumpy_1d.log_likelihood_fn = @(x) 0.1.*log(sin( 20.*x ) + 1.1 );
-bumpy_1d.true_log_evidence = brute_force_integrate_1d(bumpy_1d);
+% bumpy_1d.name = 'bumpy 1d';
+% bumpy_1d.description = 'a highly varying function';
+% bumpy_1d.dimension = 1;
+% bumpy_1d.prior.mean = .9;
+% bumpy_1d.prior.covariance = 1.1;
+% bumpy_1d.log_likelihood_fn = @(x) 0.1.*log(sin( 20.*x ) + 1.1 );
+% bumpy_1d.true_log_evidence = brute_force_integrate_1d(bumpy_1d);
 
-
-bumpy_1d_exp.name = 'bumpy 1d exp';
-bumpy_1d_exp.description = 'exp of a highly varying function';
+bumpy_1d_exp.name = 'bumpy 1d';
+bumpy_1d_exp.description = 'a highly varying function';
 bumpy_1d_exp.dimension = 1;
 bumpy_1d_exp.prior.mean = .9;
 bumpy_1d_exp.prior.covariance = 1.1;
-bumpy_1d_exp.log_likelihood_fn = @(x) 0.1.*sin( 20.*x ); 
+bumpy_1d_exp.log_likelihood_fn = @(x) sin( 10.*x ); 
 bumpy_1d_exp.true_log_evidence = brute_force_integrate_1d(bumpy_1d_exp);
 
                                  
@@ -170,7 +169,7 @@ two_hills_1d.dimension = 1;
 two_hills_1d.prior.mean = 0;
 two_hills_1d.prior.covariance = 10^2;
 likelihood.mean1 = -10; likelihood.mean2 = 10;
-likelihood.covariance1 = .25; likelihood.covariance2 = .25;
+likelihood.covariance1 = 5; likelihood.covariance2 = 5;
 scale_factor = 0.05;  % Rescale so it looks nice for plots.
 two_hills_1d.log_likelihood_fn = ...
     @(x) logsumexp([logmvnpdf( x, likelihood.mean1, likelihood.covariance1 ), ...
@@ -213,9 +212,9 @@ two_hills_4d.description = 'Two smooth Gaussian hills';
 two_hills_4d.dimension = 4;
 two_hills_4d.prior.mean = zeros(1, two_hills_4d.dimension);
 two_hills_4d.prior.covariance = diag(ones(two_hills_4d.dimension, 1) .* 10^2);
-likelihood.mean1 = -5 .* ones(1, two_hills_4d.dimension);
+likelihood.mean1 = -2 .* ones(1, two_hills_4d.dimension);
 likelihood.mean2 = 3 .* ones(1, two_hills_4d.dimension);
-likelihood.covariance1 = 4 .* diag(ones(two_hills_4d.dimension,1));
+likelihood.covariance1 = 3 .* diag(ones(two_hills_4d.dimension,1));
 likelihood.covariance2 = 2 .* diag(ones(two_hills_4d.dimension,1));
 two_hills_4d.log_likelihood_fn = ...
     @(x) logsumexp([logmvnpdf( x, likelihood.mean1, likelihood.covariance1 ), ...
@@ -251,7 +250,7 @@ friedman_data = load('friedman_data.mat');
 friedman_3d.log_likelihood_fn = ...
     @(log_hypers)gp_log_likelihood(log_hypers, ...
                                    friedman_data.X, friedman_data.y, @covSEiso);
-friedman_3d.true_log_evidence = NaN;
+friedman_3d.true_log_evidence =  -224.042705593331050;   % Based on 1000000 SMC samples.
 
 
 friedman_7d.name = 'friedman 7d';
@@ -263,7 +262,7 @@ friedman_data = load('friedman_data.mat');
 friedman_7d.log_likelihood_fn = ...
     @(log_hypers)gp_log_likelihood(log_hypers, ...
                                    friedman_data.X, friedman_data.y, @covSEard);
-friedman_7d.true_log_evidence = NaN;
+friedman_7d.true_log_evidence = -215.846016515331058;   % Based on 1000000 SMC samples.
 
 % Specify problems.
 problems = {};
@@ -271,7 +270,6 @@ problems{end+1} = simple_test_1d;
 problems{end+1} = simple_test_trans_1d;
 problems{end+1} = simple_test_scale_1d;
 problems{end+1} = easy_1d;
-problems{end+1} = bumpy_1d;
 problems{end+1} = bumpy_1d_exp;
 problems{end+1} = two_spikes_1d;
 problems{end+1} = two_hills_1d;
@@ -281,6 +279,7 @@ problems{end+1} = easy_4d;
 problems{end+1} = two_spikes_4d;
 problems{end+1} = two_hills_4d;
 problems{end+1} = friedman_7d;
+%problems{end+1} = bumpy_1d;
 %problems{end+1} = easy_10d;
 %problems{end+1} = easy_20d;
 
