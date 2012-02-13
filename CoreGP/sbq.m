@@ -197,8 +197,15 @@ for i = 1:opt.num_samples
                 %| laplace_sds > 20;
             if any(bad_sd_ixs)
                 warning('Infinite or positive lengthscales, Setting lengthscale variance to prior variance.');
-                % we want sds on the log of the input scales
-                good_sds = sqrt(diag(prior.covariance));
+                % sqrt(diag(prior.covariance))) defines a scale in x-space.
+                % We want the standard deviations of our posterior over the
+                % log input-scales, which can be approximated as the log of
+                % that scale. Note that our prior specifies that x varies
+                % between e.g -e^10 and e^10, saying that our
+                % log-input-scales can vary between -10 and 10 doesn't seem
+                % unreasonable. 
+                
+                good_sds = log(sqrt(diag(prior.covariance)) + 1);
                 laplace_sds(bad_sd_ixs) = good_sds(bad_sd_ixs);
             end
             opt.sds_tl_log_input_scales = laplace_sds;
