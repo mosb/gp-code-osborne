@@ -65,7 +65,8 @@ end
 opt = struct(...
                     'allowed_cond_error',10^-14, ... % allowed conditioning error
                     'sds_tl_log_input_scales', opt.sds_tl_log_input_scales,...
-                    'delta_update', false);
+                    'delta_update', false, ...
+                    'gamma', 100);
 % sds_tl_log_input_scales represents the posterior standard deviations in the
 % input scales for tr. If false, a delta function posterior is assumed.            
 %opt = set_defaults( opt, default_opt );
@@ -74,19 +75,7 @@ opt = struct(...
 % Load likelihood samples and their locations
 % ======================================================
 
-log_l_s = samples.log_l;
-[max_log_l_s, max_ind] = max(log_l_s);
-
-% this function is only ever used to compare different x_a's for the
-% single fixed l_s, so no big deal about subtracting off this
-log_l_s = log_l_s - max_log_l_s;
-l_s = exp(log_l_s);
-
-% gamma_l is correct for after l_s has already been divided by
-% exp(max_log_l_s). tl_s is its correct value, but log(gamma_l) has
-% effectively had max_log_l_s subtracted from it. 
-gamma_l = ev_params.gamma_l;
-tl_s = log_transform(l_s);
+l_s = samples.scaled_l;
 
 x_s = samples.locations;
 x_c = ev_params.candidate_locations;
@@ -303,13 +292,13 @@ end
 % likelihoods, gives us our mean estimate for the evidence
 n_l_sa = del_inv_K_Ups_inv_K_l_sa + ups_inv_K_l_sa;
 n_l_a = n_l_sa(num_sa);
-n_l_s = n_l_sa(1:num_s) * l_s + gamma_l * minty_del;
+n_l_s = n_l_sa(1:num_s) * l_s + opt.gamma * minty_del;
 
 % expected squared mean evidence: here we have to correct for our scaling
 % of l_s earlier.
-xpc_sqd_mean = exp(2*max_log_l_s) * (n_l_s^2 ...
-    + 2 * n_l_s * n_l_a * (gamma_l * exp(tm_a + 0.5*tv_a) - gamma_l) ...
-    + n_l_a^2 * gamma_l^2 * ...
+xpc_sqd_mean = exp(2*samples.max_log_l) * (n_l_s^2 ...
+    + 2 * n_l_s * n_l_a * (opt.gamma * exp(tm_a + 0.5*tv_a) - opt.gamma) ...
+    + n_l_a^2 * opt.gamma^2 * ...
         (exp(2*tm_a + 2*tv_a) - 2 * exp(tm_a + 0.5*tv_a) + 1));
 
 xpc_unc =  exp(ev_params.log_mean_second_moment) - xpc_sqd_mean;

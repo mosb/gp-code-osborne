@@ -4,7 +4,7 @@ rand('twister', 0);
     
 % Set up a simple toy function to test SQB.
 r_mean1 = 2000;
-r_sd1 = 1000;
+r_sd1 = 500;
 r_mean2 = 4000;
 r_sd2 = 1000;
 normf = @(x,m,sd) (2*pi*sd^2)^(-0.5)*exp(-0.5*(x-m).^2/sd^2);

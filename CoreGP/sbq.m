@@ -57,6 +57,7 @@ D = numel(prior.mean);
 
 % Set unspecified fields to default values.
 default_opt = struct('num_samples', 300, ...
+                     'gamma', 100, ...
                      'num_retrains', 5, ...
                      'num_box_scales', 5, ...
                      'train_gp_time', 50 * D, ...
@@ -100,8 +101,9 @@ for i = 1:opt.num_samples
     % ==================================
     samples.locations(i,:) = next_sample_point;          % Record the current sample location.
     samples.log_l(i,:) = log_likelihood_fn(next_sample_point);   % Sample the integrand at the new point.
-    samples.scaled_l = exp(samples.log_l - max(samples.log_l));
-    samples.tl = log_transform(samples.scaled_l);
+    samples.max_log_l = max(samples.log_l); % all log-likelihoods have max_log_l subtracted off
+    samples.scaled_l = exp(samples.log_l - samples.max_log_l);
+    samples.tl = log_transform(samples.scaled_l, opt.gamma);
     
     
     % Retrain GP

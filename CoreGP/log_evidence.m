@@ -57,7 +57,7 @@ end
 default_opt = struct('num_c', 200,... % number of candidate points
                      'num_box_scales', 5, ... % defines the box over which to take candidates
                      'allowed_cond_error',10^-14, ... % allowed conditioning error
-                     'gamma_l', (exp(1)-1)^(-1) ... % log_transform scaling factor.   
+                     'gamma', 100 ... % log_transform scaling factor.   
                      );
 opt = set_defaults( opt, default_opt );
 
@@ -94,14 +94,12 @@ num_sc = size(x_sc, 1);
 
 % rescale all log-likelihood values for numerical accuracy; we'll correct
 % for this at the end of the function
-max_log_l = max(samples.log_l);
-l_s = exp(samples.log_l - max_log_l);
+l_s = samples.scaled_l;
 
-% gamma_l is corrected for after l_s has already been divided by
-% exp(max_log_l_s). tl_s is its correct value, but log(gamma_l) has
-% effectively had max_log_l_s subtracted from it. 
-gamma_l = opt.gamma_l;
-tl_s = log_transform(l_s, gamma_l);
+% opt.gamma is corrected for after l_s has already been divided by
+% exp(samples.max_log_l_s). tl_s is its correct value, but log(opt.gamma) has
+% effectively had samples.max_log_l_s subtracted from it. 
+tl_s = samples.tl;
 
 
 % Compute our covariance matrices and their cholesky factors
@@ -221,7 +219,7 @@ mean_tl_sc = K_tl_sc' * inv_K_tl_tl;
 
 % the difference between the mean of the transformed (log) likelihood and
 % the transform of the mean likelihood
-delta_tl_sc = mean_tl_sc - log_transform(mean_l_sc, gamma_l);
+delta_tl_sc = mean_tl_sc - log_transform(mean_l_sc, opt.gamma);
 
 % Compute the means of various integrals we will need to determine the mean
 % evidence
@@ -241,7 +239,7 @@ ups_inv_K_del = solve_chol(R_del, ups_del)';
 minty_del = ups_inv_K_del * delta_tl_sc;
 
 % the correction factor due to l being non-negative
-correction = minty_del_l + gamma_l * minty_del;
+correction = minty_del_l + opt.gamma * minty_del;
 
 % the mean evidence
 mean_ev = minty_l + correction;
@@ -249,7 +247,7 @@ mean_ev = minty_l + correction;
 % mean_ev has been determined using the rescaled log-likelihoods (that have
 % had the maximum log likelihood subtracted off), we return correct values
 % by scaling back again)
-log_mean_evidence = max_log_l + log(mean_ev);
+log_mean_evidence = samples.max_log_l + log(mean_ev);
 
 % Compute the further terms required to determine the variance in the
 % evidence
@@ -270,20 +268,20 @@ mCminty_l_tl_l = inv_K_l_l' * Chi_l_tl_l * inv_K_l_l ...
             - sum(inv_R_Ups_inv_K_tl_l.^2);
 
 % variance of the evidence
-var_ev = gamma_l^2 * Vinty_tl ...
-    + 2 * gamma_l * Cminty_tl_l ...
+var_ev = opt.gamma^2 * Vinty_tl ...
+    + 2 * opt.gamma * Cminty_tl_l ...
     + mCminty_l_tl_l;
 
 % sanity check
 if var_ev < 0
     warning('variance of evidence negative');
-    fprintf('variance of evidence: %g\n', var_ev.*exp(max_log_l)^2);
+    fprintf('variance of evidence: %g\n', var_ev.*exp(samples.max_log_l)^2);
     var_ev = eps;
 end
 % var_ev has been determined using the rescaled log-likelihoods (that have
 % had the maximum log likelihood subtracted off), we return correct values
 % by scaling back again)
-log_var_evidence = 2*max_log_l + log(var_ev);
+log_var_evidence = 2*samples.max_log_l + log(var_ev);
 
 % Compute the second moment of the evidence
 % ======================================================
@@ -294,7 +292,7 @@ mean_second_moment =  mean_ev.^2 + var_ev;
 % mean_second_moment has been determined using the rescaled log-likelihoods
 % (that have had the maximum log likelihood subtracted off), we return
 % correct values by scaling back again)
-log_mean_second_moment = 2*max_log_l + log(mean_second_moment);
+log_mean_second_moment = 2*samples.max_log_l + log(mean_second_moment);
 
 % Store a lot of stuff in the ev_params structure for use by
 % expected_uncertainty_evidence.m
@@ -319,6 +317,5 @@ ev_params = struct(...
   'del_inv_K' , del_inv_K_del, ...
   'delta_tl_sc' , delta_tl_sc, ...
   'minty_del' , minty_del, ...
-  'log_mean_second_moment', log_mean_second_moment, ...
-  'gamma_l', gamma_l ...
+  'log_mean_second_moment', log_mean_second_moment ...
    );
