@@ -5,7 +5,6 @@ function h = gpml_plot( hypers, X, y )
 
 [N,D] = size(X);
 
-figure;
 h = plot( X, y, '.'); hold on;
 x_limits = xlim;
 

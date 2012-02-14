@@ -267,7 +267,8 @@ friedman_7d.true_log_evidence = -215.846016515331058;   % Based on 1000000 SMC s
 % Specify problems.
 problems = {};
 problems{end+1} = simple_test_1d;
-problems{end+1} = simple_test_trans_1d;
+return
+%problems{end+1} = simple_test_trans_1d;
 problems{end+1} = simple_test_scale_1d;
 problems{end+1} = easy_1d;
 problems{end+1} = bumpy_1d_exp;

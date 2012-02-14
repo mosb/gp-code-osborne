@@ -41,10 +41,11 @@ end
 D = numel(prior.mean);
 
 % Set unspecified fields to default values.
-default_opt = struct('num_samples', 300, ...
+default_opt = struct('num_samples', 100, ...
                      'exp_loss_evals', 150 * D, ...
                      'start_pt', zeros(1, D), ...
                      'num_prior_pts', 10, ...  % Start with samples from prior.
+                     'gamma', 1, ...
                      'plots', false, ...
                      'set_ls_var_method', 'laplace');
 opt = set_defaults( opt, default_opt );
@@ -54,7 +55,7 @@ opt = set_defaults( opt, default_opt );
 for i = 1:opt.num_prior_pts
     next_sample_point = mvnrnd(prior.mean, prior.covariance);
     samples.locations(i,:) = next_sample_point;
-    samples.log_r(i,:) = log_likelihood_fn(next_sample_point);
+    samples.log_l(i,:) = log_likelihood_fn(next_sample_point);
 end
 
 % Start of actual SBQ algorithm
@@ -65,89 +66,93 @@ for i = opt.num_prior_pts + 1:opt.num_samples
     % Update sample struct.
     % ==================================
     samples.locations(i,:) = next_sample_point;          % Record the current sample location.
-    samples.log_r(i,:) = log_likelihood_fn(next_sample_point);   % Sample the integrand at the new point.
-    samples.scaled_r = exp(samples.log_r - max(samples.log_r));
-    
-    
-    % Train a GP over the untransformed observations.
-    % ====================================================
+    samples.log_l(i,:) = log_likelihood_fn(next_sample_point);   % Sample the integrand at the new point.
+    samples.max_log_l = max(samples.log_l); % all log-likelihoods have max_log_l subtracted off
+    samples.scaled_l = exp(samples.log_l - samples.max_log_l);
+    samples.tl = log_transform(samples.scaled_l, opt.gamma);
+
+    % Train GPs
+    % ===========================   
     inference = @infExact;
     likfunc = @likGauss;
     meanfunc = {'meanZero'};
-    max_iters = 100;    
+    max_iters = 1000;
     covfunc = @covSEiso;
-    
-    % Init GP Hypers each time at first to prevent getting lost in some weird place.
-    if ~exist('gp_hypers', 'var') || i < 10 * D
-        fprintf('Initializing hypers from heuristics');
-        gp_hypers.mean = [];%0;
-        gp_hypers.lik = log(0.01);
-        %gp_hypers.cov = log( [ 1 1] );%log([ones(1, D) 1]);    
-        gp_hypers.cov = log( [ mean(sqrt(diag(prior.covariance)))/2 1] ); 
-    end
-  
+
+    % Init GP Hypers.
+    init_hypers.mean = [];
+    init_hypers.lik = log(0.01);  % Values go between 0 and 1, so no need to scale.
+    init_lengthscales = mean(sqrt(diag(prior.covariance)))/10;
+    init_output_variance = .1;
+    init_hypers.cov = log( [init_lengthscales init_output_variance] ); 
+
     % Fit the model, but not the likelihood hyperparam (which stays fixed).
+    fprintf('Fitting GP to observations...\n');
+    gp_hypers = init_hypers;
     gp_hypers = minimize(gp_hypers, @gp_fixedlik, -max_iters, ...
                          inference, meanfunc, covfunc, likfunc, ...
-                         samples.locations, samples.scaled_r);     
-    
-    % Update our posterior uncertainty about the lengthscale hyperparameters.
-    % =========================================================================
+                         samples.locations, samples.scaled_l);
+    if any(isnan(gp_hypers.cov))
+        gp_hypers = init_hypers;
+        warning('Optimizing hypers failed');
+    end
+    l_gp_hypers.log_output_scale = gp_hypers.cov(end);
+    l_gp_hypers.log_input_scales(1:D) = gp_hypers.cov(1:end - 1);
+    fprintf('Output variance: '); disp(exp(l_gp_hypers.log_output_scale));
+    fprintf('Lengthscales: '); disp(exp(l_gp_hypers.log_input_scales));
+
+    fprintf('Fitting GP to log-observations...\n');
+    gp_hypers_log = init_hypers;
+    gp_hypers_log = minimize(gp_hypers_log, @gp_fixedlik, -max_iters, ...
+                             inference, meanfunc, covfunc, likfunc, ...
+                             samples.locations, samples.tl);        
+    if any(isnan(gp_hypers_log.cov))
+        gp_hypers_log = init_hypers;
+        warning('Optimizing hypers on log failed');
+    end
+    tl_gp_hypers.log_output_scale = gp_hypers_log.cov(end);
+    tl_gp_hypers.log_input_scales(1:D) = gp_hypers_log.cov(1:end - 1);
+    fprintf('Output variance of logL: '); disp(exp(tl_gp_hypers.log_output_scale));
+    fprintf('Lengthscales on logL: '); disp(exp(tl_gp_hypers.log_input_scales));
+
+    if opt.plots
+        figure(50); clf;
+        gpml_plot( gp_hypers, samples.locations, samples.scaled_l);
+        title('GP on untransformed values');
+        figure(51); clf;
+        gpml_plot( gp_hypers_log, samples.locations, samples.tl);
+        title('GP on log( exp(scaled) + 1) values');
+    end
+
+    % Optionally set uncertainty in lengthscales using the laplace
+    % method around the maximum likelihood value.
     if strcmp(opt.set_ls_var_method, 'laplace')
-        % Set the variances of the lengthscales using the laplace
-        % method around the maximum likelihood value.
-        laplace_mode = gp_hypers.cov(1:end - 1);
-
         % Specify the likelihood function which we'll be taking the hessian of:
-        % Todo: check that there isn't a scaling factor since Mike uses
-        %       Gaussians, and Carl uses sqexp.
-        %       Also, there is the matter of scaling the values.
-        % Todo: Compute the Hessian using the gradient instead.
-        like_func = @(log_in_scale) gpml_likelihood( log_in_scale, gp_hypers, ...
-            inference, meanfunc, covfunc, likfunc, samples.locations, ...
-            samples.scaled_r);
+        like_func = @(log_in_scale) gpml_lengthscale_likelihood( log_in_scale, ...
+            gp_hypers_log, inference, meanfunc, covfunc, likfunc, ...
+            samples.locations, samples.tl);
 
-        % Find the Hessian.
-        laplace_sds = Inf;
-        try
-            laplace_sds = sqrt(-1./hessdiag( like_func, laplace_mode));
-        catch e; e; end
-
-        % A little sanity checking, since at first the length scale won't be
-        % sensible.
-        bad_sd_ixs = isnan(laplace_sds) | isinf(laplace_sds) | (abs(imag(laplace_sds)) > 0);
-        if any(bad_sd_ixs)
-            warning('Non-negative curvature, setting lengthscale variance to prior variance.');
-            good_sds = sqrt(diag(prior.covariance));
-            laplace_sds(bad_sd_ixs) = good_sds(bad_sd_ixs);
-        end
-        opt.sds_tr_input_scales = laplace_sds;
+        laplace_mode = gp_hypers_log.cov(1:end - 1);
+        failsafe_sds = sqrt(diag(prior.covariance));
+        opt.sds_tl_log_input_scales = ...
+            likelihood_laplace( like_func, laplace_mode, failsafe_sds);
 
         if opt.plots && D == 1
-            plot_hessian_approx( like_func, laplace_sds, laplace_mode );
+            plot_hessian_approx( like_func, opt.sds_tl_log_input_scales, laplace_mode );
         end
-        fprintf('Posterior variance in lengthscales: '); disp(laplace_sds);
     end
-    
-    % Convert gp_hypers to r_gp_params.  GPML and Mike's code have different 
-    % normalization constants.
-    log_conversion_constant = ...
-        -logmvnpdf(zeros(1,D), zeros(1,D), diag(ones(D,1).*exp(gp_hypers.cov(1:end - 1))))/2;
-    converted_output_scale = gp_hypers.cov(end) + log_conversion_constant;
-    opt.sds_tr_input_scales = opt.sds_tr_input_scales * exp(log_conversion_constant);
-    fprintf('Output variance: '); disp(exp(converted_output_scale));
-    fprintf('Lengthscales: '); disp(exp(gp_hypers.cov(1:end - 1)));    
-    r_gp_params.quad_output_scale = exp(converted_output_scale);
-    r_gp_params.quad_input_scales(1:D) = exp(gp_hypers.cov(1:end - 1));
-    [log_ev, log_var_ev, r_gp_params] = log_evidence(samples, prior, r_gp_params, opt);
-    
+
+    [log_mean_evidence, log_var_evidence, ev_params, del_gp_hypers] = ...
+        log_evidence(samples, prior, l_gp_hypers, tl_gp_hypers, [], opt);
+
     % Choose the next sample point.
     % =================================
-    if i < opt.num_samples  % Except for the last iteration,
-        
+    if i < opt.num_samples  % Except for the last iteration.
+
         % Define the criterion to be optimized.
         objective_fn = @(new_sample_location) expected_uncertainty_evidence...
-                (new_sample_location', samples, prior, r_gp_params, opt);
+                (new_sample_location(:)', samples, prior, ...
+                l_gp_hypers, tl_gp_hypers, del_gp_hypers, ev_params, opt);
             
         % Define the box with which to bound the selection of samples.
         lower_bound = prior.mean - 5*sqrt(diag(prior.covariance))';
@@ -158,7 +163,7 @@ for i = opt.num_prior_pts + 1:opt.num_samples
             % If we have a 1-dimensional function, optimize it by exhaustive
             % evaluation.
             [exp_loss_min, next_sample_point] = ...
-                plot_1d_minimize(objective_fn, bounds, samples, log_var_ev);
+                plot_1d_minimize(objective_fn, bounds, samples, log_var_evidence);
         else
             % Search within the prior box.
             [exp_loss_min, next_sample_point] = ...
@@ -167,11 +172,12 @@ for i = opt.num_prior_pts + 1:opt.num_samples
     end
     
     % Print progress.
-    fprintf('Iteration %d evidence: %g +- %g\n', i, exp(log_ev), sqrt(exp(log_var_ev)));
+    fprintf('Iteration %d evidence: %g +- %g\n', i, ...
+            exp(log_mean_evidence), sqrt(exp(log_var_evidence)));
 
     % Convert the distribution over the evidence into a distribution over the
     % log-evidence by moment matching.  This is just a hack for now!!!
-    mean_log_evidences(i) = log_ev;
-    var_log_evidences(i) = log( exp(log_var_ev) / exp(log_ev)^2 + 1 );
+    mean_log_evidences(i) = log_mean_evidence;
+    var_log_evidences(i) = log( exp(log_var_evidence) / exp(log_mean_evidence)^2 + 1 );
 end
 end

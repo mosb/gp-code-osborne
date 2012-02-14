@@ -66,10 +66,10 @@ opt = struct(...
                     'allowed_cond_error',10^-14, ... % allowed conditioning error
                     'sds_tl_log_input_scales', opt.sds_tl_log_input_scales,...
                     'delta_update', false, ...
-                    'gamma', 100);
+                    'gamma', opt.gamma );
 % sds_tl_log_input_scales represents the posterior standard deviations in the
 % input scales for tr. If false, a delta function posterior is assumed.            
-opt = set_defaults( opt, default_opt );
+%opt = set_defaults( opt, default_opt );
 
 
 % Load likelihood samples and their locations
