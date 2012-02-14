@@ -30,7 +30,9 @@ if nargin < 3
 end
 
 % Get the random seed.
-initial_random_state = rng;
+%initial_random_state = rng; todo: change this back.
+    randn('state', 0);
+    rand('twister', 0);
 
 mean_log_evidences = NaN(opt.num_samples, 1);
 var_log_evidences = NaN(opt.num_samples, 1);
@@ -38,7 +40,9 @@ var_log_evidences = NaN(opt.num_samples, 1);
 cur_opt = opt;  % The options that will be used by the sampler.
 
 for num_s = opt.num_samples
-    rng(initial_random_state);    % Set the random seed.
+    %rng(initial_random_state);    % Set the random seed.
+        randn('state', 0);
+    rand('twister', 0);
     
     cur_opt.num_samples = num_s;
     [mean_log_evidences(num_s), var_log_evidences(num_s), samples] = ...

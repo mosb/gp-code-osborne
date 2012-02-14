@@ -35,6 +35,10 @@ end
 [ais_mean_log_evidence, ais_var_log_evidence, sample_locs, sample_vals] = ...
     ais_mh(loglik_fn, prior, opt);
 
+[sample_locs, sample_vals] = ...
+    remove_duplicate_samples(sample_locs, sample_vals);
+opt.num_samples = length(sample_vals);
+
 % Now call BMC using the exp of those samples.
 [mean_evidence, var_evidence] = ...
     bmc_integrate(sample_locs, exp(sample_vals - max(sample_vals)), prior);

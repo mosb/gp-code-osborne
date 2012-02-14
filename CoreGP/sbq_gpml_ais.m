@@ -52,6 +52,9 @@ opt = set_defaults( opt, default_opt );
 [ais_mean_log_evidence, ais_var_log_evidence, sample_locs, sample_vals] = ...
     ais_mh(log_likelihood_fn, prior, opt);
 
+[sample_locs, sample_vals] = ...
+    remove_duplicate_samples(sample_locs, sample_vals);
+opt.num_samples = length(sample_vals);
 
 % Todo: set this later.
 opt.gamma_l = 1e-4;
@@ -62,8 +65,9 @@ samples.locations = sample_locs;
 for i = 1:opt.num_samples
     samples.log_l(i,:) = log_likelihood_fn(samples.locations(i,:));
 end
-samples.scaled_l = exp(samples.log_l - max(samples.log_l));
-samples.tl = log_transform(samples.scaled_l, opt.gamma_l);
+samples.max_log_l = max(samples.log_l); % all log-likelihoods have max_log_l subtracted off
+samples.scaled_l = exp(samples.log_l - samples.max_log_l);
+samples.tl = log_transform(samples.scaled_l, opt.gamma);
 
 
 % Train GPs
@@ -107,9 +111,9 @@ end
 tl_gp_hypers.log_output_scale = gp_hypers_log.cov(end);
 tl_gp_hypers.log_input_scales(1:D) = gp_hypers_log.cov(1:end - 1);
 
-% Delta hypers are simply the same as for the transformed GP, divided by 2.
-del_gp_hypers.log_output_scale = gp_hypers_log.cov(end);
-del_gp_hypers.log_input_scales(1:D) = gp_hypers_log.cov(1:end - 1) - log(2);
+% Delta hypers are simply the same as for the untransformd GP, divided by 2.
+del_gp_hypers.log_output_scale = gp_hypers.cov(end);
+del_gp_hypers.log_input_scales(1:D) = gp_hypers.cov(1:end - 1) - log(2);
 % todo: call get_likelihood_hessian
     
 fprintf('Output variance: '); disp(exp(l_gp_hypers.log_output_scale));

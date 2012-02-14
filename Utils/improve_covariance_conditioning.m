@@ -16,7 +16,7 @@ function [out, sqd_jitters] = improve_covariance_conditioning(in,importance,allo
 % to the calling of these functions
 fixed_inds = any(isnan(in))';
 
-sqd_jitters = ~fixed_inds.*max(in(:)).*1e-8;
+sqd_jitters = ~fixed_inds.*max(in(:)).*1e-4;
 out = in + diag(sqd_jitters);
 return;
 
