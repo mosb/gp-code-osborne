@@ -1,7 +1,7 @@
-function [mean_log_evidences, var_log_evidences, samples, gp_hypers] = ...
+function [mean_log_evidence, var_log_evidence, samples, gp_hypers] = ...
     sbq_gpml_ais(log_likelihood_fn, prior, opt)
 % Take samples samples_mat so as to best estimate the
-% evidence, an integral over exp(log_r_fn) against the prior in prior_struct.
+% evidence, an integral over exp(log_l_fn) against the prior in prior_struct.
 % 
 % This version uses GPML to set hyperparams, and AIS to choose points.
 %
@@ -41,12 +41,10 @@ D = numel(prior.mean);
 
 % Set unspecified fields to default values.
 default_opt = struct('num_samples', 300, ...
-                     'exp_loss_evals', 50 * D, ...
-                     'start_pt', zeros(1, D), ...
                      'plots', false, ...
+                     'gamma', 1, ...
                      'set_ls_var_method', 'laplace');
 opt = set_defaults( opt, default_opt );
-
 
 % Get sample locations from a run of AIS.
 [ais_mean_log_evidence, ais_var_log_evidence, sample_locs, sample_vals] = ...
@@ -55,9 +53,6 @@ opt = set_defaults( opt, default_opt );
 [sample_locs, sample_vals] = ...
     remove_duplicate_samples(sample_locs, sample_vals);
 opt.num_samples = length(sample_vals);
-
-% Todo: set this later.
-opt.gamma_l = 1e-4;
 
 % Update sample struct.
 % ==================================
@@ -81,7 +76,7 @@ covfunc = @covSEiso;
 % Init GP Hypers.
 init_hypers.mean = [];
 init_hypers.lik = log(0.01);  % Values go between 0 and 1, so no need to scale.
-init_lengthscales = mean(sqrt(diag(prior.covariance)))/2;
+init_lengthscales = mean(sqrt(diag(prior.covariance)))/10;
 init_output_variance = .1;
 init_hypers.cov = log( [init_lengthscales init_output_variance] ); 
 
@@ -97,7 +92,8 @@ if any(isnan(gp_hypers.cov))
 end
 l_gp_hypers.log_output_scale = gp_hypers.cov(end);
 l_gp_hypers.log_input_scales(1:D) = gp_hypers.cov(1:end - 1);
-
+fprintf('Output variance: '); disp(exp(l_gp_hypers.log_output_scale));
+fprintf('Lengthscales: '); disp(exp(l_gp_hypers.log_input_scales));
 
 fprintf('Fitting GP to log-observations...\n');
 gp_hypers_log = init_hypers;
@@ -110,29 +106,39 @@ if any(isnan(gp_hypers_log.cov))
 end
 tl_gp_hypers.log_output_scale = gp_hypers_log.cov(end);
 tl_gp_hypers.log_input_scales(1:D) = gp_hypers_log.cov(1:end - 1);
-
-% Delta hypers are simply the same as for the untransformd GP, divided by 2.
-del_gp_hypers.log_output_scale = gp_hypers.cov(end);
-del_gp_hypers.log_input_scales(1:D) = gp_hypers.cov(1:end - 1) - log(2);
-% todo: call get_likelihood_hessian
-    
-fprintf('Output variance: '); disp(exp(l_gp_hypers.log_output_scale));
-fprintf('Lengthscales: '); disp(exp(l_gp_hypers.log_input_scales));
-
-%gpml_plot( gp_hypers, samples.locations, samples.scaled_l);
-%title('GP on untransformed values');
-
 fprintf('Output variance of logL: '); disp(exp(tl_gp_hypers.log_output_scale));
 fprintf('Lengthscales on logL: '); disp(exp(tl_gp_hypers.log_input_scales));
 
-%gpml_plot( gp_hypers_log, samples.locations, samples.tl);
-%title('GP on log( exp(scaled) + 1) values');
+if opt.plots
+    gpml_plot( gp_hypers, samples.locations, samples.scaled_l);
+    title('GP on untransformed values');
+    gpml_plot( gp_hypers_log, samples.locations, samples.tl);
+    title('GP on log( exp(scaled) + 1) values');
+end
 
-[log_mean_evidence, log_var_evidence] = log_evidence(samples, prior, ...
-    l_gp_hypers, tl_gp_hypers, del_gp_hypers, opt);
+% Optionally set uncertainty in lengthscales using the laplace
+% method around the maximum likelihood value.
+if strcmp(opt.set_ls_var_method, 'laplace')
+    % Specify the likelihood function which we'll be taking the hessian of:
+    like_func = @(log_in_scale) gpml_lengthscale_likelihood( log_in_scale, ...
+        gp_hypers_log, inference, meanfunc, covfunc, likfunc, ...
+        samples.locations, samples.tl);
+
+    laplace_mode = gp_hypers.cov(1:end - 1);
+    failsafe_sds = sqrt(diag(prior.covariance));
+    opt.sds_tl_log_input_scales = ...
+        likelihood_laplace( like_func, laplace_mode, failsafe_sds);
+
+    if opt.plots && D == 1
+        plot_hessian_approx( like_func, opt.sds_tl_log_input_scales, laplace_mode );
+    end
+end
+
+[log_mean_evidence, log_var_evidence] = ...
+    log_evidence(samples, prior, l_gp_hypers, tl_gp_hypers, [], opt);
 
 % Convert the distribution over the evidence into a distribution over the
 % log-evidence by moment matching.  This is just a hack for now!!!
-mean_log_evidences(1) = log_mean_evidence;
-var_log_evidences(1) = log( exp(log_var_evidence) / exp(log_mean_evidence)^2 + 1 );
+mean_log_evidence = log_mean_evidence;
+var_log_evidence = log( exp(log_var_evidence) / exp(log_mean_evidence)^2 + 1 );
 end

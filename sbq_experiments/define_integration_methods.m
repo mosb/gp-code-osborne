@@ -58,7 +58,7 @@ bq_gpml_ais_method.opt = [];
 
 % Specify integration methods.
 methods = {};
-methods{end+1} = smc_method;
+%methods{end+1} = smc_method;
 methods{end+1} = ais_method;
 methods{end+1} = bmc_method;
 %methods{end+1} = sbq_method;

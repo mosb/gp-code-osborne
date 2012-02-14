@@ -175,12 +175,3 @@ for i = opt.num_prior_pts + 1:opt.num_samples
     var_log_evidences(i) = log( exp(log_var_ev) / exp(log_ev)^2 + 1 );
 end
 end
-
-
-function l = gpml_likelihood( log_in_scale, gp_hypers, inference, meanfunc, covfunc, likfunc, X, y)
-% This function coJust replaces the lengthscales.
-    gp_hypers.cov(1:end-1) = log_in_scale;
-    l = exp(-gp_fixedlik(gp_hypers, inference, meanfunc, covfunc, likfunc, X, y));
-end
-
-

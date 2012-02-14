@@ -57,20 +57,15 @@ end
 default_opt = struct('num_c', 200,... % number of candidate points
                      'num_box_scales', 5, ... % defines the box over which to take candidates
                      'allowed_cond_error',10^-14, ... % allowed conditioning error
-                     'gamma', 100 ... % log_transform scaling factor.   
+                     'gamma', 100, ... % log_transform scaling factor.
+                     'plots', false ...   % plot transformed surfaces.
                      );
 opt = set_defaults( opt, default_opt );
 
-% Load likelihood samples and their locations
-% ======================================================
+num_samples = size(samples.locations, 1);
 
-% the locations of our samples
-x_s = samples.locations;
-
-% define the number of dimensions in location space (num_dims), the number
-% of samples (num_s), and the number of candidate locations (num_c) to take.
-[num_s, num_dims] = size(x_s);
-opt.num_c = max(opt.num_c, num_s);
+% The number of candidate locations to sample.
+opt.num_c = max(opt.num_c, samples.locations);
 
 % candidate locations will be constrained to a box defined by the prior
 lower_bound = prior.mean - opt.num_box_scales*sqrt(diag(prior.covariance))';
@@ -84,13 +79,13 @@ mahal_scales = exp(l_gp_hypers.log_input_scales);
 
 % find the candidate locations, far removed from existing samples, with the
 % use of a Voronoi diagram
-x_c = find_farthest(x_s, ...
+x_c = find_farthest(samples.locations, ...
                     [lower_bound; upper_bound], opt.num_c, ...
                      mahal_scales);
 
 % the combined sample locations
-x_sc = [x_s; x_c];
-num_sc = size(x_sc, 1);
+x_sc = [samples.locations; x_c];
+[num_sc, D] = size(x_sc);
 
 % rescale all log-likelihood values for numerical accuracy; we'll correct
 % for this at the end of the function
@@ -109,15 +104,17 @@ tl_s = samples.tl;
 % follows we use a gaussian covariance. We correct the output scales
 % appropriately.
 l_gp_hypers = sqdexp2gaussian(l_gp_hypers);
+orig_tl_gp_hypers = tl_gp_hypers;   % Save these in case we need to use them
+                                    % to init the delta hypers.
 tl_gp_hypers = sqdexp2gaussian(tl_gp_hypers);
-del_gp_hypers = sqdexp2gaussian(del_gp_hypers);
+
 
 % squared distances are expensive to compute, so we store them for use in
 % the functions below, rather than having each function compute them
 % afresh.
 sqd_dist_stack_sc = sqd_dist_stack(x_sc,x_sc);
-sqd_dist_stack_s = sqd_dist_stack_sc(1:num_s, 1:num_s, :);
-sqd_dist_stack_s_sc = sqd_dist_stack_sc(1:num_s, :, :);
+sqd_dist_stack_s = sqd_dist_stack_sc(1:num_samples, 1:num_samples, :);
+sqd_dist_stack_s_sc = sqd_dist_stack_sc(1:num_samples, :, :);
 
 % The gram matrix over the likelihood, its cholesky factor, and the
 % product of the precision and the data
@@ -141,17 +138,6 @@ inv_K_tl_tl = solve_chol(R_tl, tl_s);
 % The covariance over the transformed likelihood between x_sc and x_s
 K_tl_sc = gaussian_mat(sqd_dist_stack_s_sc, tl_gp_hypers);
 
-% The gram matrix over delta and its cholesky factor
-K_del = gaussian_mat(sqd_dist_stack_sc, del_gp_hypers);
-% The candidate locations are more important to preserve noise-free than
-% the sample locatios, at which delta is equal to the prior mean anyway
-% (zero)
-importance_sc = ones(num_sc,1);
-importance_sc(num_s + 1 : end) = 2;
-K_del = improve_covariance_conditioning(K_del, importance_sc, ...
-    opt.allowed_cond_error);
-R_del = chol(K_del);     
-
 % Compute the Ups and ups matrices required to evaluate the mean and
 % variance of the evidence
 % ======================================================
@@ -160,7 +146,7 @@ R_del = chol(K_del);
 % the functions below, rather than having each funciton compute them
 % afresh.
 sqd_x_sub_mu_stack_sc = sqd_dist_stack(x_sc, prior.mean);
-sqd_x_sub_mu_stack_s = sqd_x_sub_mu_stack_sc(1:num_s, :, :);
+sqd_x_sub_mu_stack_s = sqd_x_sub_mu_stack_sc(1:num_samples, :, :);
 
 % calculate ups for the likelihood, where ups is defined as
 % ups_s = int K(x, x_s)  priol(x) dx
@@ -170,10 +156,6 @@ ups_l = small_ups_vec(sqd_x_sub_mu_stack_s, l_gp_hypers, prior);
 % ups_s = int K(x, x_s)  priol(x) dx
 ups_tl = small_ups_vec(sqd_x_sub_mu_stack_s, tl_gp_hypers, prior);
   
-% calculate ups for delta, where ups is defined as
-% ups_s = int K(x, x_s)  priol(x) dx
-ups_del = small_ups_vec(sqd_x_sub_mu_stack_sc, del_gp_hypers, prior);
-
 % calculate ups2 for the likelihood, where ups2 is defined as
 % ups2_s = int int K(x, x') K(x', x_s) priol(x) prior(x') dx dx'
 ups2_l = small_ups2_vec(sqd_x_sub_mu_stack_s, tl_gp_hypers, ...
@@ -189,16 +171,8 @@ chi_tl = small_chi_const(tl_gp_hypers, prior);
 Chi_l_tl_l = big_chi_mat(sqd_x_sub_mu_stack_s, sqd_dist_stack_s, ...
     l_gp_hypers, tl_gp_hypers, prior);
 
-% calculate Ups for delta & the likelihood, where Ups is defined as
-% Ups_s_s' = int K(x_s, x) K(x, x_s') priol(x) dx
-Ups_del_l = big_ups_mat...
-    (sqd_x_sub_mu_stack_sc, sqd_x_sub_mu_stack_s, ...
-    tr(sqd_dist_stack_s_sc), ...
-    del_gp_hypers, l_gp_hypers, prior);
-
-% calculate Ups for the likelihood and the likelihood, where Ups is defined
-% as 
-% Ups_s_s' = int K(x_s, x) K(x, x_s') priol(x) dx
+% calculate Ups for the likelihood and the likelihood, where Ups is defined as 
+% Ups_s_s' = int K(x_s, x) K(x, x_s') prior(x) dx
 Ups_tl_l = big_ups_mat...
     (sqd_x_sub_mu_stack_s, sqd_x_sub_mu_stack_s, ...
     sqd_dist_stack_s, ...
@@ -221,6 +195,56 @@ mean_tl_sc = K_tl_sc' * inv_K_tl_tl;
 % the transform of the mean likelihood
 delta_tl_sc = mean_tl_sc - log_transform(mean_l_sc, opt.gamma);
 
+
+if isempty(del_gp_hypers);
+    fprintf('Fitting GP to delta-observations...\n');
+
+    % Set up GP.
+    gp_hypers_del.mean = [];
+    gp_hypers_del.lik = log(0.01);  % Values go between 0 and 1, so no need to scale.
+    init_lengthscales = orig_tl_gp_hypers.log_input_scales - log(10);
+    init_output_variance = orig_tl_gp_hypers.log_output_scale;
+    gp_hypers_del.cov = [init_lengthscales(1) init_output_variance]; 
+    inference = @infExact;
+    likfunc = @likGauss;
+    meanfunc = {'meanZero'};
+    max_iters = 100;
+    covfunc = @covSEiso;
+
+    gp_hypers_del = minimize(gp_hypers_del, @gp_fixedlik, -max_iters, ...
+                             inference, meanfunc, covfunc, likfunc, ...
+                             x_sc, delta_tl_sc);        
+
+    del_gp_hypers.log_output_scale = gp_hypers_del.cov(end);
+    del_gp_hypers.log_input_scales(1:D) = gp_hypers_del.cov(1:end - 1);
+    del_gp_hypers = sqdexp2gaussian(del_gp_hypers);
+
+    del_gp_hypers
+else
+    del_gp_hypers = sqdexp2gaussian(del_gp_hypers);
+end
+
+
+% Some debugging plots.
+if opt.plots && D == 1
+    figure(999); clf;
+    plot( x_sc, mean_l_sc, 'g.' ); hold on;
+    plot( samples.locations, samples.scaled_l, 'kx' ); hold on;
+    title('Untransformed space');
+
+    figure(998); clf;
+    h_tl = plot( x_sc, mean_tl_sc, 'g.' ); hold on;
+    h_l = plot( x_sc, log_transform(mean_l_sc, opt.gamma), 'b.' ); hold on;
+    h_del = plot( x_sc, delta_tl_sc, 'r.' ); hold on;
+    h_samps = plot( samples.locations, samples.tl, 'mx' ); hold on;
+    draw_lengthscale( exp(l_gp_hypers.log_input_scales), 'l lengthscale', 1 );
+    draw_lengthscale( exp(tl_gp_hypers.log_input_scales), 'tl lengthscale', 2 );
+    draw_lengthscale( exp(del_gp_hypers.log_input_scales), 'del lengthscale', 3 );
+    title('Transformed space');
+    legend([ h_l, h_tl, h_del, h_samps], {'L GP', 'TL GP', 'Del vals', 'data'});
+end
+
+
 % Compute the means of various integrals we will need to determine the mean
 % evidence
 % ======================================================
@@ -229,10 +253,32 @@ delta_tl_sc = mean_tl_sc - log_transform(mean_l_sc, opt.gamma);
 ups_inv_K_l = solve_chol(R_l, ups_l)';
 minty_l = ups_inv_K_l * l_s;
 
+% calculate Ups for delta & the likelihood, where Ups is defined as
+% Ups_s_s' = int K(x_s, x) K(x, x_s') prior(x) dx
+Ups_del_l = big_ups_mat...
+    (sqd_x_sub_mu_stack_sc, sqd_x_sub_mu_stack_s, ...
+    tr(sqd_dist_stack_s_sc), ...
+    del_gp_hypers, l_gp_hypers, prior);
+
+% The gram matrix over delta and its cholesky factor
+K_del = gaussian_mat(sqd_dist_stack_sc, del_gp_hypers);
+% The candidate locations are more important to preserve noise-free than
+% the sample locatios, at which delta is equal to the prior mean anyway
+% (zero)
+importance_sc = ones(num_sc,1);
+importance_sc(num_samples + 1 : end) = 2;
+K_del = improve_covariance_conditioning(K_del, importance_sc, ...
+    opt.allowed_cond_error);
+R_del = chol(K_del);     
+
 % compute mean of int delta(x) l(x) p(x) dx given l_s and delta_tl_sc
 del_inv_K_del = solve_chol(R_del, delta_tl_sc)';
 Ups_inv_K_del_l = solve_chol(R_l, Ups_del_l')';
 minty_del_l = del_inv_K_del * Ups_inv_K_del_l * l_s;
+
+% calculate ups for delta, where ups is defined as
+% ups_s = int K(x, x_s)  priol(x) dx
+ups_del = small_ups_vec(sqd_x_sub_mu_stack_sc, del_gp_hypers, prior);
 
 % compute mean of int delta(x) p(x) dx given l_s and delta_tl_sc 
 ups_inv_K_del = solve_chol(R_del, ups_del)';

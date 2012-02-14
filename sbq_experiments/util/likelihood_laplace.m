@@ -1,4 +1,4 @@
-function sd_lengthscales = likelihood_laplace( like_func, laplace_mode, failsafe_sds )
+function laplace_sds = likelihood_laplace( like_func, laplace_mode, failsafe_sds )
 % Estimate posterior uncertainty about the lengthscale hyperparameters,
 % using the Laplace approximation on a likelihood function.
 %
@@ -21,8 +21,4 @@ function sd_lengthscales = likelihood_laplace( like_func, laplace_mode, failsafe
                 'Setting lengthscale variance to prior variance']);
         laplace_sds(bad_sd_ixs) = failsafe_sds(bad_sd_ixs);
     end
-
-
-end
-
 end

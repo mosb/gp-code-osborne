@@ -15,4 +15,5 @@ function plot_hessian_approx( like_func, laplace_sds, x0 )
     laplace_h=plot(hrange, rescale.*mvnpdf(hrange', x0, laplace_sds^2), 'r');
     xlabel('log input scale');
     ylabel('likelihood');
+    title('Lengthscale laplace approximation');
 end
