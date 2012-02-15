@@ -152,6 +152,9 @@ color(6, 1:3) = [0.9 0.1 0.9];  % purple
 opacity = 0.1;
 edgecolor = 'none';
 
+draw_plots = false;
+if draw_plots
+
 % Print legend.
 % =====================
 %method_names = cellfun( @(name) strrep( name, '_', ' '), method_names, ...
@@ -181,7 +184,7 @@ plotted_sample_set = min_samples:num_sample_sizes;
 %figure_string = '\n\\begin{figure}\n\\centering\\setlength\\fheight{14cm}\\setlength\\fwidth{12cm}\\input{%s}\n\\end{figure}\n';
 figure_string = '\\psfragfig{%s}\n';
 
-if 0
+
 for p_ix = 1:num_problems
     cur_problem_name = problem_names{p_ix};
     figure; clf;
@@ -339,20 +342,19 @@ for p_ix = 1:num_problems
         bounds = ylim;
         xrange = linspace( bounds(1), bounds(2), 1000)';
         n = length(xrange);        
-        
+        true_plot_depth = sample_sizes(end);
+                
         % Plot the prior.
-        h_prior = plot3(repmat(end_ix + 1,n,1), xrange,...
+        h_prior = plot3(repmat(true_plot_depth + 1,n,1), xrange,...
             mvnpdf(xrange, cur_problem.prior.mean(1), cur_problem.prior.covariance(1)), 'k', 'LineWidth', 2); hold on;
 
-        % Plot the true function.
+        % Plot the likelihood function.
         like_func_vals = ...
             exp(cur_problem.log_likelihood_fn(...
             [xrange zeros(n, cur_problem.dimension - 1)]));
-        % Rescale to match prior.
+        % Rescale it to match the vertical scale of the prior.
         like_func_vals = like_func_vals ./ max(like_func_vals) ...
-            .* mvnpdf(0, 0, cur_problem.prior.covariance(1));
-        
-        true_plot_depth = end_ix;
+            .* mvnpdf(0, 0, cur_problem.prior.covariance(1));        
         h_ll = plot3(repmat(true_plot_depth,n,1), xrange, like_func_vals, 'g', 'LineWidth', 2);
         
         xlabel('Number of samples');

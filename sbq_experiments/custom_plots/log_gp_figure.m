@@ -64,7 +64,7 @@ log_posterior = @(x)(bsxfun(quad_log_kernel, function_sample_points, x) * weight
 log_posterior_variance = @(x)(bsxfun(quad_log_kernel, x, x) - diag((bsxfun(quad_log_kernel, x, function_sample_points) * C) * bsxfun(quad_log_kernel, function_sample_points, x)'));
 
 %exp_log_posterior = @(x)(exp(log_posterior(x))); % Construct posterior function.
-exp_log_posterior = @(x)(exp(log_posterior(x) + 0.5.*log_posterior_variance(x).^2)); % Construct posterior function, taking into account variance.
+exp_log_posterior = @(x)(exp(log_posterior(x) + 0.5.*log_posterior_variance(x))); % Construct posterior function, taking into account variance.
 
 % Plot exp(likelihood-GP posterior).
 exp_gpl_handle = plot( xrange, exp(log_posterior(xrange)), 'b-.'); hold on;

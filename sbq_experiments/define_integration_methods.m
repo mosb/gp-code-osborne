@@ -37,6 +37,12 @@ bmc_method.acronym = 'BMC AIS';
 bmc_method.function = @online_bmc; %@bmc;
 bmc_method.opt = [];
 
+log_bmc_ais_method.nicename = 'Log Bayesian Monte Carlo';
+log_bmc_ais_method.uniquename = 'log bmc ais v1';
+log_bmc_ais_method.acronym = 'LBMC';
+log_bmc_ais_method.function = @online_log_bmc;
+log_bmc_ais_method.opt = [];
+
 sbq_method.nicename = 'Sequential Bayesian Quadrature';
 sbq_method.uniquename = 'sequential bayesian quadrature v1';
 sbq_method.acronym = 'SBQ';
@@ -56,11 +62,15 @@ bq_gpml_ais_method.function = @online_bq_ais;
 bq_gpml_ais_method.opt = [];
 
 
+
+
 % Specify integration methods.
 methods = {};
 methods{end+1} = smc_method;
 methods{end+1} = ais_method;
 methods{end+1} = bmc_method;
+methods{end+1} = log_bmc_ais_method;
 methods{end+1} = sbq_method;
 methods{end+1} = sbq_gpml_method;
 methods{end+1} = bq_gpml_ais_method;
+
