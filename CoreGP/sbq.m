@@ -215,6 +215,8 @@ for i = 1:opt.num_samples
             if opt.plots && D == 1
                 plot_hessian_approx( like_func, laplace_sds, laplace_mode );
             end
+        else 
+            opt.sds_tl_log_input_scales = false;
         end
     end
     

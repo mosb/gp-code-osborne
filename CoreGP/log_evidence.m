@@ -16,7 +16,7 @@ function [log_mean_evidence, log_var_evidence, ev_params, del_gp_hypers] = ...
 %   'sqd_dist_stack_s
 %   'R_tl_s
 %   'K_tl_s
-%   'invK_tl_s
+%   'inv_K_tl_s
 %   'jitters_l
 %   'sqd_dist_stack_s
 %   'R_del
@@ -57,9 +57,10 @@ end
 default_opt = struct('num_c', 200,... % number of candidate points
                      'num_box_scales', 5, ... % defines the box over which to take candidates
                      'allowed_cond_error',10^-14, ... % allowed conditioning error
+                     'sds_tl_log_input_scales', false, ... % sds_tl_log_input_scales represents the posterior standard deviations in the input scales for tr. If false, a delta function posterior is assumed. 
                      'gamma', 100, ... % log_transform scaling factor.
                      'plots', false ...   % plot transformed surfaces.
-                     );
+                        );
 opt = set_defaults( opt, default_opt );
 
 num_samples = size(samples.locations, 1);
@@ -138,46 +139,6 @@ inv_K_tl_tl = solve_chol(R_tl, tl_s);
 % The covariance over the transformed likelihood between x_sc and x_s
 K_tl_sc = gaussian_mat(sqd_dist_stack_s_sc, tl_gp_hypers);
 
-% Compute the Ups and ups matrices required to evaluate the mean and
-% variance of the evidence
-% ======================================================
-
-% squared distances are expensive to compute, so we store them for use in
-% the functions below, rather than having each funciton compute them
-% afresh.
-sqd_x_sub_mu_stack_sc = sqd_dist_stack(x_sc, prior.mean);
-sqd_x_sub_mu_stack_s = sqd_x_sub_mu_stack_sc(1:num_samples, :, :);
-
-% calculate ups for the likelihood, where ups is defined as
-% ups_s = int K(x, x_s)  priol(x) dx
-ups_l = small_ups_vec(sqd_x_sub_mu_stack_s, l_gp_hypers, prior);
-
-% calculate ups for the likelihood, where ups is defined as
-% ups_s = int K(x, x_s)  priol(x) dx
-ups_tl = small_ups_vec(sqd_x_sub_mu_stack_s, tl_gp_hypers, prior);
-  
-% calculate ups2 for the likelihood, where ups2 is defined as
-% ups2_s = int int K(x, x') K(x', x_s) priol(x) prior(x') dx dx'
-ups2_l = small_ups2_vec(sqd_x_sub_mu_stack_s, tl_gp_hypers, ...
-    l_gp_hypers, prior);  
-
-% calculate chi for the likelihood, where chi is defined as
-% chi = int int K(x, x') priol(x) prior(x') dx dx'
-chi_tl = small_chi_const(tl_gp_hypers, prior);
-      
-% calculate Chi for the likelihood, where Chi is defined as
-% Chi_l = int int K(x_s, x) K(x, x') K(x', x_s) priol(x)
-% prior(x') dx dx'
-Chi_l_tl_l = big_chi_mat(sqd_x_sub_mu_stack_s, sqd_dist_stack_s, ...
-    l_gp_hypers, tl_gp_hypers, prior);
-
-% calculate Ups for the likelihood and the likelihood, where Ups is defined as 
-% Ups_s_s' = int K(x_s, x) K(x, x_s') prior(x) dx
-Ups_tl_l = big_ups_mat...
-    (sqd_x_sub_mu_stack_s, sqd_x_sub_mu_stack_s, ...
-    sqd_dist_stack_s, ...
-    tl_gp_hypers, l_gp_hypers, prior);
-
 % Compute delta, the difference between the mean of the transformed (log)
 % likelihood and the transform of the mean likelihood
 % ======================================================
@@ -244,10 +205,25 @@ if opt.plots && D == 1
     legend([ h_l, h_tl, h_del, h_samps], {'L GP', 'TL GP', 'Del vals', 'data'});
 end
 
-
-% Compute the means of various integrals we will need to determine the mean
-% evidence
+% Compute various quantities required to evaluate the mean evidence
 % ======================================================
+
+% squared distances are expensive to compute, so we store them for use in
+% the functions below, rather than having each funciton compute them
+% afresh.
+[sqd_x_sub_mu_stack_sc, x_sub_mu_stack_sc] = ...
+    sqd_dist_stack(x_sc, prior.mean);
+sqd_x_sub_mu_stack_s = sqd_x_sub_mu_stack_sc(1:num_samples, :, :);
+x_sub_mu_stack_s = x_sub_mu_stack_sc(1:num_samples, :, :);
+
+% calculate ups for the likelihood, where ups is defined as
+% ups_s = int K(x, x_s)  priol(x) dx
+ups_l = small_ups_vec(sqd_x_sub_mu_stack_s, l_gp_hypers, prior);
+
+% calculate ups for the likelihood, where ups is defined as
+% ups_s = int K(x, x_s)  priol(x) dx
+ups_tl = small_ups_vec(sqd_x_sub_mu_stack_s, tl_gp_hypers, prior);
+
 
 % compute mean of int l(x) p(x) dx given l_s
 ups_inv_K_l = solve_chol(R_l, ups_l)';
@@ -299,6 +275,28 @@ log_mean_evidence = samples.max_log_l + log(mean_ev);
 % evidence
 % ======================================================
 
+% calculate ups2 for the likelihood, where ups2 is defined as
+% ups2_s = int int K(x, x') K(x', x_s) priol(x) prior(x') dx dx'
+ups2_l = small_ups2_vec(sqd_x_sub_mu_stack_s, tl_gp_hypers, ...
+    l_gp_hypers, prior);  
+
+% calculate chi for the likelihood, where chi is defined as
+% chi = int int K(x, x') priol(x) prior(x') dx dx'
+chi_tl = small_chi_const(tl_gp_hypers, prior);
+      
+% calculate Chi for the likelihood, where Chi is defined as
+% Chi_l = int int K(x_s, x) K(x, x') K(x', x_s) priol(x)
+% prior(x') dx dx'
+Chi_l_tl_l = big_chi_mat(sqd_x_sub_mu_stack_s, sqd_dist_stack_s, ...
+    l_gp_hypers, tl_gp_hypers, prior);
+
+% calculate Ups for the likelihood and the likelihood, where Ups is defined as 
+% Ups_s_s' = int K(x_s, x) K(x, x_s') prior(x) dx
+Ups_tl_l = big_ups_mat...
+    (sqd_x_sub_mu_stack_s, sqd_x_sub_mu_stack_s, ...
+    sqd_dist_stack_s, ...
+    tl_gp_hypers, l_gp_hypers, prior);
+
 % compute the variance of int log_transform(l)(x) p(x) dx given l_s
 ups_inv_K_tl = solve_chol(R_tl, ups_tl)';
 Vinty_tl = chi_tl - ups_inv_K_tl * ups_tl;
@@ -317,6 +315,64 @@ mCminty_l_tl_l = inv_K_l_l' * Chi_l_tl_l * inv_K_l_l ...
 var_ev = opt.gamma^2 * Vinty_tl ...
     + 2 * opt.gamma * Cminty_tl_l ...
     + mCminty_l_tl_l;
+
+
+if opt.sds_tl_log_input_scales
+    % we account for our uncertainty in the log input scales
+    
+    % the variances of our posteriors over our input scales. We assume the
+    % covariance matrix has zero off-diagonal elements; the posterior is
+    % spherical. 
+    V_theta = opt.sds_tl_log_input_scales.^2;
+    if size(V_theta,1) == 1
+        V_theta = V_theta';
+    end   
+    
+    % compute mean of int tl(x) l(x) p(x) dx given l_s and tl_s 
+    minty_tl_l = inv_K_tl_tl' * Ups_inv_K_tl_l;
+    
+    % compute mean of int tl(x) p(x) dx given l_s and tl_s 
+    minty_tl = ups_tl' * inv_K_tl_tl;
+    
+    % hyperparameters for gp over the transformed likelihood, tl, assumed
+    % to have zero mean
+    tl_input_scales = exp(tl_gp_hypers.log_input_scales);
+    inv_sqd_tl_input_scales_stack = ...
+        reshape(tl_input_scales.^-2, 1, 1, D);
+    
+    % Dtheta_K_tl_a_s is the gradient of the Gaussian covariance over the
+    % transformed likelihood between x_a and x_s: each plate in the stack
+    % is the derivative with respect to a different log input scale
+    Dtheta_K_tl_const = -1 + bsxfun(@times, ...
+        sqd_dist_stack_s, ...
+        inv_sqd_tl_input_scales_stack);
+    Dtheta_K_tl = bsxfun(@times, K_tl, Dtheta_K_tl_const);
+    
+    % Dtheta_Ups_tl_l is the modification of Ups_tl_l to allow for
+    % derivatives wrt log input scales: each plate in the stack is the
+    % derivative with respect to a different log input scale.
+    [Dtheta_Ups_tl_l_const, Dtheta_ups_tl_const] = DTheta_consts...
+        (inv_sqd_tl_input_scales_stack, x_sub_mu_stack_s, ...
+        prior, tl_gp_hypers, l_gp_hypers);
+    Dtheta_Ups_tl_l = bsxfun(@times, Ups_tl_l, Dtheta_Ups_tl_l_const);
+    
+    % Dtheta_ups_tl is the modification of ups_tl to allow for
+    % derivatives wrt log input scales: each plate in the stack is the
+    % derivative with respect to a different log input scale.
+    Dtheta_ups_tl = bsxfun(@times, ups_tl, Dtheta_ups_tl_const);
+        
+    int_ml_Dtheta_mtl = bsxfun(@plus, ...
+            - minty_tl_l - opt.gamma * minty_tl, ...
+            - prod3(Ups_inv_K_tl_l' + opt.gamma * ups_tl', ...
+                    prod3(solve_chol3(R_tl, Dtheta_K_tl), inv_K_tl_tl)) ...
+            + prod3(inv_K_l_l', ...
+                    prod3(tr(Dtheta_Ups_tl_l), inv_K_tl_tl)) ...
+            + opt.gamma * prod3(tr(Dtheta_ups_tl), inv_K_tl_tl) ...
+                                );
+        
+    % Now perform the correction to our variance
+    var_ev = var_ev + sum(reshape(int_ml_Dtheta_mtl.^2, D, 1 , 1) .* V_theta);
+end
 
 % sanity check
 if var_ev < 0
@@ -353,7 +409,7 @@ ev_params = struct(...
   'K_l_s', K_l, ...
   'R_tl_s' , R_tl, ...
   'K_tl_s' , K_tl, ...
-  'invK_tl_s' , inv_K_tl_tl, ...
+  'inv_K_tl_s' , inv_K_tl_tl, ...
   'jitters_tl_s' , jitters_tl, ...
   'R_del_sc' , R_del, ...
   'K_del_sc' , K_del, ...
@@ -365,3 +421,6 @@ ev_params = struct(...
   'minty_del' , minty_del, ...
   'log_mean_second_moment', log_mean_second_moment ...
    );
+if opt.sds_tl_log_input_scales
+    ev_params.Dtheta_K_tl_s = Dtheta_K_tl;
+end

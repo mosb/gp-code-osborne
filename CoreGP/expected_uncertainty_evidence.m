@@ -41,7 +41,7 @@ function [xpc_unc, tm_a, tv_a] = expected_uncertainty_evidence...
 %   * K_l_s
 %   * R_tl_s
 %   * K_tl_s
-%   * invK_tl_s
+%   * inv_K_tl_s
 %   * jitters_tl_s
 %   * R_del_sc
 %   * K_del_sc
@@ -52,6 +52,7 @@ function [xpc_unc, tm_a, tv_a] = expected_uncertainty_evidence...
 %   * delta_tl_sc
 %   * minty_del
 %   * log_mean_second_moment
+%   * Dtheta_K_tl_s (if ~opt.sds_tl_log_input_scales)
 
 
                 
@@ -64,11 +65,10 @@ end
 
 opt = struct(...
                     'allowed_cond_error',10^-14, ... % allowed conditioning error
-                    'sds_tl_log_input_scales', opt.sds_tl_log_input_scales,...
-                    'delta_update', false, ...
-                    'gamma', opt.gamma );
-% sds_tl_log_input_scales represents the posterior standard deviations in the
-% input scales for tr. If false, a delta function posterior is assumed.            
+                    'sds_tl_log_input_scales', opt.sds_tl_log_input_scales,... % sds_tl_log_input_scales represents the posterior standard deviations in the input scales for tr. If false, a delta function posterior is assumed.
+                    'delta_update', false, ... % update for the influence of the new observation at x_a on delta.
+                    'gamma', opt.gamma ... % log_transform scaling factor.
+                    );           
 %opt = set_defaults( opt, default_opt );
 
 
@@ -104,7 +104,7 @@ del_gp_hypers = sqdexp2gaussian(del_gp_hypers);
 % load existing covariance matrix and its cholesky factor
 R_tl_s = ev_params.R_tl_s;
 K_tl_s = ev_params.K_tl_s;
-invK_tl_s = ev_params.invK_tl_s;
+inv_K_tl_s = ev_params.inv_K_tl_s;
 
 % compute covariance between existing samples and the new location
 sqd_dist_stack_s_a = sqd_dist_stack(x_s, x_a);  
@@ -118,7 +118,7 @@ if any(ev_params.jitters_tl_s./diag(K_tl_s) > 1e-4)
 end
 
 % compute predictive mean for transformed likelihood, given zero prior mean
-tm_a = K_tl_s_a' * invK_tl_s;
+tm_a = K_tl_s_a' * inv_K_tl_s;
 
 % options for linsolve
 lowr.UT = true;
@@ -126,15 +126,15 @@ lowr.TRANSA = true;
 
 % compute predictive variance for transformed likelihood, given zero prior
 % mean
-invR_K_tl_s_a = linsolve(R_tl_s, K_tl_s_a, lowr);    
-tv_a = gaussian_mat(0, tl_gp_hypers) - sum(invR_K_tl_s_a.^2);
+inv_R_K_tl_s_a = linsolve(R_tl_s, K_tl_s_a, lowr);    
+tv_a = gaussian_mat(0, tl_gp_hypers) - sum(inv_R_K_tl_s_a.^2);
 if tv_a < 0
     tv_a = eps;
 end
 
 if opt.sds_tl_log_input_scales
     % we correct for the impact of learning this new hyperparameter sample,
-    % r_a, on our belief about the input scales
+    % r_a, on our belief about the log input scales
     
     % the variances of our posteriors over our input scales. We assume the
     % covariance matrix has zero off-diagonal elements; the posterior is
@@ -160,15 +160,12 @@ if opt.sds_tl_log_input_scales
     % Dtheta_K_tl_a_s is the gradient of the Gaussian covariance over the
     % transformed likelihood between x_a and x_s: each plate in the stack
     % is the derivative with respect to a different log input scale
-    Dtheta_K_tl_s = bsxfun(@times, K_tl_s, ...
-        -1 + bsxfun(@rdivide, ...
-        ev_params.sqd_dist_stack_s, ...
-        sqd_tl_input_scales_stack));
     
     uppr.UT = true;
-    K_invK_tl_a_s = linsolve(R_tl_s, invR_K_tl_s_a, uppr)'; 
-    Dtheta_tm_a = prod3(Dtheta_K_tl_a_s, invK_tl_s) ...
-            - prod3(K_invK_tl_a_s, prod3(Dtheta_K_tl_s, invK_tl_s));
+    K_inv_K_tl_a_s = linsolve(R_tl_s, inv_R_K_tl_s_a, uppr)'; 
+    Dtheta_tm_a = prod3(Dtheta_K_tl_a_s, inv_K_tl_s) ...
+            - prod3(K_inv_K_tl_a_s, ...
+                prod3(ev_params.Dtheta_K_tl_s, inv_K_tl_s));
         
     % Now perform the correction to our predictive variance
     tv_a = tv_a + sum(reshape(Dtheta_tm_a.^2, num_dims, 1 , 1) .* V_theta);
