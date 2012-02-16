@@ -1,6 +1,7 @@
 % Fix random seed.
 randn('state', 0);
 rand('twister', 0);  
+close all
     
 % Set up a simple toy function to test SQB.
 r_mean1 = 2000;

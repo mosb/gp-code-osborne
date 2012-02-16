@@ -5,7 +5,7 @@ function h = gpml_plot( hypers, X, y )
 
 [N,D] = size(X);
 
-h = plot( X, y, '.'); hold on;
+h = plot( X, y, '.');
 x_limits = xlim;
 
 xrange = linspace( x_limits(1), x_limits(2), 300 )';
@@ -18,10 +18,12 @@ covfunc = @covSEiso;
 
 [f, variance] = gp( hypers, inference, meanfunc, covfunc, likfunc, X, y, xrange );
 
+hold on;
 edges = [f+2*sqrt(variance); flipdim(f-2*sqrt(variance),1)]; 
-hc1 = fill([xrange; flipdim(xrange,1)], edges, [6 6 8]/8, 'EdgeColor', 'none');
-h1 = plot( xrange, f, 'b-', 'Linewidth', 2); hold on;
-h2 = plot( X(1:N), y(1:N), 'kd', 'Linewidth', 2); hold on;
+hc1 = fill([xrange; flipdim(xrange,1)], edges, [0.87 0.89 1], ...
+    'EdgeColor', 'none'); 
+h1 = plot( xrange, f, 'b-');
+h2 = plot( X(1:N), y(1:N), 'k.', 'MarkerSize', 10);
 
 lengthscale = exp(hypers.cov(1));
 
@@ -46,5 +48,12 @@ xlabel( '$x$' );
 ylabel( '$f(x)$\qquad' );
 set(get(gca,'XLabel'),'Rotation',0,'Interpreter','latex', 'Fontsize', 16);
 set(get(gca,'YLabel'),'Rotation',0,'Interpreter','latex', 'Fontsize', 16);
+    set(gca, 'TickDir', 'out')
+    set(gca, 'Box', 'off', 'FontSize', 10); 
+    set(gcf, 'color', 'white'); 
+    set(gca, 'YGrid', 'off');
+     legend boxoff
+
+
 end
 

@@ -107,7 +107,7 @@ tl_s = samples.tl;
 l_gp_hypers = sqdexp2gaussian(l_gp_hypers);
 orig_tl_gp_hypers = tl_gp_hypers;   % Save these in case we need to use them
                                     % to init the delta hypers.
-tl_gp_hypers = sqdexp2gaussian(tl_gp_hypers);
+tl_gp_hypers = sqdexp2gaussian(orig_tl_gp_hypers);
 
 
 % squared distances are expensive to compute, so we store them for use in
@@ -188,21 +188,8 @@ end
 
 % Some debugging plots.
 if opt.plots && D == 1
-    figure(999); clf;
-    plot( x_sc, mean_l_sc, 'g.' ); hold on;
-    plot( samples.locations, samples.scaled_l, 'kx' ); hold on;
-    title('Untransformed space');
-
-    figure(998); clf;
-    h_tl = plot( x_sc, mean_tl_sc, 'g.' ); hold on;
-    h_l = plot( x_sc, log_transform(mean_l_sc, opt.gamma), 'b.' ); hold on;
-    h_del = plot( x_sc, delta_tl_sc, 'r.' ); hold on;
-    h_samps = plot( samples.locations, samples.tl, 'mx' ); hold on;
-    draw_lengthscale( exp(l_gp_hypers.log_input_scales), 'l lengthscale', 1 );
-    draw_lengthscale( exp(tl_gp_hypers.log_input_scales), 'tl lengthscale', 2 );
-    draw_lengthscale( exp(del_gp_hypers.log_input_scales), 'del lengthscale', 3 );
-    title('Transformed space');
-    legend([ h_l, h_tl, h_del, h_samps], {'L GP', 'TL GP', 'Del vals', 'data'});
+    log_ev_plots(x_sc, mean_l_sc, mean_tl_sc, delta_tl_sc, ...
+        l_gp_hypers, tl_gp_hypers, del_gp_hypers, samples, opt); 
 end
 
 % Compute various quantities required to evaluate the mean evidence
