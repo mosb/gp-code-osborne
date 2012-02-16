@@ -1,6 +1,6 @@
 function [xpc_unc, tm_a, tv_a] = expected_uncertainty_evidence...
       (new_sample_location, samples, prior, ...
-      l_gp_hypers, tl_gp_hypers, del_gp_hypers, ...
+      l_gp_hypers_SE, tl_gp_hypers_SE, del_gp_hypers_SE, ...
       ev_params, opt)
 %   [xpc_unc, tm_a, tv_a] = expected_uncertainty_evidence...
 %       (new_sample_location, samples, prior, ...
@@ -25,13 +25,13 @@ function [xpc_unc, tm_a, tv_a] = expected_uncertainty_evidence...
 % - prior requires fields
 %   * mean
 %   * covariance
-% - l_gp_hypers has fields
+% - l_gp_hypers_SE: hypers for sqd exp covariance over l, with fields
 %   * log_output_scale
 %   * log_input_scales
-% - tl_gp_hypers: has fields
+% - tl_gp_hypers_SE: hypers for sqd exp covariance over tl, with fields
 %   * log_output_scale
 %   * log_input_scales
-% - del_gp_hypers: has fields
+% - del_gp_hypers_SE: hypers for sqd exp covariance over del, with fields
 %   * log_output_scale
 %   * log_input_scales
 % - ev_params: (see log_evidence.m) has fields
@@ -97,9 +97,9 @@ range_sa = [1:num_s,num_sca];
 % input hyperparameters are for a sqd exp covariance, whereas in all that
 % follows we use a gaussian covariance. We correct the output scales
 % appropriately.
-l_gp_hypers = sqdexp2gaussian(l_gp_hypers);
-tl_gp_hypers = sqdexp2gaussian(tl_gp_hypers);
-del_gp_hypers = sqdexp2gaussian(del_gp_hypers);
+l_gp_hypers = sqdexp2gaussian(l_gp_hypers_SE);
+tl_gp_hypers = sqdexp2gaussian(tl_gp_hypers_SE);
+del_gp_hypers = sqdexp2gaussian(del_gp_hypers_SE);
 
 % load existing covariance matrix and its cholesky factor
 R_tl_s = ev_params.R_tl_s;
@@ -297,6 +297,9 @@ xpc_sqd_mean = exp(2*samples.max_log_l) * (n_l_s^2 ...
     + 2 * n_l_s * n_l_a * (opt.gamma * exp(tm_a + 0.5*tv_a) - opt.gamma) ...
     + n_l_a^2 * opt.gamma^2 * ...
         (exp(2*tm_a + 2*tv_a) - 2 * exp(tm_a + 0.5*tv_a) + 1));
+    
+% compare against 
+%v exp(2*samples.max_log_l) * mean([l_s;opt.gamma*exp(tm_a)- opt.gamma].^2)
 
 xpc_unc =  exp(ev_params.log_mean_second_moment) - xpc_sqd_mean;
     

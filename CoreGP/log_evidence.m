@@ -1,6 +1,6 @@
-function [log_mean_evidence, log_var_evidence, ev_params, del_gp_hypers] = ...
+function [log_mean_evidence, log_var_evidence, ev_params, del_gp_hypers_SE] = ...
     log_evidence(samples, prior, ...
-    l_gp_hypers, tl_gp_hypers, del_gp_hypers, opt)
+    l_gp_hypers_SE, tl_gp_hypers_SE, del_gp_hypers_SE, opt)
 % [log_mean_evidence, log_var_evidence, ev_params] = ...
 %     log_evidence(samples, prior, ...
 %     l_gp_hypers, tl_gp_hypers, del_gp_hypers, opt)
@@ -36,15 +36,15 @@ function [log_mean_evidence, log_var_evidence, ev_params, del_gp_hypers] = ...
 % - prior requires fields
 %   'mean
 %   'covariance
-% - l_gp_hypers has fields
-%   'log_output_scale
-%   'log_input_scales
-% - tl_gp_hypers: has fields
-%   'log_output_scale
-%   'log_input_scales
-% - del_gp_hypers: has fields
-%   'log_output_scale
-%   'log_input_scales
+% - l_gp_hypers_SE: hypers for sqd exp covariance over l, with fields
+%   * log_output_scale
+%   * log_input_scales
+% - tl_gp_hypers_SE: hypers for sqd exp covariance over tl, with fields
+%   * log_output_scale
+%   * log_input_scales
+% - del_gp_hypers_SE: hypers for sqd exp covariance over del, with fields
+%   * log_output_scale
+%   * log_input_scales
 
 % Load options, set to default if not available
 % ======================================================
@@ -76,7 +76,7 @@ upper_bound = prior.mean + opt.num_box_scales*sqrt(diag(prior.covariance))';
 % existing sample locations as possible, according to a Mahalanobis
 % distance with diagonal covariance matrix with diagonal defined as
 % mahal_scales.
-mahal_scales = exp(l_gp_hypers.log_input_scales);
+mahal_scales = exp(l_gp_hypers_SE.log_input_scales);
 
 % find the candidate locations, far removed from existing samples, with the
 % use of a Voronoi diagram
@@ -104,10 +104,12 @@ tl_s = samples.tl;
 % input hyperparameters are for a sqd exp covariance, whereas in all that
 % follows we use a gaussian covariance. We correct the output scales
 % appropriately.
-l_gp_hypers = sqdexp2gaussian(l_gp_hypers);
-orig_tl_gp_hypers = tl_gp_hypers;   % Save these in case we need to use them
-                                    % to init the delta hypers.
-tl_gp_hypers = sqdexp2gaussian(orig_tl_gp_hypers);
+l_gp_hypers = sqdexp2gaussian(l_gp_hypers_SE);
+tl_gp_hypers = sqdexp2gaussian(tl_gp_hypers_SE);
+if ~isempty(del_gp_hypers_SE)
+    del_gp_hypers = del_gp_hypers_SE;
+end
+% otherwise, we'll work these out below.
 
 
 % squared distances are expensive to compute, so we store them for use in
@@ -157,14 +159,14 @@ mean_tl_sc = K_tl_sc' * inv_K_tl_tl;
 delta_tl_sc = mean_tl_sc - log_transform(mean_l_sc, opt.gamma);
 
 
-if isempty(del_gp_hypers);
+if isempty(del_gp_hypers_SE);
     fprintf('Fitting GP to delta-observations...\n');
 
     % Set up GP.
     gp_hypers_del.mean = [];
     gp_hypers_del.lik = log(0.01);  % Values go between 0 and 1, so no need to scale.
-    init_lengthscales = orig_tl_gp_hypers.log_input_scales - log(10);
-    init_output_variance = orig_tl_gp_hypers.log_output_scale;
+    init_lengthscales = tl_gp_hypers_SE.log_input_scales - log(10);
+    init_output_variance = tl_gp_hypers_SE.log_output_scale;
     gp_hypers_del.cov = [init_lengthscales(1) init_output_variance]; 
     inference = @infExact;
     likfunc = @likGauss;
@@ -176,13 +178,9 @@ if isempty(del_gp_hypers);
                              inference, meanfunc, covfunc, likfunc, ...
                              x_sc, delta_tl_sc);        
 
-    del_gp_hypers.log_output_scale = gp_hypers_del.cov(end);
-    del_gp_hypers.log_input_scales(1:D) = gp_hypers_del.cov(1:end - 1);
-    del_gp_hypers = sqdexp2gaussian(del_gp_hypers);
-
-    del_gp_hypers
-else
-    del_gp_hypers = sqdexp2gaussian(del_gp_hypers);
+    del_gp_hypers_SE.log_output_scale = gp_hypers_del.cov(end);
+    del_gp_hypers_SE.log_input_scales(1:D) = gp_hypers_del.cov(1:end - 1);
+    del_gp_hypers = sqdexp2gaussian(del_gp_hypers_SE);
 end
 
 
