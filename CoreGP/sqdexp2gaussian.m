@@ -8,5 +8,5 @@ gaussian = sqd_exp;
 % normalisation constant of a Gaussian with covariance
 % diag(exp(2*s.log_input_scales))
 gaussian.log_output_scale = ...
-    2 * sqd_exp.log_output_scale - 0.5 * log(gaussian_mat(0, sqd_exp));
+    2 * sqd_exp.log_output_scale - 0.5 * log_gaussian_mat(0, sqd_exp);
 end
