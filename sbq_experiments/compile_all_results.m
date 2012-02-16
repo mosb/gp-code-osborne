@@ -4,6 +4,8 @@ function compile_all_results( results_dir, paper_dir )
 % outdir: The directory to look in for all the results.
 % plotdir: The directory to put all the pplots.
 
+draw_plots = false;
+
 if nargin < 1; results_dir = '~/large_results/sbq_results/'; end
 if nargin < 2; paper_dir = '~/Dropbox/papers/sbq-paper/'; end
 plotdirshort = 'figures/plots/';
@@ -11,7 +13,7 @@ tabledirshort = 'tables/';
 plotdir = [paper_dir plotdirshort];
 tabledir = [paper_dir tabledirshort];
 
-min_samples = 3; % The minimum number of examples before we start making plots.
+min_samples = 20; % The minimum number of examples before we start making plots.
 
 fprintf('Compiling all results...\n');
 autocontent_filename = [paper_dir 'autocontent.tex'];
@@ -93,6 +95,13 @@ end
 %                       true_log_ev_table(1, p_ix, 1, 1)))));
 %end
 
+% Normalize everything.
+%for p_ix = 1:num_problems
+%    mean_log_ev_table(:, p_ix, :, :) = mean_log_ev_table(:, p_ix, :, :) - true_log_ev_table(:, p_ix, :, :);
+    % I think variances should stay the same... need to think about this more.
+%end
+
+
 method_names = cellfun( @(method) method.acronym, methods, 'UniformOutput', false );
 problem_names = cellfun( @(problem) problem.name, problems, 'UniformOutput', false );
 
@@ -152,7 +161,6 @@ color(6, 1:3) = [0.9 0.1 0.9];  % purple
 opacity = 0.1;
 edgecolor = 'none';
 
-draw_plots = false;
 if draw_plots
 
 % Print legend.
@@ -161,7 +169,7 @@ if draw_plots
 %                       'UniformOutput', false);
 figure; clf;
 for m_ix = 1:num_methods
-    z_handle(m_ix) = plot( 0, 0, '-', 'Color', sqrt(color( m_ix, 1:3) ), 'LineWidth', 1); hold on;
+    z_handle(m_ix) = plot( 0, 0, '-', 'Color', sqrt(color( m_ix, :) ), 'LineWidth', 1); hold on;
 end
 truth_handle = plot( 1, 1, 'k-', 'LineWidth', 1); hold on;
 h_l = legend([z_handle, truth_handle], {method_names{:}, 'True value'} );
@@ -208,17 +216,9 @@ for p_ix = 1:num_problems
         xlabel('Number of samples', 'fontsize', label_fontsize);
         ylabel('Neg Log Density of True Value', 'fontsize', label_fontsize);
         title(cur_problem_name, 'fontsize', label_fontsize);
-        %legend(z_handle, method_names);
-        %ylim([-3 3 ]);
-        good_methods = 1:num_methods; good_methods(2) = [];
-        %keyboard
-        min1 = min(min((neg_log_liks(good_methods, plotted_sample_set))));
-        max1 = max(max((neg_log_liks(good_methods, plotted_sample_set))));
-        ylim( [min1 max1] );
 
         filename = sprintf('log_of_truth_plot_%s', strrep(cur_problem_name, ' ', '_'));
-        %matlab2tikz( [plotdir filename], 'height', '\fheight', 'width', ...
-        %    '\fwidth', 'showInfo', false, 'showWarnings', false );
+
         set_fig_units_cm( 8, 6 );
         matlabfrag([plotdir filename]);
         fprintf(autocontent, figure_string, [plotdirshort filename]);    
@@ -251,12 +251,9 @@ for p_ix = 1:num_problems
         xlabel('Number of samples');
         ylabel('Squared Distance to True Value');
         title(cur_problem_name);
-        %legend(z_handle, method_names);
-        %ylim([-3 3 ]);
+
 
         filename = sprintf('se_plot_%s', strrep(cur_problem_name, ' ', '_'));
-        %matlab2tikz( [plotdir filename], 'height', '\fheight', 'width', ...
-        %    '\fwidth', 'showInfo', false, 'showWarnings', false );
         set_fig_units_cm( 8, 6 );
         matlabfrag([plotdir filename]);
         fprintf(autocontent, figure_string, [plotdirshort filename]);    
@@ -300,8 +297,6 @@ for p_ix = 1:num_problems
         %legend([z_handle, truth_handle], {method_names{:}, 'True value'} );
 
         filename = sprintf('varplot_%s', strrep(cur_problem_name, ' ', '_'));
-        %matlab2tikz( [plotdir filename], 'height', '\fheight', 'width', ...
-        %    '\fwidth', 'showInfo', false, 'showWarnings', false );
         set_fig_units_cm( 8, 6 );
         matlabfrag([plotdir filename], 'renderer', 'opengl', 'dpi', 200);
         fprintf(autocontent, figure_string, [plotdirshort filename]);    
@@ -366,8 +361,6 @@ for p_ix = 1:num_problems
         view(-72, 42);
         
         filename = sprintf('sampleplot_%s', strrep(cur_problem.name, ' ', '_'));
-        %matlab2tikz( [plotdir filename], 'height', '\fheight', 'width', ...
-        %    '\fwidth', 'showInfo', false, 'showWarnings', false );
         set_fig_units_cm( 8, 6 );
         matlabfrag([plotdir filename]);
         fprintf(autocontent, figure_string, [plotdirshort filename]);    

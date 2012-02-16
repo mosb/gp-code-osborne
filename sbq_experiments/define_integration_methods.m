@@ -32,8 +32,8 @@ ais_method.function = @online_ais_mh; %@ais_mh;
 ais_method.opt = [];
 
 bmc_method.nicename = 'Vanilla Bayesian Monte Carlo';
-bmc_method.uniquename = 'vanilla bayesian monte carlo v1';
-bmc_method.acronym = 'BMC AIS';
+bmc_method.uniquename = 'vanilla bayesian monte carlo ais v1';
+bmc_method.acronym = 'BMC';
 bmc_method.function = @online_bmc; %@bmc;
 bmc_method.opt = [];
 
@@ -43,23 +43,23 @@ log_bmc_ais_method.acronym = 'LBMC';
 log_bmc_ais_method.function = @online_log_bmc;
 log_bmc_ais_method.opt = [];
 
-sbq_method.nicename = 'Sequential Bayesian Quadrature';
-sbq_method.uniquename = 'sequential bayesian quadrature v1';
-sbq_method.acronym = 'SBQ';
+sbq_method.nicename = 'Doubly Bayesian Quadrature';
+sbq_method.uniquename = 'sequential bayesian quadrature mike v1';
+sbq_method.acronym = 'BBQ Mike';
 sbq_method.function = @sbq;
 sbq_method.opt = [];
 
-sbq_gpml_method.nicename = 'Sequential Bayesian Quadrature GPML';
+sbq_gpml_method.nicename = 'Doubly Bayesian Quadrature GPML';
 sbq_gpml_method.uniquename = 'sbq gpml v1';
-sbq_gpml_method.acronym = 'SBQ GPML';
+sbq_gpml_method.acronym = 'BBQ';
 sbq_gpml_method.function = @sbq_gpml;
 sbq_gpml_method.opt = [];
 
 bq_gpml_ais_method.nicename = 'Bayesian Quadrature using AIS';
 bq_gpml_ais_method.uniquename = 'bayesian quadrature gpml ais v1';
-bq_gpml_ais_method.acronym = 'BQ AIS';
+bq_gpml_ais_method.acronym = 'BQ';
 bq_gpml_ais_method.function = @online_bq_ais;
-bq_gpml_ais_method.opt = [];
+bq_gpml_ais_method.opt.set_ls_var_method = 'none';
 
 
 
@@ -69,8 +69,8 @@ methods = {};
 methods{end+1} = smc_method;
 methods{end+1} = ais_method;
 methods{end+1} = bmc_method;
-methods{end+1} = log_bmc_ais_method;
 methods{end+1} = sbq_method;
 methods{end+1} = sbq_gpml_method;
 methods{end+1} = bq_gpml_ais_method;
 
+%methods{end+1} = log_bmc_ais_method;

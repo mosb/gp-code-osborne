@@ -44,7 +44,7 @@ D = numel(prior.mean);
 default_opt = struct('num_samples', 100, ...
                      'exp_loss_evals', 150 * D, ...
                      'start_pt', prior.mean, ...
-                     'num_prior_pts', 10, ...  % Start with samples from prior.
+                     'start_with_sds', true, ...  % Start with the prior +-1 1sd and .
                      'gamma', 1, ...
                      'plots', false, ...
                      'set_ls_var_method', 'laplace');
@@ -52,16 +52,29 @@ opt = set_defaults( opt, default_opt );
 
 
 % Initialize with some random points.
-for i = 1:opt.num_prior_pts
-    next_sample_point = mvnrnd(prior.mean, prior.covariance);
-    samples.locations(i,:) = next_sample_point;
-    samples.log_l(i,:) = log_likelihood_fn(next_sample_point);
+%for i = 1:opt.num_prior_pts
+%    next_sample_point = mvnrnd(prior.mean, prior.covariance);
+%    samples.locations(i,:) = next_sample_point;
+%    samples.log_l(i,:) = log_likelihood_fn(next_sample_point);
+%end
+
+sample_points = [];
+if opt.start_with_sds
+    for d = 1:D
+        sample_points = [sample_points; zeros(4,D)];
+        sample_points(end - 3, d) = prior.mean + sqrt(prior.covariances(d));
+        sample_points(end - 2, d) = prior.mean + 2 * sqrt(prior.covariances(d));
+        sample_points(end - 1, d) = prior.mean - sqrt(prior.covariances(d));
+        sample_points(end, d) = prior.mean - 2 * sqrt(prior.covariances(d));
+    end
+    samples.locations = sample_points;
+    samples.log_l = log_likelihood_fn(sample_points);   
 end
 
 % Start of actual SBQ algorithm
 % =======================================
 next_sample_point = opt.start_pt;
-for i = opt.num_prior_pts + 1:opt.num_samples
+for i = size(sample_points,1) + 1:opt.num_samples
 
     % Update sample struct.
     % ==================================

@@ -1,11 +1,8 @@
-function handles = gpml_plot( hypers, X, y, opt )
+function handles = gpml_plot( hypers, X, y, y_axis_label )
 %
 % A helper function to plot the posterior of a 1D GP, given the hyperparams in the
 % form of GPML hypers.
 
-if nargin < 4
-    opt.show_legend = true;
-end
 
 [N,D] = size(X);
 
@@ -39,22 +36,19 @@ line([x_loc, x_loc + lengthscale],[yval1,yval1], 'Color', 'k', 'Linewidth', 2);
 line([x_loc, x_loc],[yval1 + 0.01*y_scale,yval1 - 0.01*y_scale], 'Color', 'k', 'Linewidth', 2);
 line([x_loc + lengthscale, x_loc + lengthscale],[yval1 + 0.01*y_scale,yval1 - 0.01*y_scale], 'Color', 'k', 'Linewidth', 2);
 
-yval2 = y_limits(1) + 0.1.* y_scale;
-text( x_loc, yval2, 'lengthscale' );
+yval2 = y_limits(1) + 0.15.* y_scale;
+text( x_loc, yval2, 'lengthscale', 'Fontsize', 8 );
 
-if opt.show_legend
-    legend_handle = legend( [h1 hc1 h2 ], {'GP Posterior Mean', 'GP Posterior Uncertainty', 'Data'}, 'Location', 'SouthEast');
-end
+
 handles = [h1 hc1 h2 ];
-%set_thesis_fonts( gca, legend_handle );
-%set( gca, 'XTick', [] );
-%set( gca, 'yTick', [] );
-%set( gca, 'XTickLabel', '' );
-%set( gca, 'yTickLabel', '' );
+set( gca, 'XTick', [] );
+set( gca, 'yTick', [] );
+set( gca, 'XTickLabel', '' );
+set( gca, 'yTickLabel', '' );
 xlabel( '$x$' );
-ylabel( '$\ell(x)$\qquad' );
-set(get(gca,'XLabel'),'Rotation',0,'Interpreter','latex', 'Fontsize', 8);
-set(get(gca,'YLabel'),'Rotation',0,'Interpreter','latex', 'Fontsize', 8);
+ylabel( y_axis_label );
+set(get(gca,'XLabel'),'Rotation',00,'Interpreter','latex', 'Fontsize', 10);
+set(get(gca,'YLabel'),'Rotation',90,'Interpreter','latex', 'Fontsize', 10);
     set(gca, 'TickDir', 'out')
     set(gca, 'Box', 'off', 'FontSize', 10); 
     set(gcf, 'color', 'white'); 
