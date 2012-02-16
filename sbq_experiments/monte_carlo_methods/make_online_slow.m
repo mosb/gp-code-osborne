@@ -39,7 +39,7 @@ var_log_evidences = NaN(opt.num_samples, 1);
 
 cur_opt = opt;  % The options that will be used by the sampler.
 
-for num_s = 1:opt.num_samples
+for num_s = 10:opt.num_samples
     %rng(initial_random_state);    % Set the random seed.
         randn('state', 0);
     rand('twister', 0);

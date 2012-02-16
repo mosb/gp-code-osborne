@@ -35,6 +35,7 @@ for p_ix = 1:num_problems
         %legend([h_prior h_ll h_post], {'Prior', 'Likelihood', 'Posterior'});
         title(problem.name);
         
+        xlim([xrange(1), xrange(end)]);
         % remove axes
         set(gca,'ytick',[]);
         set(gca,'xtick',[]);
@@ -48,5 +49,7 @@ for p_ix = 1:num_problems
         filename = sprintf('plots/%s', strrep( problem.name, ' ', '_' ));
         %matlab2tikz( filename, 'height', '\fheight', 'width', '\fwidth', 'showInfo', false, 'showWarnings', false );
         %fprintf('\\input{%s}\n', filename);
+        set_fig_units_cm( 2.5, 2.5 );
+        matlabfrag(filename);        
     end
 end

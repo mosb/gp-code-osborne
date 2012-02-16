@@ -264,6 +264,16 @@ friedman_7d.log_likelihood_fn = ...
                                    friedman_data.X, friedman_data.y, @covSEard);
 friedman_7d.true_log_evidence = -215.846016515331058;   % Based on 1000000 SMC samples.
 
+
+prawn_6d.name = 'prawn 6d';
+prawn_6d.descrtiption = 'Integrating over prawn minds.';
+prawn_6d.dimension = 6;
+prawn_6d.prior.mean = [ 1.5708 3 0 0 0.5000 -7.4950];
+priorrange = [pi 4 4 4 1 0.01];
+prawn_6d.prior.covariance = diag((priorrange.^2)/12);
+% prawn_6d.log_likelihood_fn = ...
+prawn_6d.true_log_evidenc = NaN;
+
 % Specify problems.
 problems = {};
 problems{end+1} = simple_test_1d;

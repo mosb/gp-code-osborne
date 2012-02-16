@@ -167,7 +167,8 @@ if isempty(del_gp_hypers_SE);
     gp_hypers_del.lik = log(0.01);  % Values go between 0 and 1, so no need to scale.
     init_lengthscales = tl_gp_hypers_SE.log_input_scales - log(10);
     init_output_variance = tl_gp_hypers_SE.log_output_scale;
-    gp_hypers_del.cov = [init_lengthscales(1) init_output_variance]; 
+    gp_hypers_del.cov = [init_lengthscales(1) init_output_variance];
+    init_hypers = gp_hypers_del;
     inference = @infExact;
     likfunc = @likGauss;
     meanfunc = {'meanZero'};
@@ -177,6 +178,11 @@ if isempty(del_gp_hypers_SE);
     gp_hypers_del = minimize(gp_hypers_del, @gp_fixedlik, -max_iters, ...
                              inference, meanfunc, covfunc, likfunc, ...
                              x_sc, delta_tl_sc);        
+                         
+    if any(isnan(gp_hypers_del.cov))
+        gp_hypers_del = init_hypers;
+        warning('Optimizing hypers on delta failed');
+    end                         
 
     del_gp_hypers_SE.log_output_scale = gp_hypers_del.cov(end);
     del_gp_hypers_SE.log_input_scales(1:D) = gp_hypers_del.cov(1:end - 1);
