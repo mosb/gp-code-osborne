@@ -153,6 +153,8 @@ for i = size(sample_points,1) + 1:opt.num_samples
         if opt.plots && D == 1
             plot_hessian_approx( like_func, opt.sds_tl_log_input_scales, laplace_mode );
         end
+    else
+        opt.sds_tl_log_input_scales = false;
     end
 
     [log_mean_evidence, log_var_evidence, ev_params, del_gp_hypers] = ...

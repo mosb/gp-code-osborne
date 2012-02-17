@@ -21,7 +21,7 @@ opt.train_gp_time = 20;
 opt.num_samples = 20;
 opt.plots = true;
 opt.parallel = false;
-opt.set_ls_var_method = 'laplace';
+opt.set_ls_var_method = 'off';
 opt.start_pt = -2000;
 
 [log_ev, log_var_ev, samples, r_gp] = sbq_gpml(log_r_fn, prior_struct, opt);
