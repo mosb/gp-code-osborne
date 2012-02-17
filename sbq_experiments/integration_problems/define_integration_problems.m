@@ -264,7 +264,7 @@ friedman_7d.log_likelihood_fn = ...
                                    friedman_data.X, friedman_data.y, @covSEard);
 friedman_7d.true_log_evidence = -215.846016515331058;   % Based on 1000000 SMC samples.
 
-
+if 0
 load('simulated_mf_data');
 priorrange = [pi 4 4 4 1 0.01];
 
@@ -294,6 +294,7 @@ sim_prawn_6d_non_markov.prior.covariance = diag((priorrange.^2)/12);
 sim_prawn_6d_non_markov.log_likelihood_fn = ...
     loglike_prawn_gaussian(theta, direction, 7);
 sim_prawn_6d_non_markov.true_log_evidence = NaN;
+end
 
 clear theta direction
 

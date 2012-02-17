@@ -1,5 +1,8 @@
 function untransformed_vs_transformed()
 
+col_width = 8.25381;  % ICML double column width in cm.
+
+clf;
 randn('state', 0);
 rand('twister', 0);  
 
@@ -78,12 +81,14 @@ tl_gp_hypers.log_input_scales(1:D) = gp_hypers_log.cov(1:end - 1);
 fprintf('Output variance of logL: '); disp(exp(tl_gp_hypers.log_output_scale));
 fprintf('Lengthscales on logL: '); disp(exp(tl_gp_hypers.log_input_scales));
 
-    subplot( 1, 2, 1);
-    custom_gpml_plot( gp_hypers, samples.locations, samples.scaled_l, '$\ell(x)$');
+    %subplot( 1, 2, 1);
+    subaxis( 1, 2, 1,'SpacingHorizontal',0.1, 'MarginLeft', .1,'MarginRight',.02);
+    custom_gpml_plot( gp_hypers, samples.locations, samples.scaled_l, '$\ell(x)$', [-2 2]);
     %title('GP on $\ell(x)$', 'Fontsize', 8, 'Interpreter','latex');
     
-    subplot( 1, 2, 2);
-    handles = custom_gpml_plot( gp_hypers_log, samples.locations, samples.tl, '$\log( \gamma \ell(x) + 1)$');
+    %subplot( 1, 2, 2);
+    subaxis( 1, 2, 2,'SpacingHorizontal',0.1, 'MarginLeft', .1,'MarginRight', .02);
+    handles = custom_gpml_plot( gp_hypers_log, samples.locations, samples.tl, '$\log( \ell(x))$', [-2 2]);
     %title('GP on $\log( \gamma \ell(x) + 1)$', 'Fontsize', 8, 'Interpreter','latex');
     
     %subplot(1, 3, 3);
@@ -91,7 +96,7 @@ fprintf('Lengthscales on logL: '); disp(exp(tl_gp_hypers.log_input_scales));
     %legend boxoff
     
 
-set_fig_units_cm( 12, 6 );
+set_fig_units_cm( col_width, 4 );
 matlabfrag('~/Dropbox/papers/sbq-paper/figures/log_transform');    
 
 

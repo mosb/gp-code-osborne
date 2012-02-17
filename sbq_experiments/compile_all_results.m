@@ -386,13 +386,13 @@ figure; clf;
 try
     for m_ix = 1:num_methods
         z_handle(m_ix) = plot( plotted_sample_set, ...
-            mean(neg_lok_likes_all_probs(:, m_ix, plotted_sample_set), 1), '-', ...
+            squeeze(mean(neg_lok_likes_all_probs(:, m_ix, plotted_sample_set), 1)), '-', ...
             'Color', color( m_ix, :), 'LineWidth', 1); hold on;
     end
 
     xlabel('Number of samples', 'fontsize', label_fontsize);
     ylabel('Avg NLL of True Value', 'fontsize', label_fontsize);
-    title(cur_problem_name, 'fontsize', label_fontsize);
+    title('average over all problems', 'fontsize', label_fontsize);
 
     filename = sprintf('avg_log_of_truth_plot_%s', strrep(cur_problem_name, ' ', '_'));
 
@@ -410,13 +410,13 @@ figure; clf;
 try
     for m_ix = 1:num_methods
         z_handle(m_ix) = plot( plotted_sample_set, ...
-            mean(squared_error_all_probs(:, m_ix, plotted_sample_set), 1), '-', ...
+            squeeze(nanmean(squared_error_all_probs(:, m_ix, plotted_sample_set), 1)), '-', ...
             'Color', color( m_ix, :), 'LineWidth', 1); hold on;
     end
 
     xlabel('Number of samples', 'fontsize', label_fontsize);
     ylabel('Avg Squared Dist to Z', 'fontsize', label_fontsize);
-    title(cur_problem_name, 'fontsize', label_fontsize);
+     title('average over all problems', 'fontsize', label_fontsize);
 
     filename = sprintf('avg_se_plot_%s', strrep(cur_problem_name, ' ', '_'));
 
