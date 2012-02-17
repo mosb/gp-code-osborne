@@ -76,6 +76,10 @@ end
 % Start of actual SBQ algorithm
 % =======================================
 next_sample_point = opt.start_pt;
+if size(sample_points,1) > opt.num_samples
+    warning('sbq: no active sampling performed');
+end
+
 for i = size(sample_points,1) + 1:opt.num_samples
 
     % Update sample struct.

@@ -284,7 +284,7 @@ prawn_6d_markov.prior.mean = [ 1.5708 3 0 0 0.5000 -7.4950];
 prawn_6d_markov.prior.covariance = diag((priorrange.^2)/12);
 prawn_6d_markov.log_likelihood_fn = ...
     loglike_prawn_gaussian(theta, direction, 5);
-prawn_6d.true_log_evidence = NaN;
+prawn_6d_markov.true_log_evidence = NaN;
 
 prawn_6d_non_markov.name = 'prawn 6d non-markov';
 prawn_6d_non_markov.description = 'Integrating over prawn minds; best non-markovian model.';
