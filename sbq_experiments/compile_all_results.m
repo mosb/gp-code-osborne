@@ -4,7 +4,7 @@ function compile_all_results( results_dir, paper_dir )
 % outdir: The directory to look in for all the results.
 % plotdir: The directory to put all the pplots.
 
-draw_plots = false;
+draw_plots = true;
 
 if nargin < 1; results_dir = '~/large_results/sbq_results/'; end
 if nargin < 2; paper_dir = '~/Dropbox/papers/sbq-paper/'; end
@@ -206,6 +206,7 @@ for p_ix = 1:num_problems
                     var_prediction = var_log_ev_table( m_ix, p_ix, s, r );
                     neg_log_liks(m_ix, s) = -real(logmvnpdf(true_log_evidence, ...
                                                 mean_prediction, var_prediction));
+                    neg_lok_likes_all_probs(p_ix, m_ix, s) = neg_log_liks(m_ix, s);
                 end
                 z_handle(m_ix) = plot( plotted_sample_set, ...
                     real(neg_log_liks(m_ix, plotted_sample_set)), '-', ...
@@ -214,7 +215,7 @@ for p_ix = 1:num_problems
         end
         
         xlabel('Number of samples', 'fontsize', label_fontsize);
-        ylabel('Neg Log Density of True Value', 'fontsize', label_fontsize);
+        ylabel('NLL of True Value', 'fontsize', label_fontsize);
         title(cur_problem_name, 'fontsize', label_fontsize);
 
         filename = sprintf('log_of_truth_plot_%s', strrep(cur_problem_name, ' ', '_'));
@@ -226,6 +227,11 @@ for p_ix = 1:num_problems
         %e
     end
 end
+
+
+
+
+
 
 
 % Plot log of squared distance to true answer, versus number of samples
@@ -242,6 +248,7 @@ for p_ix = 1:num_problems
                     mean_prediction = mean_log_ev_table( m_ix, p_ix, s, r );
                     var_prediction = var_log_ev_table( m_ix, p_ix, s, r );
                     squared_error(s) = (true_log_evidence - mean_prediction)^2;
+                    squared_error_all_probs(p_ix, m_ix, s) = squared_error(s)/exp(true_log_evidence);
                 end
                 z_handle(m_ix) = semilogy( plotted_sample_set, ...
                     squared_error(plotted_sample_set), '-',...
@@ -261,6 +268,10 @@ for p_ix = 1:num_problems
         %e
     end
 end
+
+
+
+
 
   
 % Plot one example of mean and variance versus number of samples, for one
@@ -369,6 +380,53 @@ for p_ix = 1:num_problems
     end
 end
 end
+
+% Print average over all problems.
+figure; clf;
+try
+    for m_ix = 1:num_methods
+        z_handle(m_ix) = plot( plotted_sample_set, ...
+            mean(neg_lok_likes_all_probs(:, m_ix, plotted_sample_set), 1), '-', ...
+            'Color', color( m_ix, :), 'LineWidth', 1); hold on;
+    end
+
+    xlabel('Number of samples', 'fontsize', label_fontsize);
+    ylabel('Avg NLL of True Value', 'fontsize', label_fontsize);
+    title(cur_problem_name, 'fontsize', label_fontsize);
+
+    filename = sprintf('avg_log_of_truth_plot_%s', strrep(cur_problem_name, ' ', '_'));
+
+    set_fig_units_cm( 8, 6 );
+    matlabfrag([plotdir filename]);
+    fprintf(autocontent, figure_string, [plotdirshort filename]);    
+catch e
+    e
+end
+
+
+
+% Print average over all problems.
+figure; clf;
+try
+    for m_ix = 1:num_methods
+        z_handle(m_ix) = plot( plotted_sample_set, ...
+            mean(squared_error_all_probs(:, m_ix, plotted_sample_set), 1), '-', ...
+            'Color', color( m_ix, :), 'LineWidth', 1); hold on;
+    end
+
+    xlabel('Number of samples', 'fontsize', label_fontsize);
+    ylabel('Avg Squared Dist to Z', 'fontsize', label_fontsize);
+    title(cur_problem_name, 'fontsize', label_fontsize);
+
+    filename = sprintf('avg_se_plot_%s', strrep(cur_problem_name, ' ', '_'));
+
+    set_fig_units_cm( 8, 6 );
+    matlabfrag([plotdir filename]);
+    fprintf(autocontent, figure_string, [plotdirshort filename]);    
+catch e
+    e
+end
+
 fprintf(autocontent, '\n\n\\end{document}');
 fclose(autocontent);
 
