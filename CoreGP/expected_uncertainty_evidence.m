@@ -211,7 +211,7 @@ if opt.delta_update
     % at zero at x_s, and will change at x_c more for locations close to
     % x_a. Of course, we also know with certainty that delta at x_a will
     % be zero.
-    del_noise = K_del_sca_a;
+    del_noise = K_del_sca(:,num_sca);
     del_noise(1:num_s) = 0;
     del_noise(num_sca) = 0;
     R_del_sca = perturbchol(R_del_sca, del_noise);

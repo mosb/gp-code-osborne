@@ -62,13 +62,15 @@ sample_points = [];
 if opt.start_with_sds
     for d = 1:D
         sample_points = [sample_points; zeros(4,D)];
-        sample_points(end - 3, d) = prior.mean + sqrt(prior.covariances(d));
-        sample_points(end - 2, d) = prior.mean + 2 * sqrt(prior.covariances(d));
-        sample_points(end - 1, d) = prior.mean - sqrt(prior.covariances(d));
-        sample_points(end, d) = prior.mean - 2 * sqrt(prior.covariances(d));
+        sample_points(end - 3, d) = prior.mean(d) + sqrt(prior.covariance(d));
+        sample_points(end - 2, d) = prior.mean(d) + 2 * sqrt(prior.covariance(d));
+        sample_points(end - 1, d) = prior.mean(d) - sqrt(prior.covariance(d));
+        sample_points(end, d) = prior.mean(d) - 2 * sqrt(prior.covariance(d));
     end
     samples.locations = sample_points;
-    samples.log_l = log_likelihood_fn(sample_points);   
+    for i = 1:size(sample_points, 1);
+        samples.log_l(i,:) = log_likelihood_fn(sample_points(i,:));   
+    end
 end
 
 % Start of actual SBQ algorithm

@@ -30,7 +30,8 @@ if nargin < 3
 end
 
 % Get the random seed.
-initial_random_state = rng;
+randn('state', 0);
+   rand('twister', 0);
 
 
 mean_log_evidences = NaN(opt.num_samples, 1);

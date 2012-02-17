@@ -7,7 +7,7 @@ rand('twister', 0);
 r_mean1 = 2000;
 r_sd1 = 500;
 r_mean2 = 4000;
-r_sd2 = 1000;
+r_sd2 = 500;
 normf = @(x,m,sd) (2*pi*sd^2)^(-0.5)*exp(-0.5*(x-m).^2/sd^2);
 log_r_fn = @(x) log(normf(x,r_mean1,r_sd1)+normf(x,r_mean2,r_sd2));
 
@@ -19,7 +19,7 @@ opt.print = 2;
 opt.num_retrains = 5;
 opt.train_gp_time = 20;
 opt.num_samples = 20;
-opt.plots = true;
+opt.plots = false;
 opt.parallel = false;
 opt.set_ls_var_method = 'off';
 opt.start_pt = -2000;

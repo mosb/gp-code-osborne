@@ -6,14 +6,30 @@ function log_l_pdf = loglike_prawn_gaussian(theta, direction, model_idx)
 % Reformulated from the code from Rich to use Gaussian priors on unrestricted
 % domains.
 %
+% parameters are:
+%
+% * range of interaction (for spatial models)
+%
+% * number of neighbours to interact with (topological model)
+%
+% * interaction strength with prawns travelling in the opposite direction
+%
+% * interaction strength with prawns travelling in the same direction (for
+% these, positive makes you more likely to turn around, negative less
+% likely)
+% 
+% * decay of memory factor per timestep (1 no decay, 0 no memory)
+% 
+% * intensity of random turning (I basically fixed this based on 1 prawn
+% experiments, otherwise it tries to assign far too much to 'randomness')
 
-if nargin < 4; modelidx = 1; end
+if nargin < 4; model_idx = 1; end
 
 
 % downsample inputs, correlation length is ~10 frames
 for i = 1:numel(theta)
     theta = theta(:, 1:2:end);
-    directions = directions(:, 1:2:end);
+    direction = direction(:, 1:2:end);
 end
 
 switch model_idx
