@@ -296,9 +296,10 @@ sim_prawn_6d_non_markov.log_likelihood_fn = ...
 sim_prawn_6d_non_markov.true_log_evidence = NaN;
 end
 
-clear theta direction
+%clear theta direction
 
-load('sixinputs');
+%load('sixinputs');
+if 0
 
 real_prawn_6d_mean_field.name = 'real prawn 6d mean field';
 real_prawn_6d_mean_field.description = 'Integrating over real prawn minds; mean field model.';
@@ -328,7 +329,7 @@ real_prawn_6d_non_markov.log_likelihood_fn = ...
 real_prawn_6d_non_markov.true_log_evidence = NaN;
 
 clear theta directions
-
+end
 % Specify problems.
 problems = {};
 problems{end+1} = simple_test_1d;
@@ -345,13 +346,13 @@ problems{end+1} = two_spikes_4d;
 problems{end+1} = two_hills_4d;
 problems{end+1} = friedman_7d;
 
-problems{end+1} = sim_prawn_6d_mean_field;
-problems{end+1} = sim_prawn_6d_markov;
-problems{end+1} = sim_prawn_6d_non_markov;
+%problems{end+1} = sim_prawn_6d_mean_field;
+%problems{end+1} = sim_prawn_6d_markov;
+%problems{end+1} = sim_prawn_6d_non_markov;
 
-problems{end+1} = real_prawn_6d_mean_field;
-problems{end+1} = real_prawn_6d_markov;
-problems{end+1} = real_prawn_6d_non_markov;
+%problems{end+1} = real_prawn_6d_mean_field;
+%problems{end+1} = real_prawn_6d_markov;
+%problems{end+1} = real_prawn_6d_non_markov;
 
 %problems{end+1} = bumpy_1d;
 %problems{end+1} = easy_10d;
