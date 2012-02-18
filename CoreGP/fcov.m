@@ -10,7 +10,7 @@ switch hom_fn_Name
         K = OutputScale.^2 .* exp(-1/2*r.^2);
     case 'gaussian'
         % Gaussian Covariance Function
-        K = OutputScale.^2 .* (prod(2*pi*InputScale))^(-0.5) * exp(-1/2*r.^2);
+        K = OutputScale.^2 .* (prod(2*pi*InputScale^2))^(-0.5) * exp(-1/2*r.^2);
     case 'ratquad'
         % Rational Quadratic Covariance Function, param is alpha
         if isempty(param)
