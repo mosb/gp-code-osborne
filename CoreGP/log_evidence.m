@@ -59,7 +59,8 @@ default_opt = struct('num_c', 200,... % number of candidate points
                      'allowed_cond_error',10^-14, ... % allowed conditioning error
                      'sds_tl_log_input_scales', false, ... % sds_tl_log_input_scales represents the posterior standard deviations in the input scales for tr. If false, a delta function posterior is assumed. 
                      'gamma', 100, ... % log_transform scaling factor.
-                     'plots', false ...   % plot transformed surfaces.
+                     'plots', false, ...   % plot transformed surfaces.
+                     'marginalise_scales', true ... % approximately marginalise log input scales of gp over log likelihood
                         );
 opt = set_defaults( opt, default_opt );
 
@@ -107,7 +108,7 @@ tl_s = samples.tl;
 l_gp_hypers = sqdexp2gaussian(l_gp_hypers_SE);
 tl_gp_hypers = sqdexp2gaussian(tl_gp_hypers_SE);
 if ~isempty(del_gp_hypers_SE)
-    del_gp_hypers = del_gp_hypers_SE;
+    del_gp_hypers = sqdexp2gaussian(del_gp_hypers_SE);
 end
 % otherwise, we'll work these out below.
 
@@ -174,8 +175,11 @@ if isempty(del_gp_hypers_SE);
     meanfunc = {'meanZero'};
     max_iters = 100;
     covfunc = @covSEiso;
+    
+    opt_min.length = -50;
+    opt_min.verbosity = 0;
 
-    gp_hypers_del = minimize(gp_hypers_del, @gp_fixedlik, -max_iters, ...
+    gp_hypers_del = minimize(gp_hypers_del, @gp_fixedlik, opt_min, ...
                              inference, meanfunc, covfunc, likfunc, ...
                              x_sc, delta_tl_sc);        
                          
@@ -307,17 +311,28 @@ var_ev = opt.gamma^2 * Vinty_tl ...
     + 2 * opt.gamma * Cminty_tl_l ...
     + mCminty_l_tl_l;
 
+% Correct variance estimate if approximately marginalising log input scales
+% ======================================================
 
-if opt.sds_tl_log_input_scales
-    % we account for our uncertainty in the log input scales
+if opt.marginalise_scales
+    % we account for our uncertainty in the log input scales    
+    
+    % H_theta is the diagonal of the hessian of the likelihood of the GP
+    % over the log-likelihood with respect to its log input scales.
+    % Dtheta_K_tl is the gradient of the Gaussian covariance over the
+    % transformed likelihood between x_s and x_s: each plate in the stack
+    % is the derivative with respect to a different log input scale
+    [H_theta, Dtheta_K_tl] = hess_log_scales_lik_gaussian(K_tl, R_tl, inv_K_tl_tl, ...
+        sqd_dist_stack_s, tl_gp_hypers);
     
     % the variances of our posteriors over our input scales. We assume the
     % covariance matrix has zero off-diagonal elements; the posterior is
     % spherical. 
-    V_theta = opt.sds_tl_log_input_scales.^2;
-    if size(V_theta,1) == 1
-        V_theta = V_theta';
-    end   
+    V_theta = -1./H_theta;
+        
+    if opt.plots && D == 1
+        plot_hessian_approx(V_theta, tl_gp_hypers, samples);
+    end
     
     % compute mean of int tl(x) l(x) p(x) dx given l_s and tl_s 
     minty_tl_l = inv_K_tl_tl' * Ups_inv_K_tl_l;
@@ -325,26 +340,11 @@ if opt.sds_tl_log_input_scales
     % compute mean of int tl(x) p(x) dx given l_s and tl_s 
     minty_tl = ups_tl' * inv_K_tl_tl;
     
-    % hyperparameters for gp over the transformed likelihood, tl, assumed
-    % to have zero mean
-    tl_input_scales = exp(tl_gp_hypers.log_input_scales);
-    inv_sqd_tl_input_scales_stack = ...
-        reshape(tl_input_scales.^-2, 1, 1, D);
-    
-    % Dtheta_K_tl_a_s is the gradient of the Gaussian covariance over the
-    % transformed likelihood between x_a and x_s: each plate in the stack
-    % is the derivative with respect to a different log input scale
-    Dtheta_K_tl_const = -1 + bsxfun(@times, ...
-        sqd_dist_stack_s, ...
-        inv_sqd_tl_input_scales_stack);
-    Dtheta_K_tl = bsxfun(@times, K_tl, Dtheta_K_tl_const);
-    
     % Dtheta_Ups_tl_l is the modification of Ups_tl_l to allow for
     % derivatives wrt log input scales: each plate in the stack is the
     % derivative with respect to a different log input scale.
     [Dtheta_Ups_tl_l_const, Dtheta_ups_tl_const] = DTheta_consts...
-        (inv_sqd_tl_input_scales_stack, x_sub_mu_stack_s, ...
-        prior, tl_gp_hypers, l_gp_hypers);
+        (x_sub_mu_stack_s, prior, tl_gp_hypers, l_gp_hypers);
     Dtheta_Ups_tl_l = bsxfun(@times, Ups_tl_l, Dtheta_Ups_tl_l_const);
     
     % Dtheta_ups_tl is the modification of ups_tl to allow for
@@ -412,6 +412,7 @@ ev_params = struct(...
   'minty_del' , minty_del, ...
   'log_mean_second_moment', log_mean_second_moment ...
    );
-if opt.sds_tl_log_input_scales
+if opt.marginalise_scales
     ev_params.Dtheta_K_tl_s = Dtheta_K_tl;
+    ev_params.V_theta = V_theta;
 end

@@ -52,7 +52,8 @@ function [xpc_unc, tm_a, tv_a] = expected_uncertainty_evidence...
 %   * delta_tl_sc
 %   * minty_del
 %   * log_mean_second_moment
-%   * Dtheta_K_tl_s (if ~opt.sds_tl_log_input_scales)
+%   * Dtheta_K_tl_s (if opt.marginalise_scales)
+%   * V_theta (if opt.marginalise_scales)
 
 
                 
@@ -65,8 +66,8 @@ end
 
 opt = struct(...
                     'allowed_cond_error',10^-14, ... % allowed conditioning error
-                    'sds_tl_log_input_scales', opt.sds_tl_log_input_scales,... % sds_tl_log_input_scales represents the posterior standard deviations in the input scales for tr. If false, a delta function posterior is assumed.
                     'delta_update', false, ... % update for the influence of the new observation at x_a on delta.
+                    'marginalise_scales', opt.marginalise_scales, ...
                     'gamma', opt.gamma ... % log_transform scaling factor.
                     );           
 %opt = set_defaults( opt, default_opt );
@@ -132,34 +133,15 @@ if tv_a < 0
     tv_a = eps;
 end
 
-if opt.sds_tl_log_input_scales
+if opt.marginalise_scales
     % we correct for the impact of learning this new hyperparameter sample,
     % r_a, on our belief about the log input scales
-    
-    % the variances of our posteriors over our input scales. We assume the
-    % covariance matrix has zero off-diagonal elements; the posterior is
-    % spherical. 
-    V_theta = opt.sds_tl_log_input_scales.^2;
-    if size(V_theta,1) == 1
-        V_theta = V_theta';
-    end   
-    
-    % hyperparameters for gp over the transformed likelihood, tl, assumed
-    % to have zero mean
-    tl_input_scales = exp(tl_gp_hypers.log_input_scales);
-
-    sqd_tl_input_scales_stack = reshape(tl_input_scales.^2, 1, 1, num_dims);
     
     % Dtheta_K_tl_a_s is the gradient of the tl Gaussian covariance over
     % the transformed likelihood between x_a and x_s: each plate in the
     % stack is the derivative with respect to a different log input scale
-    Dtheta_K_tl_a_s = tr(bsxfun(@times, K_tl_s_a, ...
-        -1 + bsxfun(@rdivide, ...
-        sqd_dist_stack_s_a, ...
-        sqd_tl_input_scales_stack)));
-    % Dtheta_K_tl_a_s is the gradient of the Gaussian covariance over the
-    % transformed likelihood between x_a and x_s: each plate in the stack
-    % is the derivative with respect to a different log input scale
+    Dtheta_K_tl_a_s = d_log_scales_gaussian...
+                        (K_tl_s_a, sqd_dist_stack_s_a, tl_gp_hypers)';
     
     uppr.UT = true;
     K_inv_K_tl_a_s = linsolve(R_tl_s, inv_R_K_tl_s_a, uppr)'; 
@@ -168,7 +150,8 @@ if opt.sds_tl_log_input_scales
                 prod3(ev_params.Dtheta_K_tl_s, inv_K_tl_s));
         
     % Now perform the correction to our predictive variance
-    tv_a = tv_a + sum(reshape(Dtheta_tm_a.^2, num_dims, 1 , 1) .* V_theta);
+    tv_a = tv_a + sum(reshape(Dtheta_tm_a.^2, num_dims, 1 , 1) .* ...
+        ev_params.V_theta);
 end
 
 
@@ -299,7 +282,7 @@ xpc_sqd_mean = exp(2*samples.max_log_l) * (n_l_s^2 ...
         (exp(2*tm_a + 2*tv_a) - 2 * exp(tm_a + 0.5*tv_a) + 1));
     
 % compare against 
-%v exp(2*samples.max_log_l) * mean([l_s;opt.gamma*exp(tm_a)- opt.gamma].^2)
+% exp(2*samples.max_log_l) * mean([l_s;opt.gamma*exp(tm_a)- opt.gamma].^2)
 
 xpc_unc =  exp(ev_params.log_mean_second_moment) - xpc_sqd_mean;
     

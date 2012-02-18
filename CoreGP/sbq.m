@@ -36,11 +36,8 @@ function [mean_log_evidences, var_log_evidences, samples, tl_gp_hypers] = ...
 %          the multi-start gradient descent procedure used for training.
 %          The more, the more exploration.
 %        * plots: Whether to plot the expected variance surface (only works in 1d)
-%        * set_ls_var_method:  How to estimate the variance of lengthscale
-%                              parameters.  Can be one of:
-%            + 'lengthscale':  Use the squared lengthscale from quadrature params.
-%            + 'laplace': Compute the Hessian of the log-likelihood surface.
-%            + 'none': Assume zero variance in the lengthscales.
+%        * marginalise_scales: Whether to approximately marginalise the log
+%          input scales of the gp over the log-likelihood
 
 
 % Initialize options.
@@ -68,7 +65,7 @@ default_opt = struct('num_samples', 300, ...
                      'start_pt', prior.mean, ...
                      'print', true, ...
                      'plots', false, ...
-                     'set_ls_var_method', 'laplace');%'lengthscale');
+                     'marginalise_scales', true);%'lengthscale');
 opt = set_defaults( opt, default_opt );
 
 % GP training options.
@@ -149,80 +146,11 @@ for i = 1:opt.num_samples
     tl_gp_hypers = best_hyperparams(tl_gp);
     % hyperparameters for gp over delta, the difference between log-gp-mean-r and
     % gp-mean-log-r
-    del_gp_hypers = del_hyperparams(tl_gp_hypers);
+    % del_gp_hypers = del_hyperparams(tl_gp_hypers);
     
-    % Update our posterior uncertainty about the lengthscale hyperparameters.
-    % =========================================================================
-    % Only if we've just updated the quadrature hyperparams.
-    if i == 1 || retrain_now
-        % We firstly assume that the input scales over the logl_logansformed r
-        % surface are the same as for the r surface. We are secondly going to
-        % assume that the posterior for the log-input scales over the
-        % logl_logansformed r surface is a Gaussian. We take its mean to be the ML
-        % value.  Its covariance is set immediately below:
-        if strcmp(opt.set_ls_var_method, 'lengthscale')
-            % Diagonal covariance whose diagonal elements are equal
-            % to the squared input scales of a GP (quad_l_gp) fitted to the
-            % likelihood of the logl_logansformed r surface as a function of log-input
-            % scales.
-            opt.sds_tl_log_input_scales = ...
-                quad_tl_gp.quad_input_scales(tl_gp.input_scale_inds);
-        elseif strcmp(opt.set_ls_var_method, 'laplace')
-            % Diagonal covariance whose diagonal elements set by using the laplace
-            % method around the maximum likelihood value.
-
-            % Assume the mean is the same as the mode.
-            laplace_mode = tl_gp_hypers.log_input_scales;
-
-            % Specify the likelihood function which we'll be taking the hessian of:
-            like_func = @(log_in_scale) exp(log_gp_lik2( samples.locations, ...
-                samples.tl, ...
-                tl_gp, ...
-                tl_gp_hypers.log_noise_sd, ...
-                log_in_scale, ...
-                tl_gp_hypers.log_output_scale, ...
-                tl_gp_hypers.mean));
-
-            % Find the Hessian
-            laplace_sds = Inf;
-            try
-                laplace_sds = sqrt(-1./hessdiag( like_func, laplace_mode));
-            catch e; 
-                e;
-            end
-
-            % A little sanity checking, since at first the length scale won't be
-            % sensible.
-            bad_sd_ixs = isnan(laplace_sds) ...
-                | isinf(laplace_sds) ...
-                | (abs(imag(laplace_sds)) >= 0);%...
-                %| laplace_sds > 20;
-            if any(bad_sd_ixs)
-                warning('Infinite or positive lengthscales, Setting lengthscale variance to prior variance.');
-                % sqrt(diag(prior.covariance))) defines a scale in x-space.
-                % We want the standard deviations of our posterior over the
-                % log input-scales, which can be approximated as the log of
-                % that scale. Note that our prior specifies that x varies
-                % between e.g -e^10 and e^10, saying that our
-                % log-input-scales can vary between -10 and 10 doesn't seem
-                % unreasonable. 
-                
-                good_sds = log(sqrt(diag(prior.covariance)) + 1);
-                laplace_sds(bad_sd_ixs) = good_sds(bad_sd_ixs);
-            end
-            opt.sds_tl_log_input_scales = laplace_sds;
-
-            if opt.plots && D == 1
-                plot_hessian_approx( like_func, laplace_sds, laplace_mode );
-            end
-        else 
-            opt.sds_tl_log_input_scales = false;
-        end
-    end
-    
-    [log_ev, log_var_ev, ev_params] = ...
+    [log_ev, log_var_ev, ev_params, del_gp_hypers] = ...
         log_evidence(samples, prior, ...
-        l_gp_hypers, tl_gp_hypers, del_gp_hypers, opt);
+        l_gp_hypers, tl_gp_hypers, [], opt);
 
     
     % Choose the next sample point.
@@ -269,23 +197,4 @@ for i = 1:opt.num_samples
     mean_log_evidences(i) = log_ev;
     var_log_evidences(i) = log( exp(log_var_ev) / exp(log_ev)^2 + 1 );
 end
-end
-
-function log_l = log_gp_lik2(X_data, y_data, gp, log_noise, ...
-                             log_in_scale, log_out_scale, mean)
-    % Evaluates the log_likelihood of a hyperparameter sample at a certain
-    % set of hyperparameters.
-    gp.grad_hyperparams = false;
-    
-    % Todo:  Make a function to package a hyperparameter sample into an array,
-    % like the opposite of disp_hyperparams.  Use it to replace this next part,
-    % and part of train_gp.m
-    sample(gp.meanPos) = mean;
-    sample(gp.noise_ind) = log_noise;
-    sample(gp.input_scale_inds) = bound(log_in_scale, -100, 100);
-    sample(gp.output_scale_ind) = log_out_scale;
-    gp.hypersamples(1).hyperparameters = sample;
-    
-    gp = revise_gp(X_data, y_data, gp, 'overwrite', [], 1);
-    log_l = gp.hypersamples(1).logL;
 end

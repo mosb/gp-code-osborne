@@ -13,26 +13,27 @@ randn('state', 0);
 rand('twister', 0);  
 
 prior.mean = 0;
-prior.covariance = 1;
+prior.covariance = 5^2;
 
-log_likelihood_fn = @(x)logmvnpdf( x, -.35, 3 ); 
+log_likelihood_fn = @(x)log(mvnpdf( x, -10, 2^2 ) + mvnpdf( x, 8, 3^2 )); 
 
 D = 1;
 
 % Set unspecified fields to default values.
 opt = struct('num_samples', 20, ...
-             'gamma', .1, ...
-             'set_ls_var_method', 'laplace');
-opt.num_samples = 18;
-opt.plots = false;
+             'gamma', 1, ...
+             'plots', true, ...
+             'marginalise_scales', true);
+opt.num_samples = 	10;
 
 % Initialize with some random points.
+locs = [-4, 0, 4];
 for i = 1:2
-next_sample_point = i - 2;
+next_sample_point = locs(i);
 samples.locations(i,:) = next_sample_point;
 samples.log_l(i,:) = log_likelihood_fn(next_sample_point);
 end
-next_sample_point = 1.9;
+next_sample_point = locs(3);
 
 for i = size(samples.log_l,1) + 1:opt.num_samples
 
@@ -49,8 +50,11 @@ for i = size(samples.log_l,1) + 1:opt.num_samples
     inference = @infExact;
     likfunc = @likGauss;
     meanfunc = {'meanZero'};
-    max_iters = 1000;
+    max_iters = 100;
     covfunc = @covSEiso;
+    
+        opt_min.length = -max_iters;
+    opt_min.verbosity = 0;
 
     % Init GP Hypers.
     init_hypers.mean = [];
@@ -62,7 +66,7 @@ for i = size(samples.log_l,1) + 1:opt.num_samples
     % Fit the model, but not the likelihood hyperparam (which stays fixed).
     fprintf('Fitting GP to observations...\n');
     gp_hypers = init_hypers;
-    gp_hypers = minimize(gp_hypers, @gp_fixedlik, -max_iters, ...
+    gp_hypers = minimize(gp_hypers, @gp_fixedlik, opt_min, ...
                          inference, meanfunc, covfunc, likfunc, ...
                          samples.locations, samples.scaled_l);
     if any(isnan(gp_hypers.cov))
@@ -76,7 +80,7 @@ for i = size(samples.log_l,1) + 1:opt.num_samples
 
     fprintf('Fitting GP to log-observations...\n');
     gp_hypers_log = init_hypers;
-    gp_hypers_log = minimize(gp_hypers_log, @gp_fixedlik, -max_iters, ...
+    gp_hypers_log = minimize(gp_hypers_log, @gp_fixedlik, opt_min, ...
                              inference, meanfunc, covfunc, likfunc, ...
                              samples.locations, samples.tl);        
     if any(isnan(gp_hypers_log.cov))
@@ -97,26 +101,6 @@ for i = size(samples.log_l,1) + 1:opt.num_samples
         title('GP on log( exp(scaled) + 1) values');
     end
 
-    % Optionally set uncertainty in lengthscales using the laplace
-    % method around the maximum likelihood value.
-    if strcmp(opt.set_ls_var_method, 'laplace')
-        % Specify the likelihood function which we'll be taking the hessian of:
-        like_func = @(log_in_scale) gpml_lengthscale_likelihood( log_in_scale, ...
-            gp_hypers_log, inference, meanfunc, covfunc, likfunc, ...
-            samples.locations, samples.tl);
-
-        laplace_mode = gp_hypers_log.cov(1:end - 1);
-        failsafe_sds = sqrt(diag(prior.covariance));
-        opt.sds_tl_log_input_scales = ...
-            likelihood_laplace( like_func, laplace_mode, failsafe_sds);
-
-        if opt.plots && D == 1
-            plot_hessian_approx( like_func, opt.sds_tl_log_input_scales, laplace_mode );
-        end
-    else
-        opt.sds_tl_log_input_scales = false;
-    end
-
     [log_mean_evidence, log_var_evidence, ev_params, del_gp_hypers] = ...
         log_evidence(samples, prior, l_gp_hypers, tl_gp_hypers, [], opt);
 
@@ -134,7 +118,7 @@ for i = size(samples.log_l,1) + 1:opt.num_samples
     bounds = [lower_bound; upper_bound]';            
 
   % Evaluate exhaustively between the bounds.
-    N = 100;
+    N = 1000;
     test_pts(:,i) = linspace(bounds(1), bounds(2), N);
 
     for loss_i=1:length(test_pts)
@@ -148,9 +132,35 @@ for i = size(samples.log_l,1) + 1:opt.num_samples
 
      for loss_i=1:i
         point_losses(loss_i,i) = objective_fn(samples.locations(i));
-    end
-
+     end
+    
+     
     nsme(i) = exp(log_var_evidence);   % existing neg-sqd-mean-ev
+     
+     if opt.plots
+        % Plot the function.
+        figure(1234); clf;
+        h_surface = plot(test_pts(:,i), losses(:,i), 'b'); hold on;
+
+        % Plot existing neg-sqd-mean-ev
+        h_exist = plot(bounds, [nsme(i) nsme(i)], 'k');
+
+        % Also plot previously chosen points.
+        h_points = plot(samples.locations, nsme(i) + 0*samples.locations, ...
+            'k.', 'MarkerSize', 10); hold on;
+        h_best = plot(chosen_point(i), exp_loss_min(i), 'r.', 'MarkerSize', 10); hold on;
+        xlabel('Sample location');
+        ylabel('Expected variance after adding a new sample');
+        legend( [h_surface, h_points, h_best, h_exist], {'Expected uncertainty', ...
+            'Previously Sampled Points', 'Best new sample', 'existing variance'}, 'Location', 'Best');
+        legend boxoff     
+        set(gca, 'TickDir', 'out')
+        set(gca, 'Box', 'off', 'FontSize', 10); 
+        set(gcf, 'color', 'white'); 
+        set(gca, 'YGrid', 'off');
+        drawnow
+     end
+
 end
 
 

@@ -47,7 +47,7 @@ default_opt = struct('num_samples', 100, ...
                      'start_with_sds', true, ...  % Start with the prior +-1 1sd and .
                      'gamma', 1, ...
                      'plots', false, ...
-                     'set_ls_var_method', 'laplace');
+                     'marginalise_scales', true);
 opt = set_defaults( opt, default_opt );
 
 
@@ -141,26 +141,6 @@ for i = size(sample_points,1) + 1:opt.num_samples
         figure(51); clf;
         gpml_plot( gp_hypers_log, samples.locations, samples.tl);
         title('GP on log( exp(scaled) + 1) values');
-    end
-
-    % Optionally set uncertainty in lengthscales using the laplace
-    % method around the maximum likelihood value.
-    if strcmp(opt.set_ls_var_method, 'laplace')
-        % Specify the likelihood function which we'll be taking the hessian of:
-        like_func = @(log_in_scale) gpml_lengthscale_likelihood( log_in_scale, ...
-            gp_hypers_log, inference, meanfunc, covfunc, likfunc, ...
-            samples.locations, samples.tl);
-
-        laplace_mode = gp_hypers_log.cov(1:end - 1);
-        failsafe_sds = sqrt(diag(prior.covariance));
-        opt.sds_tl_log_input_scales = ...
-            likelihood_laplace( like_func, laplace_mode, failsafe_sds);
-
-        if opt.plots && D == 1
-            plot_hessian_approx( like_func, opt.sds_tl_log_input_scales, laplace_mode );
-        end
-    else
-        opt.sds_tl_log_input_scales = false;
     end
 
     [log_mean_evidence, log_var_evidence, ev_params, del_gp_hypers] = ...

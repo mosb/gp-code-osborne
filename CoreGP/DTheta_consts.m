@@ -1,12 +1,15 @@
 function [Dtheta_Ups_tl_l_const, Dtheta_ups_tl_const] = DTheta_consts...
-        (inv_sqd_tl_input_scales_stack, x_sub_mu_stack_s, ...
-        prior, tl_gp_hypers, l_gp_hypers)
+        (x_sub_mu_stack_s, prior, tl_gp_hypers, l_gp_hypers)
     
 %    return terms required for evaluating the contribution towards the
 %    variance of the bq distribution for the evidence due to marginalising
 %    log input scales.
 
 num_dims = size(x_sub_mu_stack_s, 3);
+
+tl_input_scales = exp(tl_gp_hypers.log_input_scales);
+inv_sqd_tl_input_scales_stack = ...
+    reshape(tl_input_scales.^-2, 1, 1, num_dims);
 
 L = reshape(diag(prior.covariance), 1, 1, num_dims);
 Wl = reshape(exp(2*l_gp_hypers.log_input_scales), 1, 1, num_dims);
