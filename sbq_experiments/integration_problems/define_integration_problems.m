@@ -332,13 +332,14 @@ clear theta directions
 end
 % Specify problems.
 problems = {};
-problems{end+1} = simple_test_1d;
-problems{end+1} = simple_test_trans_1d;
-problems{end+1} = simple_test_scale_1d;
-problems{end+1} = easy_1d;
-problems{end+1} = bumpy_1d_exp;
-problems{end+1} = two_spikes_1d;
-problems{end+1} = two_hills_1d;
+
+%problems{end+1} = simple_test_1d;
+%problems{end+1} = simple_test_trans_1d;
+%problems{end+1} = simple_test_scale_1d;
+%problems{end+1} = easy_1d;
+%problems{end+1} = bumpy_1d_exp;
+%problems{end+1} = two_spikes_1d;
+%problems{end+1} = two_hills_1d;
 problems{end+1} = funnel_2d;
 problems{end+1} = friedman_3d;
 problems{end+1} = easy_4d;

@@ -85,7 +85,7 @@ x_sc = [x_s; x_c];
 x_sca = [x_sc; x_a];
 x_sa = [x_s; x_a];
 
-[num_s, num_dims] = size(x_s);
+[num_s, D] = size(x_s);
 num_sc = size(x_sc, 1);
 num_sca = num_sc + 1;
 num_sa = num_s + 1;
@@ -140,17 +140,19 @@ if opt.marginalise_scales
     % Dtheta_K_tl_a_s is the gradient of the tl Gaussian covariance over
     % the transformed likelihood between x_a and x_s: each plate in the
     % stack is the derivative with respect to a different log input scale
-    Dtheta_K_tl_a_s = d_log_scales_gaussian...
-                        (K_tl_s_a, sqd_dist_stack_s_a, tl_gp_hypers)';
+    Dtheta_K_tl_a_s = reshape(d_log_scales_gaussian...
+                        (K_tl_s_a, sqd_dist_stack_s_a, tl_gp_hypers), num_s, 1, D);
     
     uppr.UT = true;
     K_inv_K_tl_a_s = linsolve(R_tl_s, inv_R_K_tl_s_a, uppr)'; 
-    Dtheta_tm_a = prod3(Dtheta_K_tl_a_s, inv_K_tl_s) ...
-            - prod3(K_inv_K_tl_a_s, ...
-                prod3(ev_params.Dtheta_K_tl_s, inv_K_tl_s));
+    
+    % Mike:  Right now this line breaks, by line 143 might also be wrong.
+    Dtheta_tm_a = prod3(Dtheta_K_tl_a_s, inv_K_tl_s)' ...
+            - reshape(prod3(K_inv_K_tl_a_s, ...
+                prod3(ev_params.Dtheta_K_tl_s, inv_K_tl_s)), D, 1, 1);
         
     % Now perform the correction to our predictive variance
-    tv_a = tv_a + sum(reshape(Dtheta_tm_a.^2, num_dims, 1 , 1) .* ...
+    tv_a = tv_a + sum(reshape(Dtheta_tm_a.^2, D, 1 , 1) .* ...
         ev_params.V_theta);
 end
 
