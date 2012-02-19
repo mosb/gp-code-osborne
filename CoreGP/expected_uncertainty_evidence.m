@@ -146,8 +146,9 @@ if opt.marginalise_scales
     uppr.UT = true;
     K_inv_K_tl_a_s = linsolve(R_tl_s, inv_R_K_tl_s_a, uppr)'; 
     
-    % Mike:  Right now this line breaks, by line 143 might also be wrong.
-    Dtheta_tm_a = tr(prod3(Dtheta_K_tl_a_s, inv_K_tl_s)) ...
+    % gradient of the mean of the log-likelihood at the added point wrt the
+    % log-input scales
+    Dtheta_tm_a = prod3(Dtheta_K_tl_a_s, inv_K_tl_s) ...
                     - prod3(K_inv_K_tl_a_s, ...
                         prod3(ev_params.Dtheta_K_tl_s, inv_K_tl_s));
         
