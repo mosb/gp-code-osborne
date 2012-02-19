@@ -25,12 +25,9 @@ elseif length(szA) == 2 && length(szB) == 2
     
 elseif length(szA) == 3 && length(szB) == 3
     
-    warning('This code was randomly generated');
-    
-    A = permute(A,[2 1 3]);
-    A = reshape(A, szA(2), szA(1)*szA(3));
-    S = B(:,:,1)'*A;
-    S = reshape(S, szB(2), szA(1), szA(3));
-    S = permute(S,[2 1 3]);
-    
+    S = nan(szA(1), szB(2), szA(3));
+    for i = 1:szA(3)
+        S(:,:,i) = A(:,:,i) * B(:,:,i);
+    end
+
 end

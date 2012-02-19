@@ -65,6 +65,7 @@ fprintf(' Output filename: %s\n\n', filename );
     fprintf('Estimated variance in log evidence:  %d\n', var_log_evidences(end) );
     fprintf('\nTotal time taken in seconds:  %f\n', total_time );
     fprintf('\n\nSaved to %s\n', filename );
+
 % catch
 %      err = lasterror
 %     msg = err.message
