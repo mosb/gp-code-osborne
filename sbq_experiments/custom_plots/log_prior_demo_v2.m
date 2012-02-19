@@ -166,6 +166,6 @@ ylim([-1 4.5])
 %scale_factor = 1;%(pagewidth*fraction)/total_width;
 %set(gca, 'Position', [position(1:2), position(3:4).*scale_factor]);
 
-set_fig_units_cm( col_width, 7 );
+set_fig_units_cm( col_width-.5, 7 );
 matlabfrag('~/Dropbox/papers/sbq-paper/figures/delta');  
 

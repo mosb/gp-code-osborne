@@ -168,9 +168,11 @@ end
 % Plotting
 % ===========================
 
+start_ix = 5;
+
 cmap = colormap;
 clf;
-for i = 4:opt.num_samples
+for i = start_ix:opt.num_samples
     end_ix = opt.num_samples;
     cur_color = cmap(floor(size(cmap, 1)*( 1- i/end_ix)) + 1, :);
     h_est = plot3(repmat(i,N,1), test_pts(:,i), losses(:,i), ...
@@ -203,12 +205,26 @@ set(gcf, 'color', 'white');
 set(gca, 'YGrid', 'off');  
 
 grid on;
-%zlim( [ 0 .5  ] );
-%xlim( [ 0 true_plot_depth ] );
+ylim( [ xrange(1) xrange(end)  ] );
+xlim( [ start_ix true_plot_depth ] );
 %title('Active learning of an integral');
 xlabel('samples');
 ylabel('x');
 zlabel('f(x)');
+
+%set( gca, 'XTick', [] );
+%set( gca, 'yTick', [] );
+%set( gca, 'zTick', [] );
+%set( gca, 'XTickLabel', '' );
+set( gca, 'yTickLabel', '' );
+set( gca, 'zTickLabel', '' );
+xlabel( 'sample' );
+ylabel(  '$x$');
+zlabel( '$\ell(x)$' );
+set(get(gca,'XLabel'),'Rotation',90,'Interpreter','latex', 'Fontsize', 8);
+set(get(gca,'YLabel'),'Rotation',0,'Interpreter','latex', 'Fontsize', 8);
+set(get(gca,'ZLabel'),'Rotation',90,'Interpreter','latex', 'Fontsize', 8);
+
 view(-82, 48);
 
 set_fig_units_cm( col_width, 7 );

@@ -157,6 +157,7 @@ color(3, 1:3) = [0.1   0.1 1];  % blue
 color(4, 1:3) = [.4  0.4 0.1];  % dark yellow
 color(5, 1:3) = [0.1   1   1];  % cyan
 color(6, 1:3) = [0.9 0.1 0.9];  % purple
+color(7, 1:3) = [1 1 0];  % bright yellow
 
 opacity = 0.1;
 edgecolor = 'none';
