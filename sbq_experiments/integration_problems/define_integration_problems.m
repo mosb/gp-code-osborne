@@ -324,7 +324,7 @@ sim_prawn_6d_markov.prior.mean = priormean;
 sim_prawn_6d_markov.prior.covariance = priorvars;
 sim_prawn_6d_markov.log_likelihood_fn = ...
     loglike_prawn_gaussian(theta, direction, 5);
-sim_prawn_6d_markov.true_log_evidence = NaN;
+sim_prawn_6d_markov.true_log_evidence = -603.243529869901749;    % 10000 samples of SMC.
 
 sim_prawn_6d_non_markov.name = 'simulated prawn 6d non-markov';
 sim_prawn_6d_non_markov.description = 'Integrating over simulated prawn minds; best non-markovian model.';
@@ -333,7 +333,7 @@ sim_prawn_6d_non_markov.prior.mean = priormean;
 sim_prawn_6d_non_markov.prior.covariance = priorvars;
 sim_prawn_6d_non_markov.log_likelihood_fn = ...
     loglike_prawn_gaussian(theta, direction, 7);
-sim_prawn_6d_non_markov.true_log_evidence = NaN;
+sim_prawn_6d_non_markov.true_log_evidence = -582.248194343939872;  % 10000 samples of SMC.
 end
 
 % Specify problems.

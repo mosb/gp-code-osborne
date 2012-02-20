@@ -11,3 +11,5 @@ opt.num_samples = num_samples
 
 save([p.name '_truth_' int2str(num_samples) ]);
 
+fprintf('\n\n mean = %20.15f\n\n', log_mean);
+
