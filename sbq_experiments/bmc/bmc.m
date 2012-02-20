@@ -1,4 +1,4 @@
-function [mean_log_evidence, var_log_evidence, sample_locs, sample_vals] = ...
+function [log_mean_evidence, log_var_evidence, sample_locs, sample_vals] = ...
     bmc(loglik_fn, prior, opt)
 % Naive Bayesian Monte Carlo.  Chooses samples based on AIS.
 %
@@ -43,19 +43,13 @@ opt.num_samples = length(sample_vals);
 [mean_evidence, var_evidence] = ...
     bmc_integrate(sample_locs, exp(sample_vals - max(sample_vals)), prior);
 
-% Todo: move these into the conversion eqns for better numerical stability.
-% Also, possibly move the scaling into bmc_integrate.
-mean_evidence = mean_evidence * exp( max(sample_vals));
-var_evidence = var_evidence * exp(2*max(sample_vals));
+log_mean_evidence = log(mean_evidence) + max(sample_vals);
+log_var_evidence = log(var_evidence) + 2*max(sample_vals);
 
-% Convert the distribution over the evidence into a distribution over the
-% log-evidence by moment matching.
-var_log_evidence = log( var_evidence / mean_evidence^2 + 1 );
-mean_log_evidence = log(mean_evidence);% - 0.5*var_log_evidence;
 
-if var_log_evidence < 0
-    warning('variance of log evidence negative');
-    fprintf('variance of log evidence: %g\n', var_log_evidence);
-    var_log_evidence = eps;
+if var_evidence < 0
+    warning('variance of evidence negative');
+    fprintf('variance of evidence: %g\n', var_evidence);
+    log_var_evidence = log(eps);
 end
 end

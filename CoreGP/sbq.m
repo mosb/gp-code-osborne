@@ -1,4 +1,4 @@
-function [mean_log_evidences, var_log_evidences, samples, tl_gp_hypers] = ...
+function [log_mean_evidences, log_var_evidences, samples, tl_gp_hypers] = ...
     sbq(log_likelihood_fn, prior, opt)
 % Take samples samples_mat so as to best estimate the
 % evidence, an integral over exp(log_l_fn) against the prior in prior_struct.
@@ -148,9 +148,8 @@ for i = 1:opt.num_samples
     % gp-mean-log-r
     % del_gp_hypers = del_hyperparams(tl_gp_hypers);
     
-    [log_ev, log_var_ev, ev_params, del_gp_hypers] = ...
-        log_evidence(samples, prior, ...
-        l_gp_hypers, tl_gp_hypers, [], opt);
+    [log_mean_evidences(i), log_var_evidences(i), ev_params, del_gp_hypers] = ...
+        log_evidence(samples, prior, l_gp_hypers, tl_gp_hypers, [], opt);
 
     
     % Choose the next sample point.
@@ -173,7 +172,7 @@ for i = 1:opt.num_samples
             % If we have a 1-dimensional function, optimize it by exhaustive
             % evaluation.
             [exp_loss_min, next_sample_point] = ...
-                plot_1d_minimize(objective_fn, bounds, samples, log_var_ev);
+                plot_1d_minimize(objective_fn, bounds, samples, log_var_evidences(i));
         else
             % Search within the prior box.
             [exp_loss_min, next_sample_point] = ...
@@ -189,12 +188,8 @@ for i = 1:opt.num_samples
             fprintf('.');
         end
     elseif opt.print == 2
-        fprintf('evidence: %g +- %g\n', exp(log_ev), sqrt(exp(log_var_ev)));
+        fprintf('evidence: %g +- %g\n', exp(log_mean_evidences(i)), ...
+                                        sqrt(exp(log_var_evidences(i))));
     end
-    
-    % Convert the distribution over the evidence into a distribution over the
-    % log-evidence by moment matching.  This is just a hack for now!!!
-    mean_log_evidences(i) = log_ev;
-    var_log_evidences(i) = log( exp(log_var_ev) / exp(log_ev)^2 + 1 );
 end
 end

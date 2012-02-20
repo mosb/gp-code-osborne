@@ -1,4 +1,4 @@
-function [mean_log_evidence, var_log_evidence, samples, gp_hypers] = ...
+function [log_mean_evidence, log_var_evidence, samples, gp_hypers] = ...
     sbq_gpml_ais(log_likelihood_fn, prior, opt)
 % Take samples samples_mat so as to best estimate the
 % evidence, an integral over exp(log_l_fn) against the prior in prior_struct.
@@ -116,29 +116,6 @@ if opt.plots
     title('GP on log( exp(scaled) + 1) values');
 end
 
-% Optionally set uncertainty in lengthscales using the laplace
-% method around the maximum likelihood value.
-if strcmp(opt.set_ls_var_method, 'laplace')
-    % Specify the likelihood function which we'll be taking the hessian of:
-    like_func = @(log_in_scale) gpml_lengthscale_likelihood( log_in_scale, ...
-        gp_hypers_log, inference, meanfunc, covfunc, likfunc, ...
-        samples.locations, samples.tl);
-
-    laplace_mode = gp_hypers_log.cov(1:end - 1);
-    failsafe_sds = sqrt(diag(prior.covariance));
-    opt.sds_tl_log_input_scales = ...
-        likelihood_laplace( like_func, laplace_mode, failsafe_sds);
-
-    if opt.plots && D == 1
-        plot_hessian_approx( like_func, opt.sds_tl_log_input_scales, laplace_mode );
-    end
-end
-
 [log_mean_evidence, log_var_evidence] = ...
     log_evidence(samples, prior, l_gp_hypers, tl_gp_hypers, [], opt);
-
-% Convert the distribution over the evidence into a distribution over the
-% log-evidence by moment matching.  This is just a hack for now!!!
-mean_log_evidence = log_mean_evidence;
-var_log_evidence = log( exp(log_var_evidence) / exp(log_mean_evidence)^2 + 1 );
 end

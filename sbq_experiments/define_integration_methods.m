@@ -72,4 +72,4 @@ methods{end+1} = bmc_method;
 methods{end+1} = sbq_method;
 methods{end+1} = sbq_gpml_method;
 methods{end+1} = bq_gpml_ais_method;
-%methods{end+1} = log_bmc_ais_method;
+methods{end+1} = log_bmc_ais_method;

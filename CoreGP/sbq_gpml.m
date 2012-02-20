@@ -1,4 +1,4 @@
-function [mean_log_evidences, var_log_evidences, samples, gp_hypers] = ...
+function [log_mean_evidences, log_var_evidences, samples, gp_hypers] = ...
     sbq_gpml(log_likelihood_fn, prior, opt)
 % Take samples samples_mat so as to best estimate the
 % evidence, an integral over exp(log_r_fn) against the prior in prior_struct.
@@ -77,7 +77,7 @@ end
 % Start of actual SBQ algorithm
 % =======================================
 next_sample_point = opt.start_pt;
-if size(sample_points,1) > opt.num_samples
+if size(sample_points,1) >= opt.num_samples
     warning('sbq: no active sampling performed');
 end
 
@@ -144,7 +144,7 @@ for i = size(sample_points,1) + 1:opt.num_samples
         title('GP on log( exp(scaled) + 1) values');
     end
 
-    [log_mean_evidence, log_var_evidence, ev_params, del_gp_hypers] = ...
+    [log_mean_evidences(i), log_var_evidences(i), ev_params, del_gp_hypers] = ...
         log_evidence(samples, prior, l_gp_hypers, tl_gp_hypers, [], opt);
 
     % Choose the next sample point.
@@ -165,7 +165,7 @@ for i = size(sample_points,1) + 1:opt.num_samples
             % If we have a 1-dimensional function, optimize it by exhaustive
             % evaluation.
             [exp_loss_min, next_sample_point] = ...
-                plot_1d_minimize(objective_fn, bounds, samples, log_var_evidence);
+                plot_1d_minimize(objective_fn, bounds, samples, log_var_evidences(i));
         else
             % Search within the prior box.
             [exp_loss_min, next_sample_point] = ...
@@ -175,11 +175,6 @@ for i = size(sample_points,1) + 1:opt.num_samples
     
     % Print progress.
     fprintf('Iteration %d evidence: %g +- %g\n', i, ...
-            exp(log_mean_evidence), sqrt(exp(log_var_evidence)));
-
-    % Convert the distribution over the evidence into a distribution over the
-    % log-evidence by moment matching.  This is just a hack for now!!!
-    mean_log_evidences(i) = log_mean_evidence;
-    var_log_evidences(i) = log( exp(log_var_evidence) / exp(log_mean_evidence)^2 + 1 );
+            exp(log_mean_evidences(i)), sqrt(exp(log_var_evidences(i))));
 end
 end
