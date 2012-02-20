@@ -32,7 +32,7 @@
 
 function [farthest, pc_distances, enough] = find_farthest(points, box, requested, length_scales, ss_distance)%, ascend)
 
-%num_dims=size(points,2);
+num_dims=size(points,2);
 
 
 
@@ -46,56 +46,60 @@ function [farthest, pc_distances, enough] = find_farthest(points, box, requested
 % candidates=[candidates;corners];
 
 
-if size(points,2)>1
+if num_dims>1
     
-    if nargin<4
-        length_scales=ones(1,size(points,2));
-    end
+    try
+        if nargin<4
+            length_scales=ones(1,size(points,2));
+        end
+
+        num_points=size(points,1);
+        num_box=size(box,1);
+
+        scaled_points=points./repmat(length_scales,num_points,1);
+        scaled_box=box./repmat(length_scales,num_box,1);
+
+        corners = allcombs(scaled_box);
+        corners_and_points=unique(roundto([corners; scaled_points],2), 'rows');
     
-    num_points=size(points,1);
-    num_box=size(box,1);
-    
-    scaled_points=points./repmat(length_scales,num_points,1);
-    scaled_box=box./repmat(length_scales,num_box,1);
+        vertices = voronoin(corners_and_points,{'QJ'}); % This QJ seems to remove errors like voronoi(allcombs(rand(2,n)))
 
-    corners = allcombs(scaled_box);
-    corners_and_points=unique(roundto([corners; scaled_points],2), 'rows');
-    
-    vertices = voronoin(corners_and_points,{'QJ'}); % This QJ seems to remove errors like voronoi(allcombs(rand(2,n)))
-    
-    num_vertices = size(vertices, 1);
+        num_vertices = size(vertices, 1);
 
-    % some points returned by voronoin may be outside the given box
-    legal = prod((vertices <= repmat(max(scaled_box), num_vertices, 1)) .* ...
-                 (vertices >= repmat(min(scaled_box), num_vertices, 1)), 2);
+        % some points returned by voronoin may be outside the given box
+        legal = prod((vertices <= repmat(max(scaled_box), num_vertices, 1)) .* ...
+                     (vertices >= repmat(min(scaled_box), num_vertices, 1)), 2);
 
-    scaled_candidates = unique([corners; vertices(legal > 0, :)], 'rows');
-    Ncandidates = size(scaled_candidates,1);
-    candidates = scaled_candidates.*repmat(length_scales,Ncandidates,1);
+        scaled_candidates = unique([corners; vertices(legal > 0, :)], 'rows');
+        Ncandidates = size(scaled_candidates,1);
+        candidates = scaled_candidates.*repmat(length_scales,Ncandidates,1);
 
-    % may want pc_distances even if there aren't enough
+        % may want pc_distances even if there aren't enough
 
-    pc_distances = sqrt(squared_distance(points, candidates, length_scales));
+        pc_distances = sqrt(squared_distance(points, candidates, length_scales));
 
-    
-    enough = (size(candidates, 1) >= requested);
-    if (~enough)
-      farthest = candidates;
-      return;
-    end
 
-    % if ascend
-    %     [y, indices] = sort(pc_distances, 'ascend');
-    %     farthest = candidates(indices(end-requested+1:end), :);
-    % else
+        enough = (size(candidates, 1) >= requested);
+        if (~enough)
+          farthest = candidates;
+          return;
+        end
 
-        [y, indices] = sort(sum(pc_distances), 'descend');
-    if ~isempty(requested)
-        farthest = candidates(indices(1:requested), :);
-        pc_distances = pc_distances(:,indices(1:requested));
-    else
-        farthest = candidates(indices, :);
-        pc_distances = pc_distances(:,indices);
+        % if ascend
+        %     [y, indices] = sort(pc_distances, 'ascend');
+        %     farthest = candidates(indices(end-requested+1:end), :);
+        % else
+
+            [y, indices] = sort(sum(pc_distances), 'descend');
+        if ~isempty(requested)
+            farthest = candidates(indices(1:requested), :);
+            pc_distances = pc_distances(:,indices(1:requested));
+        else
+            farthest = candidates(indices, :);
+            pc_distances = pc_distances(:,indices);
+        end
+    catch e
+        farthest = far_pts(points, box, requested);
     end
     
 else
