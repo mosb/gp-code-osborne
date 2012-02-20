@@ -34,25 +34,38 @@ end
 
 switch model_idx
     case 0
-        log_l_pdf = @(x) logP_ring_null(theta, direction, x(1), x(2), x(3:4), x(5), x(6));
+        f = @logP_ring_null;
     case 1
-        log_l_pdf = @(x) logP_ring_mf(theta, direction, x(1), x(2), x(3:4), x(5), x(6));
+        f = @logP_ring_mf;
     case 2
-        log_l_pdf = @(x) logP_ring_topo(theta, direction, x(1), x(2), x(3:4), x(5), x(6));
+        f = @logP_ring_topo;
     case 3
-        log_l_pdf = @(x) logP_ring_R(theta, direction, x(1), x(2), x(3:4), x(5), x(6));
+        f = @logP_ring_R;
     case 4
-        log_l_pdf = @(x) logP_ring_R_2ways(theta, direction, x(1), x(2), x(3:4), x(5), x(6));
+        f = @logP_ring_R_2ways;
     case 5
-        log_l_pdf = @(x) logP_ring_R_ahead(theta, direction, x(1), x(2), x(3:4), x(5), x(6));
+        f = @logP_ring_R_ahead;
     case 6
-        log_l_pdf = @(x) logP_ring_R_ahead2ways(theta, direction, x(1), x(2), x(3:4), x(5), x(6));       
+        f = @logP_ring_R_ahead2ways;       
     case 7
-        log_l_pdf = @(x) logP_ring_memory(theta, direction, x(1), x(2), x(3:4), x(5), x(6));
+        f = @logP_ring_memory;
     case 8
-        log_l_pdf = @(x) logP_ring_memory_2ways(theta, direction, x(1), x(2), x(3:4), x(5), x(6));     
+        f = @logP_ring_memory_2ways;     
     case 9
-        log_l_pdf = @(x) logP_ring_memory_ahead(theta, direction, x(1), x(2), x(3:4), x(5), x(6));
+        f = @logP_ring_memory_ahead;
     case 10
-        log_l_pdf = @(x) logP_ring_memory_ahead2ways(theta, direction, x(1), x(2), x(3:4), x(5), x(6));   
+        f = @logP_ring_memory_ahead2ways;   
 end
+
+log_l_pdf = @(x) log_l_pdf_f(f, theta, direction, x);
+
+function log_l = log_l_pdf_f(f, theta, direction, x)
+
+K = nan; % should never be used for our problems
+R = logistic(x(1), 0, pi);
+p_pulse = x(2:3);
+decay = logistic(x(4), 0, 1);
+q = x(5);
+
+log_l = f(theta, direction, R, K, p_pulse, decay, q);
+

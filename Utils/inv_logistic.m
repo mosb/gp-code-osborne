@@ -1,12 +1,6 @@
-function [ x ] = inv_logistic( f, upper )
+function [ x ] = inv_logistic( f, lower, upper)
 % logistic function
 
-ee = min(eps, upper/10);
-
-if nargin<2
-    upper = 1;
-end
-
-x = -log(bsxfun(@rdivide, upper - 2*ee, f - ee) - 1);
+x = -log(bsxfun(@rdivide, upper - lower, f - lower) - 1);
 
 
