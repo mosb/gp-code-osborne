@@ -67,7 +67,7 @@ opt = set_defaults( opt, default_opt );
 num_samples = size(samples.locations, 1);
 
 % The number of candidate locations to sample.
-opt.num_c = max(opt.num_c, samples.locations);
+opt.num_c = max(opt.num_c, size(samples.locations, 1));
 
 % candidate locations will be constrained to a box defined by the prior
 lower_bound = prior.mean - opt.num_box_scales*sqrt(diag(prior.covariance))';

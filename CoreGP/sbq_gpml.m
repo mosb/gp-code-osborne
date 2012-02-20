@@ -60,12 +60,13 @@ opt = set_defaults( opt, default_opt );
 
 sample_points = [];
 if opt.start_with_sds
+    
     for d = 1:D
         sample_points = [sample_points; zeros(4,D)];
-        sample_points(end - 3, d) = prior.mean(d) + sqrt(prior.covariance(d));
-        sample_points(end - 2, d) = prior.mean(d) + 2 * sqrt(prior.covariance(d));
-        sample_points(end - 1, d) = prior.mean(d) - sqrt(prior.covariance(d));
-        sample_points(end, d) = prior.mean(d) - 2 * sqrt(prior.covariance(d));
+        sample_points(end - 3, d) = prior.mean(d) + sqrt(prior.covariance(d, d));
+        sample_points(end - 2, d) = prior.mean(d) + 2 * sqrt(prior.covariance(d, d));
+        sample_points(end - 1, d) = prior.mean(d) - sqrt(prior.covariance(d, d));
+        sample_points(end, d) = prior.mean(d) - 2 * sqrt(prior.covariance(d, d));
     end
     samples.locations = sample_points;
     for i = 1:size(sample_points, 1);
