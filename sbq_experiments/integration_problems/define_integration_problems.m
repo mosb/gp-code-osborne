@@ -264,15 +264,49 @@ friedman_7d.log_likelihood_fn = ...
                                    friedman_data.X, friedman_data.y, @covSEard);
 friedman_7d.true_log_evidence = -215.846016515331058;   % Based on 1000000 SMC samples.
 
-if 1
+
+
+% Define real prawn problems.
+% ==================================
+load('sixinputs_downsampled');
+
+% Prawn model priors.
+priorrange = [10 4 4 10 0.01];
+priormean = [0 0 0 0 -7.4950];
+priorvars = diag((priorrange.^2)/12);
+
+real_prawn_6d_mean_field.name = 'real prawn 6d mean field';
+real_prawn_6d_mean_field.description = 'Integrating over real prawn minds; mean field model.';
+real_prawn_6d_mean_field.dimension = 5;
+real_prawn_6d_mean_field.prior.mean = priormean;
+real_prawn_6d_mean_field.prior.covariance = priorvars;
+real_prawn_6d_mean_field.log_likelihood_fn = ...
+    loglike_prawn_gaussian(theta, direction, 1);
+real_prawn_6d_mean_field.true_log_evidence = NaN;
+
+real_prawn_6d_markov.name = 'real prawn 6d markov';
+real_prawn_6d_markov.description = 'Integrating over real prawn minds; best markovian model.';
+real_prawn_6d_markov.dimension = 5;
+real_prawn_6d_markov.prior.mean = priormean;
+real_prawn_6d_markov.prior.covariance = priorvars;
+real_prawn_6d_markov.log_likelihood_fn = ...
+    loglike_prawn_gaussian(theta, direction, 5);
+real_prawn_6d_markov.true_log_evidence = NaN;
+
+real_prawn_6d_non_markov.name = 'real prawn 6d non-markov';
+real_prawn_6d_non_markov.description = 'Integrating over real prawn minds; best non-markovian model.';
+real_prawn_6d_non_markov.dimension = 5;
+real_prawn_6d_non_markov.prior.mean = priormean;
+real_prawn_6d_non_markov.prior.covariance = priorvars;
+real_prawn_6d_non_markov.log_likelihood_fn = ...
+    loglike_prawn_gaussian(theta, direction, 7);
+real_prawn_6d_non_markov.true_log_evidence = NaN;
+
+
+if 0
 load('simulated_mf_data');
 % NB: parameters are [inv_logistic(R, 0, pi), p_pulse(1), p_pulse(2), 
 % ... inv_logistic(decay, 0, 1), q]
-
-priorrange = [10 4 4 10 0.01];
-priormean = [0 0 0 0 -7.4950];
-
-priorvars = diag((priorrange.^2)/12);
 
 sim_prawn_6d_mean_field.name = 'simulated prawn 6d mean field';
 sim_prawn_6d_mean_field.description = 'Integrating over simulated prawn minds; mean field model.';
@@ -302,40 +336,6 @@ sim_prawn_6d_non_markov.log_likelihood_fn = ...
 sim_prawn_6d_non_markov.true_log_evidence = NaN;
 end
 
-%clear theta direction
-
-%load('sixinputs');
-if 0
-
-real_prawn_6d_mean_field.name = 'real prawn 6d mean field';
-real_prawn_6d_mean_field.description = 'Integrating over real prawn minds; mean field model.';
-real_prawn_6d_mean_field.dimension = 5;
-real_prawn_6d_mean_field.prior.mean = priormean;
-real_prawn_6d_mean_field.prior.covariance = priorvars;
-real_prawn_6d_mean_field.log_likelihood_fn = ...
-    loglike_prawn_gaussian(theta, directions, 1);
-real_prawn_6d_mean_field.true_log_evidence = NaN;
-
-real_prawn_6d_markov.name = 'real prawn 6d markov';
-real_prawn_6d_markov.description = 'Integrating over real prawn minds; best markovian model.';
-real_prawn_6d_markov.dimension = 5;
-real_prawn_6d_markov.prior.mean = priormean;
-real_prawn_6d_markov.prior.covariance = priorvars;
-real_prawn_6d_markov.log_likelihood_fn = ...
-    loglike_prawn_gaussian(theta, directions, 5);
-real_prawn_6d_markov.true_log_evidence = NaN;
-
-real_prawn_6d_non_markov.name = 'real prawn 6d non-markov';
-real_prawn_6d_non_markov.description = 'Integrating over real prawn minds; best non-markovian model.';
-real_prawn_6d_non_markov.dimension = 5;
-real_prawn_6d_non_markov.prior.mean = priormean;
-real_prawn_6d_non_markov.prior.covariance = priorvars;
-real_prawn_6d_non_markov.log_likelihood_fn = ...
-    loglike_prawn_gaussian(theta, directions, 7);
-real_prawn_6d_non_markov.true_log_evidence = NaN;
-
-clear theta directions
-end
 % Specify problems.
 problems = {};
 
@@ -353,18 +353,17 @@ problems{end+1} = two_spikes_4d;
 problems{end+1} = two_hills_4d;
 problems{end+1} = friedman_7d;
 
-problems{end+1} = sim_prawn_6d_mean_field;
-problems{end+1} = sim_prawn_6d_markov;
-problems{end+1} = sim_prawn_6d_non_markov;
-
-%problems{end+1} = real_prawn_6d_mean_field;
-%problems{end+1} = real_prawn_6d_markov;
-%problems{end+1} = real_prawn_6d_non_markov;
+problems{end+1} = real_prawn_6d_mean_field;
+problems{end+1} = real_prawn_6d_markov;
+problems{end+1} = real_prawn_6d_non_markov;
 
 %problems{end+1} = bumpy_1d;
 %problems{end+1} = easy_10d;
 %problems{end+1} = easy_20d;
 
+%problems{end+1} = sim_prawn_6d_mean_field;
+%problems{end+1} = sim_prawn_6d_markov;
+%problems{end+1} = sim_prawn_6d_non_markov;
 end
 
 function logZ = brute_force_integrate_1d(problem)
