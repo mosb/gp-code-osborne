@@ -315,7 +315,7 @@ sim_prawn_6d_mean_field.prior.mean = priormean;
 sim_prawn_6d_mean_field.prior.covariance = priorvars;
 sim_prawn_6d_mean_field.log_likelihood_fn = ...
     loglike_prawn_gaussian(theta, direction, 1);
-sim_prawn_6d_mean_field.true_log_evidence = NaN;
+sim_prawn_6d_mean_field.true_log_evidence = -606.550806182059887;  % 10000 samples of SMC.
 
 sim_prawn_6d_markov.name = 'simulated prawn 6d markov';
 sim_prawn_6d_markov.description = 'Integrating over simulated prawn minds; best markovian model.';
