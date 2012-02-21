@@ -8,6 +8,8 @@
 % ========================
 function latex_table(filename, results, methodNames, metricNames, experimentName)
 
+results = real(results);
+
 file = fopen( filename, 'w');
 
 for i = 1:length(methodNames)

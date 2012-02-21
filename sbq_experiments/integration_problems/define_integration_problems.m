@@ -293,7 +293,7 @@ real_prawn_6d_markov.prior.mean = priormean;
 real_prawn_6d_markov.prior.covariance = priorvars;
 real_prawn_6d_markov.log_likelihood_fn = ...
     loglike_prawn_gaussian(theta, direction, 5);
-real_prawn_6d_markov.true_log_evidence = -603.243529869901749;    % 10000 samples of SMC.
+real_prawn_6d_markov.true_log_evidence = -602.875974649963155;    % 100000 samples of SMC.
 
 real_prawn_6d_non_markov.name = 'real prawn 6d non-markov';
 real_prawn_6d_non_markov.description = 'Integrating over real prawn minds; best non-markovian model.';
@@ -302,7 +302,7 @@ real_prawn_6d_non_markov.prior.mean = priormean;
 real_prawn_6d_non_markov.prior.covariance = priorvars;
 real_prawn_6d_non_markov.log_likelihood_fn = ...
     loglike_prawn_gaussian(theta, direction, 7);
-real_prawn_6d_non_markov.true_log_evidence = -582.248194343939872;  % 10000 samples of SMC.
+real_prawn_6d_non_markov.true_log_evidence = -582.608593080991568;  % 100000 samples of SMC.
 
 
 
