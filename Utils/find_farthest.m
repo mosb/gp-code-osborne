@@ -78,11 +78,15 @@ if num_dims>1
 
         pc_distances = sqrt(squared_distance(points, candidates, length_scales));
 
-
-        enough = (size(candidates, 1) >= requested);
+        num_missing = requested - size(candidates, 1);
+        enough = num_missing <= 0;
         if (~enough)
-          farthest = candidates;
-          return;
+            extra_candidates = ...
+                unifrnd(repmat(box(1,:),num_missing,1),...
+                        repmat(box(2,:),num_missing,1));
+            
+            farthest = [candidates;extra_candidates];
+            return;
         end
 
         % if ascend
