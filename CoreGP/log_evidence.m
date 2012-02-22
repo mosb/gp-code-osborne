@@ -54,7 +54,7 @@ if nargin<4
     opt = struct();
 end
 
-default_opt = struct('num_c', 200,... % number of candidate points
+default_opt = struct('num_c', 400,... % number of candidate points
                      'num_box_scales', 5, ... % defines the box over which to take candidates
                      'allowed_cond_error',10^-14, ... % allowed conditioning error
                      'sds_tl_log_input_scales', false, ... % sds_tl_log_input_scales represents the posterior standard deviations in the input scales for tr. If false, a delta function posterior is assumed. 
@@ -173,12 +173,10 @@ if isempty(del_gp_hypers_SE);
     inference = @infExact;
     likfunc = @likGauss;
     meanfunc = {'meanZero'};
-    max_iters = 100;
     covfunc = @covSEiso;
     
-    opt_min.length = -50;
+    opt_min.length = -100;
     opt_min.verbosity = 0;
-
     gp_hypers_del = minimize(gp_hypers_del, @gp_fixedlik, opt_min, ...
                              inference, meanfunc, covfunc, likfunc, ...
                              x_sc, delta_tl_sc);        

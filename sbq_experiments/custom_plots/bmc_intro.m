@@ -60,7 +60,9 @@ h2 = plot( function_sample_points, y, 'kd', 'Marker', '.', ...
 % Add axes, legend, make the plot look nice, and save it.
 xlim( [xrange(1) - 0.04, xrange(end)]);
 ylim( [ -8 10] );
-legend( [h2 h1 hc1 g(1)], {'samples', 'posterior mean', 'posterior variance', 'expected area'}, 'Location', 'SouthEast', 'Fontsize', 6);
+legend( [h2 h1 hc1 g(1)], ...
+        {'samples', 'posterior mean', 'posterior variance', 'expected area'}, ...
+        'Location', 'SouthEast', 'Fontsize', 6);
 set( gca, 'XTick', [] );
 set( gca, 'yTick', [] );
 set( gca, 'XTickLabel', '' );

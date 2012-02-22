@@ -4,7 +4,7 @@ function compile_all_results( results_dir, paper_dir )
 % outdir: The directory to look in for all the results.
 % plotdir: The directory to put all the pplots.
 
-draw_plots = false;
+draw_plots = true;
 
 if nargin < 1; results_dir = '~/large_results/fear_sbq_results/'; end
 if nargin < 2; paper_dir = '~/Dropbox/papers/sbq-paper/'; end
@@ -23,18 +23,17 @@ fprintf('All content listed in %s\n', autocontent_filename);
 autocontent = fopen(autocontent_filename, 'w');
 fprintf(autocontent, ['\\documentclass{article}\n' ...
     '\\usepackage{preamble}\n' ...
-    '\\usepackage{morefloats}\n' ...'
-    '\\usepackage{pgfplots}\n' ...
-    '\\newlength\\fheight\\newlength\\fwidth\n' ...
+    '\\usepackage[margin=0.1in]{geometry}' ...
     '\\begin{document}\n\n' ...
     '\\input{tables/integrands.tex\n}']);
 addpath(genpath(pwd))
-
+    %'\\usepackage{morefloats}\n' ...
+    %'\\usepackage{pgfplots}\n' ...
 
 % Get the experimental configuration from the definition scripts.
 problems = define_integration_problems();
 methods = define_integration_methods();
-sample_sizes = 1:1000;%1:define_sample_sizes();
+sample_sizes = 1:define_sample_sizes();
 
 num_problems = length(problems);
 num_methods = length(methods);
@@ -105,6 +104,7 @@ end
 
 
 method_names = cellfun( @(method) method.acronym, methods, 'UniformOutput', false );
+method_domains = cellfun( @(method) method.domain, methods, 'UniformOutput', false );
 problem_names = cellfun( @(problem) problem.name, problems, 'UniformOutput', false );
 true_log_ev = cellfun( @(problem) problem.true_log_evidence, problems);
 
@@ -133,16 +133,49 @@ for p_ix = 1:num_problems
     for m_ix = 1:num_methods
         r = 1;
         true_log_evidence = true_log_ev( p_ix );
-        log_mean_prediction = mean_log_ev_table( m_ix, p_ix, end, r ) - true_log_evidence;
-        log_var_prediction = var_log_ev_table( m_ix, p_ix, end, r ) - 2*true_log_evidence;
-        log_liks(m_ix, p_ix) = logmvnpdf(1, exp(log_mean_prediction), ...
+        
+        squared_error(m_ix, p_ix) = (exp(mean_log_ev_table( m_ix, p_ix, end, r ) - true_log_evidence)^2 - 1);
+
+        
+        % Choose between dist over Z and over logZ
+        if strcmp(method_domains{m_ix}, 'Z');
+            log_mean_prediction = ...
+                mean_log_ev_table( m_ix, p_ix, end, r ) - true_log_evidence;            
+            log_var_prediction = ...
+                var_log_ev_table( m_ix, p_ix, end, r ) - 2*true_log_evidence;
+            log_liks(m_ix, p_ix) = logmvnpdf(1, exp(log_mean_prediction), ...
                                              exp(log_var_prediction));
+            
+            normalized_mean = exp(mean_log_ev_table( m_ix, p_ix, end, r ) - true_log_evidence);
+            normalized_std = sqrt(exp(var_log_ev_table( m_ix, p_ix, end, r ) - 2*true_log_evidence));
+            correct(m_ix, p_ix) = 1 < normalized_mean + 0.6745 * normalized_std ...
+                               && 1 > normalized_mean - 0.6745 * normalized_std;
+        elseif strcmp(method_domains{m_ix}, 'logZ');
+            log_liks(m_ix, p_ix) = ...
+                log(lognpdf(true_log_evidence, mean_log_ev_table( m_ix, p_ix, end, r ), ...
+                                               var_log_ev_table( m_ix, p_ix, end, r )));
+            normalized_mean = mean_log_ev_table( m_ix, p_ix, end, r );
+            normalized_std = sqrt(exp(var_log_ev_table( m_ix, p_ix, end, r )));
+            correct(m_ix, p_ix) = true_log_evidence < normalized_mean + 0.6745 * normalized_std ...
+                               && true_log_evidence > normalized_mean - 0.6745 * normalized_std;                                           
+        else
+            error('No domain defined for this method');
+        end
     end
 end
 latex_table( [tabledir, 'truth_prob.tex'], -log_liks', problem_names, ...
      method_names, sprintf('neg log density of truth at %i samples', ...
                            sample_sizes(end)) );
 fprintf(autocontent, '\\input{%s}\n', [tabledirshort, 'truth_prob.tex']);
+
+fprintf('\n\n');
+print_table( 'log squared error', problem_names, method_names, log(real(se)) );
+fprintf('\n\n');
+print_table( 'neg log density', problem_names, method_names, -log_liks' );
+fprintf('\n\n');
+print_table( 'squared_error', problem_names, method_names, squared_error' );
+fprintf('\n\n');
+print_table( 'calibration', problem_names, method_names, correct' );
 
 
 % Draw some plots
@@ -157,26 +190,26 @@ color(5, 1:3) = [0.1   1   1];  % cyan
 color(6, 1:3) = [0.9 0.1 0.9];  % purple
 color(7, 1:3) = [1 1 0];  % bright yellow
 
-opacity = 0.1;
-edgecolor = 'none';
+
 
 if draw_plots
 
+opacity = 0.1;
+edgecolor = 'none';
+    
 % Print legend.
 % =====================
-%method_names = cellfun( @(name) strrep( name, '_', ' '), method_names, ...
-%                       'UniformOutput', false);
 figure; clf;
 for m_ix = 1:num_methods
     z_handle(m_ix) = plot( 0, 0, '-', 'Color', sqrt(color( m_ix, :) ), 'LineWidth', 1); hold on;
 end
 truth_handle = plot( 1, 1, 'k-', 'LineWidth', 1); hold on;
-h_l = legend([z_handle, truth_handle], {method_names{:}, 'True value'} );
-filename = 'legend';
+h_l = legend([z_handle, truth_handle], {method_names{:}, 'True value'},...
+             'Location', 'East', 'Fontsize', 8);
+legend boxoff
 axis off;
-%matlab2tikz( [plotdir filename], 'height', '\fheight', 'width', '\fwidth', 'showInfo', false, 'showWarnings', false );
-%fprintf(autocontent, '\n\\begin{figure}\n\\centering\\setlength\\fheight{3cm}\\setlength\\fwidth{3cm}\\input{%s}\n\\end{figure}\n', [plotdirshort filename]);    
-set_fig_units_cm( 4, 5 )
+set_fig_units_cm( 3, 4 )
+filename = 'legend';
 matlabfrag([plotdir filename]);
 fprintf(autocontent, '\\psfragfig{%s}\n', [plotdirshort filename]);    
 

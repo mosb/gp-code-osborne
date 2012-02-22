@@ -284,7 +284,7 @@ real_prawn_6d_mean_field.prior.mean = priormean;
 real_prawn_6d_mean_field.prior.covariance = priorvars;
 real_prawn_6d_mean_field.log_likelihood_fn = ...
     loglike_prawn_gaussian(theta, direction, 1);
-real_prawn_6d_mean_field.true_log_evidence = -606.447448576312922;  % 100000 samples of SMC.
+real_prawn_6d_mean_field.true_log_evidence = -606.433987277287315;  % 1000000 samples of SMC.
 
 real_prawn_6d_markov.name = 'real prawn 6d markov';
 real_prawn_6d_markov.description = 'Integrating over real prawn minds; best markovian model.';

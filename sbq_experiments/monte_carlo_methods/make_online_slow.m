@@ -39,7 +39,7 @@ var_log_evidences = NaN(opt.num_samples, 1);
 
 cur_opt = opt;  % The options that will be used by the sampler.
 
-for num_s = 10:opt.num_samples
+for num_s = opt.num_samples
     stream.State = savedState;    % Set the random seed.
     
     cur_opt.num_samples = num_s;

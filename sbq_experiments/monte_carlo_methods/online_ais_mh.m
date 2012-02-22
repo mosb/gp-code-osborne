@@ -1,4 +1,4 @@
-function [log_mean_evidences, log_var_evidences, samples] = ...
+function [mean_log_evidences, var_log_evidences, samples] = ...
     online_ais_mh(loglik_fn, prior, opt)
 % Makes a fixed-length sampler into an online sampler, the slow way.
 % Simply re-fixes the random seed and calls the sampler again.
@@ -22,7 +22,7 @@ end
 var_log_evidences = var(all_mean_log_evidences)';
 
 % Now convert to a distribution over Z instead of LogZ.
-[log_mean_evidences, log_var_evidences] = ...
-    log_of_normal_to_log_normal( mean_log_evidences, var_log_evidences );
+%[log_mean_evidences, log_var_evidences] = ...
+%    log_of_normal_to_log_normal( mean_log_evidences, var_log_evidences );
 
 end
