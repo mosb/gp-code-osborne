@@ -13,7 +13,7 @@ function problems = define_integration_problems()
 
 
 simple_test_1d.name = 'simple';
-simple_test_1d.description = 'Mike''s simple test';
+simple_test_1d.description = 'A smooth function with two bumps';
 simple_test_1d.dimension = 1;
 simple_test_1d.prior.mean = 0;
 simple_test_1d.prior.covariance = 1;
@@ -64,7 +64,7 @@ simple_test_scale_1d.true_log_evidence = ...
                                      r_mean2, r_sd2^2)]); %+ log(10);                       
 
 easy_1d.name = 'easy 1d';
-easy_1d.description = 'A smooth 1D Gaussian.';
+easy_1d.description = 'A smooth 1D Gaussian';
 easy_1d.dimension = 1;
 easy_1d.prior.mean = .9;
 easy_1d.prior.covariance = 1.1;
@@ -79,7 +79,7 @@ easy_1d.true_log_evidence = ...
 
                                  
 easy_4d.name = 'easy 4d';
-easy_4d.description = 'A smooth 4D isotropic Gaussian.';
+easy_4d.description = 'A smooth 4D isotropic Gaussian';
 easy_4d.dimension = 4;
 easy_4d.prior.mean = .9 .* ones(1, easy_4d.dimension);
 easy_4d.prior.covariance = diag(1.1 .* ones(easy_4d.dimension,1));
@@ -94,7 +94,7 @@ easy_4d.true_log_evidence = ...
                                  
                                  
 easy_10d.name = 'easy 10d';
-easy_10d.description = 'A smooth 10D isotropic Gaussian.';
+easy_10d.description = 'A smooth 10D isotropic Gaussian';
 easy_10d.dimension = 10;
 easy_10d.prior.mean = .9 .* ones(1, easy_10d.dimension);
 easy_10d.prior.covariance = diag(1.1 .* ones(easy_10d.dimension,1));
@@ -109,7 +109,7 @@ easy_10d.true_log_evidence = ...
                                  
                                  
 easy_20d.name = 'easy 20d';
-easy_20d.description = 'A smooth 20D isotropic Gaussian.';
+easy_20d.description = 'A smooth 20D isotropic Gaussian';
 easy_20d.dimension = 20;
 easy_20d.prior.mean = .9 .* ones(1, easy_20d.dimension);
 easy_20d.prior.covariance = diag(1.1 .* ones(easy_20d.dimension,1));
@@ -132,7 +132,7 @@ easy_20d.true_log_evidence = ...
 % bumpy_1d.true_log_evidence = brute_force_integrate_1d(bumpy_1d);
 
 bumpy_1d_exp.name = 'bumpy 1d';
-bumpy_1d_exp.description = 'a highly varying function';
+bumpy_1d_exp.description = 'A highly varying function';
 bumpy_1d_exp.dimension = 1;
 bumpy_1d_exp.prior.mean = .9;
 bumpy_1d_exp.prior.covariance = 1.1;
@@ -191,10 +191,10 @@ two_spikes_4d.description = 'Two widely separated skinny humps';
 two_spikes_4d.dimension = 4;
 two_spikes_4d.prior.mean = zeros(1, two_spikes_4d.dimension);
 two_spikes_4d.prior.covariance = diag(ones(two_spikes_4d.dimension, 1) .* 10^2);
-likelihood.mean1 = -10 .* ones(1, two_spikes_4d.dimension);
-likelihood.mean2 = 10 .* ones(1, two_spikes_4d.dimension);
-likelihood.covariance1 = 0.4 .* diag(ones(two_spikes_4d.dimension,1));
-likelihood.covariance2 = 0.4 .* diag(ones(two_spikes_4d.dimension,1));
+likelihood.mean1 = -5 .* ones(1, two_spikes_4d.dimension);
+likelihood.mean2 = 5 .* ones(1, two_spikes_4d.dimension);
+likelihood.covariance1 = 1.4 .* diag(ones(two_spikes_4d.dimension,1));
+likelihood.covariance2 = 1.4 .* diag(ones(two_spikes_4d.dimension,1));
 two_spikes_4d.log_likelihood_fn = ...
     @(x) logsumexp([logmvnpdf( x, likelihood.mean1, likelihood.covariance1 ), ...
                     logmvnpdf( x, likelihood.mean2, likelihood.covariance2 )]')';
@@ -228,7 +228,7 @@ two_hills_4d.true_log_evidence = ...
                                      likelihood.mean2, likelihood.covariance2)]);                                  
                                  
 funnel_2d.name = 'funnel 2d';
-funnel_2d.description = 'Radford Neal''s funnel plot';
+funnel_2d.description = 'Radford Neal''s funnel function';
 funnel_2d.dimension = 2;
 funnel_2d.prior.mean = zeros(1, funnel_2d.dimension );
 funnel_2d.prior.covariance = 25.*diag(ones(funnel_2d.dimension,1));
@@ -242,7 +242,7 @@ funnel_2d.true_log_evidence = -2.7480;
 
 
 friedman_3d.name = 'friedman 3d';
-friedman_3d.description = 'isotropic BMC paper experiment.';
+friedman_3d.description = 'BMC paper experiment, isotropic kernel';
 friedman_3d.dimension = 3;
 friedman_3d.prior.mean = zeros(1, friedman_3d.dimension);
 friedman_3d.prior.covariance = diag(ones(friedman_3d.dimension, 1) .* 4);
@@ -254,7 +254,7 @@ friedman_3d.true_log_evidence =  -224.042705593331050;   % Based on 1000000 SMC 
 
 
 friedman_7d.name = 'friedman 7d';
-friedman_7d.description = 'BMC paper experiment.';
+friedman_7d.description = 'BMC paper experiment';
 friedman_7d.dimension = 7;
 friedman_7d.prior.mean = zeros(1, friedman_7d.dimension);
 friedman_7d.prior.covariance = diag(ones(friedman_7d.dimension, 1) .* 4);
@@ -278,7 +278,7 @@ priormean = [0 0 0 0 -7.4950];
 priorvars = diag((priorrange.^2)/12);
 
 real_prawn_6d_mean_field.name = 'real prawn 6d mean field';
-real_prawn_6d_mean_field.description = 'Integrating over real prawn minds; mean field model.';
+real_prawn_6d_mean_field.description = 'prawn model; mean field model.';
 real_prawn_6d_mean_field.dimension = 5;
 real_prawn_6d_mean_field.prior.mean = priormean;
 real_prawn_6d_mean_field.prior.covariance = priorvars;
@@ -287,7 +287,7 @@ real_prawn_6d_mean_field.log_likelihood_fn = ...
 real_prawn_6d_mean_field.true_log_evidence = -606.433987277287315;  % 1000000 samples of SMC.
 
 real_prawn_6d_markov.name = 'real prawn 6d markov';
-real_prawn_6d_markov.description = 'Integrating over real prawn minds; best markovian model.';
+real_prawn_6d_markov.description = 'prawn model; best markovian model.';
 real_prawn_6d_markov.dimension = 5;
 real_prawn_6d_markov.prior.mean = priormean;
 real_prawn_6d_markov.prior.covariance = priorvars;
@@ -296,7 +296,7 @@ real_prawn_6d_markov.log_likelihood_fn = ...
 real_prawn_6d_markov.true_log_evidence = -602.875974649963155;    % 100000 samples of SMC.
 
 real_prawn_6d_non_markov.name = 'real prawn 6d non-markov';
-real_prawn_6d_non_markov.description = 'Integrating over real prawn minds; best non-markovian model.';
+real_prawn_6d_non_markov.description = 'prawn model; best non-markovian model.';
 real_prawn_6d_non_markov.dimension = 5;
 real_prawn_6d_non_markov.prior.mean = priormean;
 real_prawn_6d_non_markov.prior.covariance = priorvars;
@@ -310,9 +310,9 @@ real_prawn_6d_non_markov.true_log_evidence = -582.608593080991568;  % 100000 sam
 problems = {};
 
 problems{end+1} = simple_test_1d;
-problems{end+1} = simple_test_trans_1d;
-problems{end+1} = simple_test_scale_1d;
-problems{end+1} = easy_1d;
+%problems{end+1} = simple_test_trans_1d;
+%problems{end+1} = simple_test_scale_1d;
+%problems{end+1} = easy_1d;
 problems{end+1} = bumpy_1d_exp;
 problems{end+1} = two_spikes_1d;
 problems{end+1} = two_hills_1d;

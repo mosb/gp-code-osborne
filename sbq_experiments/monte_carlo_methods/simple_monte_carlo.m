@@ -31,9 +31,13 @@ end
 samples = mvnrnd( prior.mean, prior.covariance, opt.num_samples );
 logliks = loglik_fn( samples );
 
+% Remove any bad likelihoods
+good_ix = ~isinf(logliks);
+num_good = sum(good_ix);
+
 % Compute empirical mean.
-mean_log_evidence = logsumexp(logliks) - log(opt.num_samples);
+mean_log_evidence = logsumexp(logliks(good_ix)) - log(num_good);
 
 % Compute empirical variance. todo:  check if this is the right thing to do.
-var_log_evidence = var(logliks) / opt.num_samples;
+var_log_evidence = var(logliks(good_ix)) / num_good;
 end

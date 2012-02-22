@@ -4,7 +4,7 @@ function compile_all_results( results_dir, paper_dir )
 % outdir: The directory to look in for all the results.
 % plotdir: The directory to put all the pplots.
 
-draw_plots = true;
+draw_plots = false;
 
 if nargin < 1; results_dir = '~/large_results/fear_sbq_results/'; end
 if nargin < 2; paper_dir = '~/Dropbox/papers/sbq-paper/'; end
@@ -25,7 +25,7 @@ fprintf(autocontent, ['\\documentclass{article}\n' ...
     '\\usepackage{preamble}\n' ...
     '\\usepackage[margin=0.1in]{geometry}' ...
     '\\begin{document}\n\n' ...
-    '\\input{tables/integrands.tex\n}']);
+    '\\input{tables/integrands_auto.tex\n}']);
 addpath(genpath(pwd))
     %'\\usepackage{morefloats}\n' ...
     %'\\usepackage{pgfplots}\n' ...
@@ -33,7 +33,7 @@ addpath(genpath(pwd))
 % Get the experimental configuration from the definition scripts.
 problems = define_integration_problems();
 methods = define_integration_methods();
-sample_sizes = 1:define_sample_sizes();
+sample_sizes = 1:200;%define_sample_sizes();
 
 num_problems = length(problems);
 num_methods = length(methods);
@@ -62,7 +62,10 @@ for p_ix = 1:num_problems
                 % Now save all relevant results into tables.
                 for s_ix = 1:num_sample_sizes
                     timing_table(m_ix, p_ix, s_ix, r) = results.total_time;
-                    mean_log_ev_table(m_ix, p_ix, s_ix, r) = results.mean_log_evidences(s_ix);
+                    if imag(results.mean_log_evidences(s_ix)) > 0
+                        fprintf(' imag ');
+                    end
+                    mean_log_ev_table(m_ix, p_ix, s_ix, r) = real(results.mean_log_evidences(s_ix));
                     var_log_ev_table(m_ix, p_ix, s_ix, r) = results.var_log_evidences(s_ix);
                     true_log_ev_table(m_ix, p_ix, s_ix, r) = results.problem.true_log_evidence;
                 end
@@ -134,7 +137,7 @@ for p_ix = 1:num_problems
         r = 1;
         true_log_evidence = true_log_ev( p_ix );
         
-        squared_error(m_ix, p_ix) = (exp(mean_log_ev_table( m_ix, p_ix, end, r ) - true_log_evidence)^2 - 1);
+        squared_error(m_ix, p_ix) = (exp(mean_log_ev_table( m_ix, p_ix, end, r ) - true_log_evidence) - 1)^2;
 
         
         % Choose between dist over Z and over logZ
@@ -146,18 +149,18 @@ for p_ix = 1:num_problems
             log_liks(m_ix, p_ix) = logmvnpdf(1, exp(log_mean_prediction), ...
                                              exp(log_var_prediction));
             
-            normalized_mean = exp(mean_log_ev_table( m_ix, p_ix, end, r ) - true_log_evidence);
-            normalized_std = sqrt(exp(var_log_ev_table( m_ix, p_ix, end, r ) - 2*true_log_evidence));
-            correct(m_ix, p_ix) = 1 < normalized_mean + 0.6745 * normalized_std ...
-                               && 1 > normalized_mean - 0.6745 * normalized_std;
+            normalized_mean(m_ix, p_ix) = exp(mean_log_ev_table( m_ix, p_ix, end, r ) - true_log_evidence);
+            normalized_std(m_ix, p_ix) = sqrt(exp(var_log_ev_table( m_ix, p_ix, end, r ) - 2*true_log_evidence));
+            correct(m_ix, p_ix) = 1 < normalized_mean(m_ix, p_ix) + 0.6745 * normalized_std(m_ix, p_ix) ...
+                               && 1 > normalized_mean(m_ix, p_ix) - 0.6745 * normalized_std(m_ix, p_ix);
         elseif strcmp(method_domains{m_ix}, 'logZ');
             log_liks(m_ix, p_ix) = ...
-                log(lognpdf(true_log_evidence, mean_log_ev_table( m_ix, p_ix, end, r ), ...
-                                               var_log_ev_table( m_ix, p_ix, end, r )));
-            normalized_mean = mean_log_ev_table( m_ix, p_ix, end, r );
-            normalized_std = sqrt(exp(var_log_ev_table( m_ix, p_ix, end, r )));
-            correct(m_ix, p_ix) = true_log_evidence < normalized_mean + 0.6745 * normalized_std ...
-                               && true_log_evidence > normalized_mean - 0.6745 * normalized_std;                                           
+                log_lognpdf(mean_log_ev_table( m_ix, p_ix, end, r ), true_log_evidence, ...
+                                               var_log_ev_table( m_ix, p_ix, end, r ));
+            normalized_mean(m_ix, p_ix) = mean_log_ev_table( m_ix, p_ix, end, r );
+            normalized_std(m_ix, p_ix) = sqrt(var_log_ev_table( m_ix, p_ix, end, r ));
+            correct(m_ix, p_ix) = true_log_evidence < normalized_mean(m_ix, p_ix) + 0.6745 * normalized_std(m_ix, p_ix) ...
+                               && true_log_evidence > normalized_mean(m_ix, p_ix) - 0.6745 * normalized_std(m_ix, p_ix);                                           
         else
             error('No domain defined for this method');
         end
@@ -176,6 +179,40 @@ fprintf('\n\n');
 print_table( 'squared_error', problem_names, method_names, squared_error' );
 fprintf('\n\n');
 print_table( 'calibration', problem_names, method_names, correct' );
+fprintf('\n\n');
+print_table( 'normalized_mean', problem_names, method_names, normalized_mean' );
+fprintf('\n\n');
+print_table( 'normalized_std', problem_names, method_names, normalized_std' );
+
+latex_table( [tabledir, 'norm_mean.tex'], normalized_mean', problem_names, ...
+     method_names, 'normalized means' );
+fprintf(autocontent, '\\input{%s}\n', [tabledirshort, 'norm_mean.tex']);
+
+
+latex_table( [tabledir, 'norm_std.tex'], normalized_std', problem_names, ...
+     method_names, 'normalized stddev');
+fprintf(autocontent, '\\input{%s}\n', [tabledirshort, 'norm_std.tex']);
+
+
+
+combined_nll = sum(-log_liks(:, 1:end-4)');
+combined_se = mean(squared_error(:, 1:end-4)');
+combined_calibration = mean(correct(:, 1:end-4)');
+combined_synth = [combined_nll; combined_se; combined_calibration];
+
+final_results_table( [tabledir, 'combined_synth.tex'], combined_synth', method_names, {'NLL', 'SE', 'C'}, ...
+     'Combined Synthetic Results');
+fprintf(autocontent, '\\input{%s}\n', [tabledirshort, 'combined_synth.tex']);
+
+
+combined_nll = sum(-log_liks(:, end-3:end)');
+combined_se = mean(squared_error(:, end-3:end)');
+combined_calibration = mean(correct(:, end-3:end)');
+combined_prawn = [combined_nll; combined_se; combined_calibration];
+
+final_results_table( [tabledir, 'combined_prawn.tex'], combined_prawn', method_names, {'NLL', 'SE', 'C'}, ...
+     'Combined Prawn Results');
+fprintf(autocontent, '\\input{%s}\n', [tabledirshort, 'combined_prawn.tex']);
 
 
 % Draw some plots
