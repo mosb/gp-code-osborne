@@ -81,9 +81,18 @@ if num_dims>1
         num_missing = requested - size(candidates, 1);
         enough = num_missing <= 0;
         if (~enough)
-            extra_candidates = ...
-                unifrnd(repmat(box(1,:),num_missing,1),...
-                        repmat(box(2,:),num_missing,1));
+            
+            % generate points on a unit circle
+            directions = rand(num_missing, num_dims)-0.5;
+            directions_length = sqrt(sum(directions.^2, 2));
+            directions = bsxfun(@rdivide, directions, directions_length);
+            % scale by length_scales
+            directions = bsxfun(@times, directions, length_scales);
+            
+            start_inds = ceil(num_points * rand(num_missing, 1));
+            starts = points(start_inds,:);
+            
+            extra_candidates = starts + directions;
             
             farthest = [candidates;extra_candidates];
             return;
