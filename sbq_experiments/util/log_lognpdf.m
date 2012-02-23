@@ -18,7 +18,7 @@ end
 z_sigma_squared(z_sigma_squared <= 0) = NaN;
 
 try
-    y = -0.5 * ((z_p - z_mu).^2)./sigma_squared ...
+    y = -0.5 * ((z_p - z_mu).^2)./z_sigma_squared ...
         - z_p - log(sqrt(2*pi)) - 0.5*log(z_sigma_squared);
 catch
     error(message('stats:lognpdf:InputSizeMismatch'));
