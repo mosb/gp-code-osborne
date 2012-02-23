@@ -24,7 +24,7 @@ opt_min.verbosity = 0;
 
 % Init GP Hypers.
 init_hypers.mean = [];
-init_hypers.lik = log(0.01);  % Values go between 0 and 1, so no need to scale.
+init_hypers.lik = log(1e-4);  % Values go between 0 and 1, so no need to scale.
 
 if size(l,2) == 1
     l = l';
