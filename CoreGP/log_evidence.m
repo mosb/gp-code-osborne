@@ -157,29 +157,14 @@ delta_tl_sc = mean_tl_sc - log_transform(mean_l_sc, opt.gamma);
 if isempty(del_gp_hypers_SE);
     fprintf('Fitting GP to delta-observations...\n');
 
-    % Set up GP.
-    gp_hypers_del.mean = [];
-    gp_hypers_del.lik = log(0.01);  % Values go between 0 and 1, so no need to scale.
-    init_lengthscales = tl_gp_hypers_SE.log_input_scales - log(10);
-    init_output_variance = tl_gp_hypers_SE.log_output_scale;
-    gp_hypers_del.cov = [init_lengthscales(1) init_output_variance];
-    init_hypers = gp_hypers_del;
-    inference = @infExact;
-    likfunc = @likGauss;
-    meanfunc = {'meanZero'};
-    covfunc = @covSEiso;
-    
-    opt_min.length = -100;
-    opt_min.verbosity = 0;
-    gp_hypers_del = minimize(gp_hypers_del, @gp_fixedlik, opt_min, ...
-                             inference, meanfunc, covfunc, likfunc, ...
-                             x_sc, delta_tl_sc);        
+    num_evals = 100;
+    % Train GP.
+    gp_hypers_del = ...
+        fit_hypers_multiple_restart( x_sc, delta_tl_sc, ...
+        tl_gp_hypers_SE.log_input_scales - log(10), ...
+        tl_gp_hypers_SE.log_output_scale, ...
+        num_evals);               
                          
-    if any(isnan(gp_hypers_del.cov))
-        gp_hypers_del = init_hypers;
-        warning('Optimizing hypers on delta failed');
-    end                         
-
     del_gp_hypers_SE.log_output_scale = gp_hypers_del.cov(end);
     del_gp_hypers_SE.log_input_scales(1:D) = gp_hypers_del.cov(1:end - 1);
     del_gp_hypers = sqdexp2gaussian(del_gp_hypers_SE);

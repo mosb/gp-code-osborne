@@ -81,6 +81,13 @@ if size(sample_points,1) >= opt.num_samples
     warning('sbq: no active sampling performed');
 end
 
+% initialise hypers
+l_gp_hypers.log_input_scales = log(sqrt(diag(prior.covariance)') / 10);
+l_gp_hypers.log_output_scale = log(0.1);
+
+tl_gp_hypers.log_input_scales = log(sqrt(diag(prior.covariance)') / 10);
+tl_gp_hypers.log_output_scale = log(0.1);
+
 for i = size(sample_points,1) + 1:opt.num_samples
 
     % Update sample struct.
@@ -94,22 +101,28 @@ for i = size(sample_points,1) + 1:opt.num_samples
     % Train GPs
     % ===========================   
     fprintf('Fitting GP to observations...\n');
-    lengthscale_center = mean(sqrt(diag(prior.covariance))) / 10;
+    
+    
     gp_hypers = ...
         fit_hypers_multiple_restart( samples.locations, samples.scaled_l, ...
-                                     lengthscale_center );
+                                     l_gp_hypers.log_input_scales, ...
+                                     l_gp_hypers.log_output_scale);
     l_gp_hypers.log_output_scale = gp_hypers.cov(end);
     l_gp_hypers.log_input_scales(1:D) = gp_hypers.cov(1:end - 1);
+
     fprintf('Output variance: '); disp(exp(l_gp_hypers.log_output_scale));
     fprintf('Lengthscales: '); disp(exp(l_gp_hypers.log_input_scales));
 
     fprintf('Fitting GP to log-observations...\n');
-    lengthscale_center = mean(sqrt(diag(prior.covariance))) / 10;
+    
+    
     gp_hypers_log = ...
         fit_hypers_multiple_restart( samples.locations, samples.tl,...
-                                     lengthscale_center );
+                                     tl_gp_hypers.log_input_scales, ...
+                                     tl_gp_hypers.log_output_scale);
     tl_gp_hypers.log_output_scale = gp_hypers_log.cov(end);
     tl_gp_hypers.log_input_scales(1:D) = gp_hypers_log.cov(1:end - 1);
+
     fprintf('Output variance of logL: '); disp(exp(tl_gp_hypers.log_output_scale));
     fprintf('Lengthscales on logL: '); disp(exp(tl_gp_hypers.log_input_scales));
 
@@ -157,36 +170,4 @@ for i = size(sample_points,1) + 1:opt.num_samples
 end
 end
 
-function best_hypers = fit_hypers_multiple_restart( X, y, l )
-    
-    % Specify GP Model.
-    inference = @infExact;
-    likfunc = @likGauss;
-    meanfunc = {'meanZero'};
-    covfunc = @covSEiso;
-    opt_min.length = -1000;
-    opt_min.verbosity = 0;
-    
-    % Init GP Hypers.
-    init_hypers.mean = [];
-    init_hypers.lik = log(0.01);  % Values go between 0 and 1, so no need to scale.
-    init_output_variance = .1;
-    
-    init_lengthscales = [l * 100, l * 10, l, l / 10, l / 100];
-    
-    for i = 1:length(init_lengthscales);
-        init_hypers.cov = log( [init_lengthscales(i) init_output_variance] ); 
-        % Fit the model, but not the likelihood hyperparam (which stays fixed).    
-        [gp_hypers{i} fX] = minimize(init_hypers, @gp_fixedlik, opt_min, ...
-                                     inference, meanfunc, covfunc, likfunc, ...
-                                     X, y);
-        nll(i) = fX(end);
-    end
-    [best_nll, best_ix] = min(nll);
-    fprintf('NLL of different lengthscale mins: '); disp(nll);
-    best_hypers = gp_hypers{best_ix};
-    if any(isnan(best_hypers.cov))
-        best_hypers = init_hypers;
-        warning('Optimizing hypers failed');
-    end    
-end
+
