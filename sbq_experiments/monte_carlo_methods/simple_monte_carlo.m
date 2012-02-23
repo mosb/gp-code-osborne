@@ -1,4 +1,4 @@
-function [mean_log_evidence, var_log_evidence, samples] = ...
+function [log_mean_evidence, log_var_evidence, samples] = ...
     simple_monte_carlo(loglik_fn, prior, opt)
 % Simple Monte Carlo
 % 
@@ -36,8 +36,8 @@ good_ix = ~isinf(logliks);
 num_good = sum(good_ix);
 
 % Compute empirical mean.
-mean_log_evidence = logsumexp(logliks(good_ix)) - log(num_good);
+log_mean_evidence = logsumexp(logliks(good_ix)) - log(num_good);
 
 % Compute empirical variance. todo:  check if this is the right thing to do.
-var_log_evidence = var(logliks(good_ix)) / num_good;
+log_var_evidence = logsumexp(2.*(logliks(good_ix) - log_mean_evidence)) - log(num_good);
 end

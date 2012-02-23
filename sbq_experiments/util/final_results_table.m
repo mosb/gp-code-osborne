@@ -62,7 +62,7 @@ fprintf(file, '\\begin{center}\n');
 fprintf(file, '\\begin{tabular}{l %s}\n', repmat(' r', 1, metrics));
 
 % first line
-fprintf(file, 'Integrand');
+fprintf(file, 'Method');
 for c = 1:metrics
   fprintf(file, ' & \\rotatebox{0}{ %s } ', metricNames{c});
 end

@@ -23,14 +23,14 @@ smc_method.nicename = 'Simple Monte Carlo';
 smc_method.uniquename = 'simple monte carlo v1';
 smc_method.acronym = 'SMC';
 smc_method.function = @online_smc;%@simple_monte_carlo;
-smc_method.domain = 'logZ';   % Its distribution is Gaussian over logZ.
+smc_method.domain = 'Z';   % Its distribution is Gaussian over logZ.
 smc_method.opt = [];
 
 ais_method.nicename = 'Annealed Importance Sampling';
 ais_method.uniquename = 'annealed importance sampling v1';
 ais_method.acronym = 'AIS';
 ais_method.function = @online_ais_mh; %@ais_mh;
-ais_method.domain = 'logZ';
+ais_method.domain = 'Z';
 ais_method.opt = [];
 
 bmc_method.nicename = 'Vanilla Bayesian Monte Carlo';
@@ -105,8 +105,8 @@ methods{end+1} = bmc_method;
 methods{end+1} = bbq_hypers_method;
 methods{end+1} = sbq_gpml_method;
 methods{end+1} = bq_gpml_ais_method;
-methods{end+1} = bbq_method;
-methods{end+1} = bq_ais_method;
-methods{end+1} = bq_hypers_ais_method;
+%methods{end+1} = bbq_method;
+%methods{end+1} = bq_ais_method;
+%methods{end+1} = bq_hypers_ais_method;
 
 %methods{end+1} = log_bmc_ais_method;
