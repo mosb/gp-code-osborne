@@ -89,9 +89,9 @@ samples(1, :) = [];
 sample_vals(1) = [];
 mean_log_evidence = sum(weights);
 
-%rho = auto_correlation(weights);
-%effective_sample_size = opt.num_samples * ( 1 - rho ) / (1 + rho );
-var_log_evidence = NaN;%var(weights)*opt.num_samples/effective_sample_size^2;  % todo: double check this.
+rho = auto_correlation(weights);
+effective_sample_size = opt.num_samples * ( 1 - rho ) / (1 + rho );
+var_log_evidence = var(weights)*opt.num_samples/effective_sample_size^2;  % todo: double check this.
 end
 
 

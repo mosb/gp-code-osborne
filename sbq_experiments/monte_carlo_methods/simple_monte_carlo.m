@@ -35,9 +35,13 @@ logliks = loglik_fn( samples );
 good_ix = ~isinf(logliks);
 num_good = sum(good_ix);
 
+
 % Compute empirical mean.
 log_mean_evidence = logsumexp(logliks(good_ix)) - log(num_good);
 
-% Compute empirical variance. todo:  check if this is the right thing to do.
-log_var_evidence = logsumexp(2.*(logliks(good_ix) - log_mean_evidence)) - log(num_good);
+% Compute standard error in a numerically stable way.
+log_second_moment = logsumexp(2.*(logliks(good_ix))) - log(num_good);
+log_first_moment_sq = 2*log_mean_evidence;
+b = min([ log_second_moment log_first_moment_sq]);
+log_var_evidence = log( exp(log_second_moment - b) -exp(log_first_moment_sq - b) ) + b - log(num_good);
 end

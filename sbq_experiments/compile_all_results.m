@@ -195,9 +195,9 @@ fprintf(autocontent, '\\input{%s}\n', [tabledirshort, 'norm_std.tex']);
 
 
 
-combined_nll = sum(-log_liks(:, 1:end-4)');
-combined_se = mean(squared_error(:, 1:end-4)');
-combined_calibration = mean(correct(:, 1:end-4)');
+combined_nll = sum(-log_liks(:, 1:end-3)');
+combined_se = mean(squared_error(:, 1:end-3)');
+combined_calibration = mean(correct(:, 1:end-3)');
 combined_synth = [combined_nll; combined_se; combined_calibration];
 
 final_results_table( [tabledir, 'combined_synth.tex'], combined_synth', method_names, {'NLL', 'SE', 'C'}, ...
@@ -205,9 +205,9 @@ final_results_table( [tabledir, 'combined_synth.tex'], combined_synth', method_n
 fprintf(autocontent, '\\input{%s}\n', [tabledirshort, 'combined_synth.tex']);
 
 
-combined_nll = sum(-log_liks(:, end-3:end)');
-combined_se = mean(squared_error(:, end-3:end)');
-combined_calibration = mean(correct(:, end-3:end)');
+combined_nll = sum(-log_liks(:, end-2:end)');
+combined_se = mean(squared_error(:, end-2:end)');
+combined_calibration = mean(correct(:, end-2:end)');
 combined_prawn = [combined_nll; combined_se; combined_calibration];
 
 final_results_table( [tabledir, 'combined_prawn.tex'], combined_prawn', method_names, {'NLL', 'SE', 'C'}, ...
@@ -291,7 +291,7 @@ for p_ix = 1:num_problems
         end
         
         xlabel('Number of samples', 'fontsize', label_fontsize);
-        ylabel('NLL of True Value', 'fontsize', label_fontsize);
+        ylabel('$-\\log(p(Z))$', 'fontsize', label_fontsize, 'Rotation',90,'Interpreter','latex', 'Fontsize', 8);
         title(cur_problem_name, 'fontsize', label_fontsize);
 
         filename = sprintf('log_of_truth_plot_%s', strrep(cur_problem_name, ' ', '_'));
@@ -331,7 +331,7 @@ for p_ix = 1:num_problems
             end
         end
         xlabel('Number of samples');
-        ylabel('Squared Distance to True Value');
+        ylabel('Squared Error');
         title(cur_problem_name);
 
 

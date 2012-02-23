@@ -186,13 +186,14 @@ two_hills_1d.true_log_evidence = ...
               + log(scale_factor);
           
           
+          
 two_spikes_4d.name = 'two spikes 4d';
 two_spikes_4d.description = 'Two widely separated skinny humps';
 two_spikes_4d.dimension = 4;
 two_spikes_4d.prior.mean = zeros(1, two_spikes_4d.dimension);
 two_spikes_4d.prior.covariance = diag(ones(two_spikes_4d.dimension, 1) .* 10^2);
-likelihood.mean1 = -5 .* ones(1, two_spikes_4d.dimension);
-likelihood.mean2 = 5 .* ones(1, two_spikes_4d.dimension);
+likelihood.mean1 = -3 .* ones(1, two_spikes_4d.dimension);
+likelihood.mean2 = 3 .* ones(1, two_spikes_4d.dimension);
 likelihood.covariance1 = 1.4 .* diag(ones(two_spikes_4d.dimension,1));
 likelihood.covariance2 = 1.4 .* diag(ones(two_spikes_4d.dimension,1));
 two_spikes_4d.log_likelihood_fn = ...

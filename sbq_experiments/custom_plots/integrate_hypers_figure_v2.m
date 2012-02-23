@@ -12,7 +12,9 @@
 
 function integrate_hypers_figure
 
-
+randn('state', 0);
+rand('twister', 0);  
+    
 clf;
 col_width = 8.25381;  % ICML double column width in cm.
 lw = 0.5;
@@ -117,7 +119,7 @@ emp = plot(xrange, posterior(xrange) - 2.*std(f_mu_history)', 'k', 'Linewidth', 
 % Add axes, legend, make the plot look nice, and save it.
 xlim( [xrange(1) - 0.04, xrange(end)]);
 ylim( [ -8 14] );
-legend_handle = legend( [h2 h1 hc1 hc2 emp], {'data', 'mean', 'variance', 'approx. integrated lengthscale', 'true integrate lengthscale'}, 'Location', 'SouthEast', 'Fontsize', 6);
+legend_handle = legend( [h2 h1 hc1 hc2 emp], {'data', 'mean', 'variance', 'approx. marginalised length scale', 'true marginalised length scale'}, 'Location', 'SouthWest', 'Fontsize', 6);
 set( gca, 'XTick', [] );
 set( gca, 'yTick', [] );
 set( gca, 'XTickLabel', '' );

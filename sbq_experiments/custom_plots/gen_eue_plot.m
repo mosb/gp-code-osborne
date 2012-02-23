@@ -189,13 +189,13 @@ xrange = test_pts(:,end);
 % Plot the prior.
 scale_factor = max(losses(:)) / mvnpdf(0, 0, prior.covariance);
 h_prior = plot3(repmat(i + 1,N,1), xrange,...
-    mvnpdf(xrange, prior.mean, prior.covariance) * scale_factor, 'k', 'LineWidth', 1); hold on;
+    mvnpdf(xrange, prior.mean, prior.covariance) * scale_factor, 'g--', 'LineWidth', 1); hold on;
 
 % Plot the true function.
 true_plot_depth = i + 1;
 scale_factor = max(losses(:)) / max(exp(log_likelihood_fn(xrange)));
 h_ll = plot3(repmat(true_plot_depth,N,1), xrange, ...
-    scale_factor * exp(log_likelihood_fn(xrange)), 'g', 'LineWidth', 2);
+    scale_factor * exp(log_likelihood_fn(xrange)), 'k', 'LineWidth', 1);
 
 %legend( [ h_prior h_ll h_est SDh h_samples ], {'Prior', 'True Likelihood Function', 'Posterior mean', 'Marginal uncetainty', 'Sample locations'}, 'Location', 'Best');
 legend boxoff     
@@ -216,17 +216,18 @@ zlabel('f(x)');
 %set( gca, 'yTick', [] );
 %set( gca, 'zTick', [] );
 %set( gca, 'XTickLabel', '' );
+%set( get(gca, 'xTickLabel' ), 'Fontsize', 8);
 set( gca, 'yTickLabel', '' );
 set( gca, 'zTickLabel', '' );
 xlabel( 'sample' );
 ylabel(  '$x$');
-zlabel( '$\ell(x)$' );
-set(get(gca,'XLabel'),'Rotation',90,'Interpreter','latex', 'Fontsize', 8);
+zlabel( 'expected variance' );
+set(get(gca,'XLabel'),'Rotation',0,'Interpreter','latex', 'Fontsize', 8);
 set(get(gca,'YLabel'),'Rotation',0,'Interpreter','latex', 'Fontsize', 8);
 set(get(gca,'ZLabel'),'Rotation',90,'Interpreter','latex', 'Fontsize', 8);
 
 view(-82, 48);
 
 set_fig_units_cm( col_width, 7 );
-matlabfrag('~/Dropbox/papers/sbq-paper/figures/eue_progression');  
+matlabfrag('~/Dropbox/papers/sbq-paper/figures/eue_progression2');  
 end
