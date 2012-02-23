@@ -33,7 +33,7 @@ addpath(genpath(pwd))
 % Get the experimental configuration from the definition scripts.
 problems = define_integration_problems();
 methods = define_integration_methods();
-sample_sizes = 1:100;%define_sample_sizes();
+sample_sizes = 1:150;%define_sample_sizes();
 
 num_problems = length(problems);
 num_methods = length(methods);
@@ -226,7 +226,7 @@ color(4, 1:3) = [.4  0.4 0.1];  % dark yellow
 color(5, 1:3) = [0.1   1   1];  % cyan
 color(6, 1:3) = [0.9 0.1 0.9];  % purple
 color(7, 1:3) = [1 1 0];  % bright yellow
-
+color(8:10, 1:3) = 0;  % bright yellow
 
 
 if draw_plots
