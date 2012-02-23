@@ -78,6 +78,13 @@ if num_dims>1
 
         pc_distances = sqrt(squared_distance(points, candidates, length_scales));
 
+%         for i=1:num_dims;
+%             i2s = [1:i-1,i+1:num_dims];
+%             i2 = i2s(ceil(rand*(num_dims-1)));
+%             figure;plot(points(:,i),points(:,i2),'k.','MarkerSize',14)
+%             hold on;plot(candidates(:,i),candidates(:,i2),'m.','MarkerSize',10)
+%         end
+        
         num_missing = requested - size(candidates, 1);
         enough = num_missing <= 0;
         if (~enough)
@@ -95,6 +102,7 @@ if num_dims>1
             extra_candidates = starts + directions;
             
             farthest = [candidates;extra_candidates];
+            
             return;
         end
 

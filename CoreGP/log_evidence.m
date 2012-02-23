@@ -55,7 +55,7 @@ if nargin<4
 end
 
 default_opt = struct('num_c', 400,... % number of candidate points
-                     'num_c_box_scales', 1, ... % defines the box over which to take candidates
+                     'num_c_scales', 1, ... % defines the box over which to take candidates
                      'allowed_cond_error',10^-14, ... % allowed conditioning error
                      'sds_tl_log_input_scales', false, ... % sds_tl_log_input_scales represents the posterior standard deviations in the input scales for tr. If false, a delta function posterior is assumed. 
                      'gamma', 100, ... % log_transform scaling factor.
@@ -70,22 +70,14 @@ num_samples = size(samples.locations, 1);
 opt.num_c = max(opt.num_c, size(samples.locations, 1));
 
 
-% candidate locations are taken to be as far away from each other and
-% existing sample locations as possible, according to a Mahalanobis
-% distance with diagonal covariance matrix with diagonal defined as
-% mahal_scales.
+% candidate locations are taken to be far away from each other and existing
+% sample locations, according to a Mahalanobis distance with diagonal
+% covariance matrix with diagonal defined as mahal_scales.
 mahal_scales = exp(l_gp_hypers_SE.log_input_scales);
 
-% candidate locations will be constrained to a box defined by the prior
-lower_bound = min(samples.locations) - opt.num_c_box_scales*mahal_scales;
-upper_bound = max(samples.locations) + opt.num_c_box_scales*mahal_scales;
-
-
-% find the candidate locations, far removed from existing samples, with the
-% use of a Voronoi diagram
-x_c = find_farthest(samples.locations, ...
-                    [lower_bound; upper_bound], opt.num_c, ...
-                     mahal_scales);
+% find the candidate locations, removed from existing samples
+x_c = find_candidates(samples.locations, opt.num_c, mahal_scales, ...
+            opt.num_c_scales);
 
 % the combined sample locations
 x_sc = [samples.locations; x_c];
