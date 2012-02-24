@@ -42,7 +42,7 @@ D = numel(prior.mean);
 
 % Set unspecified fields to default values.
 default_opt = struct('num_samples', 100, ...
-                     'exp_loss_evals', 150 * D^2, ...
+                     'exp_loss_evals', 500 * D^2, ...
                      'start_pt', prior.mean, ...
                      'start_with_sds', true, ...  % Start with the prior +-1 1sd and .
                      'gamma', 1, ...
@@ -138,6 +138,7 @@ for i = size(sample_points,1) + 1:opt.num_samples
     [log_mean_evidences(i), log_var_evidences(i), ev_params, del_gp_hypers] = ...
         log_evidence(samples, prior, l_gp_hypers, tl_gp_hypers, [], opt);
 
+    tic
     % Choose the next sample point.
     % =================================
     if i < opt.num_samples  % Except for the last iteration.
@@ -164,6 +165,7 @@ for i = size(sample_points,1) + 1:opt.num_samples
                 samples, tl_gp_hypers, opt.exp_loss_evals );
         end
     end
+    toc
     
     % Print progress.
     fprintf('Iteration %d log evidence: %g +- %g\n', i, ...

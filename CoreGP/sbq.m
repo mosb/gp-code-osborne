@@ -61,7 +61,7 @@ default_opt = struct('num_samples', 300, ...
                      'parallel', true, ...
                      'train_gp_num_samples', 5 * D, ...
                      'train_gp_print', false, ...
-                     'exp_loss_evals', 150 * D^2, ...
+                     'exp_loss_evals', 500 * D^2, ...
                      'start_pt', prior.mean, ...
                      'print', true, ...
                      'plots', false, ...
@@ -101,7 +101,6 @@ for i = 1:opt.num_samples
     samples.max_log_l = max(samples.log_l); % all log-likelihoods have max_log_l subtracted off
     samples.scaled_l = exp(samples.log_l - samples.max_log_l);
     samples.tl = log_transform(samples.scaled_l, opt.gamma);
-    
     
     % Retrain GP
     % ===========================   
@@ -151,7 +150,7 @@ for i = 1:opt.num_samples
     [log_mean_evidences(i), log_var_evidences(i), ev_params, del_gp_hypers] = ...
         log_evidence(samples, prior, l_gp_hypers, tl_gp_hypers, [], opt);
 
-    
+    tic;
     % Choose the next sample point.
     % =================================
     if i < opt.num_samples  % Except for the last iteration,
@@ -181,6 +180,7 @@ for i = 1:opt.num_samples
                 samples, tl_gp_hypers, opt.exp_loss_evals );
         end
     end
+    toc
     
     % Print progress dots.
     if opt.print == 1
