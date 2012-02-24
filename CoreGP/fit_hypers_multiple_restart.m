@@ -10,7 +10,7 @@ function best_hypers = fit_hypers_multiple_restart( ...
 % - o: (optional) initial guess for log output scale
     
 if nargin < 5
-    number_evals = 1000;
+    number_evals = 500;
 end
 
 

@@ -160,7 +160,8 @@ for i = size(sample_points,1) + 1:opt.num_samples
         else
             % Search within the prior box.
             [exp_loss_min, next_sample_point] = ...
-                min_in_box( objective_fn, prior, opt.exp_loss_evals );
+                min_in_box( objective_fn, prior, ...
+                samples, tl_gp_hypers, opt.exp_loss_evals );
         end
     end
     

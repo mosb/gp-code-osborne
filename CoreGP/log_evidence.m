@@ -157,7 +157,7 @@ delta_tl_sc = mean_tl_sc - log_transform(mean_l_sc, opt.gamma);
 if isempty(del_gp_hypers_SE);
     fprintf('Fitting GP to delta-observations...\n');
 
-    num_evals = 100;
+    num_evals = 50;
     % Train GP.
     gp_hypers_del = ...
         fit_hypers_multiple_restart( x_sc, delta_tl_sc, ...
