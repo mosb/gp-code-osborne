@@ -83,7 +83,9 @@ for r = 1:methods
     printFormat = ['%4.3f'];
     
     %if best(jj) == ii
-    if nearbest(r, c)
+    if r == 2 && ( c == 1 || c == 3 )
+      fprintf(file, ' & N/A');
+    elseif nearbest(r, c)
       %fprintf(file, [' & $\\mathbf{' printFormat '} \\pm %2.1f$'], ...
       fprintf(file, [' & $\\mathbf{' printFormat '}$'], ...
         results(r, c));
