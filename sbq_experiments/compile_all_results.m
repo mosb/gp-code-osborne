@@ -200,7 +200,9 @@ combined_se = mean(squared_error(:, 1:end-3)');
 combined_calibration = mean(correct(:, 1:end-3)');
 combined_synth = [combined_nll; combined_se; combined_calibration];
 
-final_results_table( [tabledir, 'combined_synth.tex'], combined_synth', method_names, {'NLL', 'SE', 'C'}, ...
+
+method_names = cellfun(@(x) ['\acro{',x,'}'],a, 'UniformOutput', false);
+final_results_table( [tabledir, 'combined_synth.tex'], combined_synth', method_names, {'-\log p(\mathbf{Z})', '\acro{RMNSE}', '\mathcal{C}'}, ...
      'Combined Synthetic Results');
 fprintf(autocontent, '\\input{%s}\n', [tabledirshort, 'combined_synth.tex']);
 

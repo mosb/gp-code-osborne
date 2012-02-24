@@ -44,4 +44,5 @@ for i = 1:num_starts
 end
 [exp_loss_min, best_ind] = min(end_exp_loss);
 next_sample_point = end_points(best_ind, :);
+
 end
