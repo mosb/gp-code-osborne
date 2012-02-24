@@ -166,7 +166,16 @@ if isempty(del_gp_hypers_SE);
         num_evals);               
                          
     del_gp_hypers_SE.log_output_scale = gp_hypers_del.cov(end);
-    del_gp_hypers_SE.log_input_scales(1:D) = gp_hypers_del.cov(1:end - 1);
+    del_log_input_scales = gp_hypers_del.cov(1:end - 1);
+    % a hack: when there are only one or two non-zero likelihoods,
+    % the lengthscales for l are not well-determined by data. Then the
+    % lengthscales for del can end up being so big that the integral over
+    % delta becomes bigger than over l, causing erroneously big correction
+    % factors. This might be more properly solved by map inference for
+    % input scales. 
+    del_log_input_scales = min(del_log_input_scales, ...
+        l_gp_hypers.log_input_scales);
+    del_gp_hypers_SE.log_input_scales = del_log_input_scales;
     del_gp_hypers = sqdexp2gaussian(del_gp_hypers_SE);
 end
 
