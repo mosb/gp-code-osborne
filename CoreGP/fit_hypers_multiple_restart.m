@@ -37,7 +37,7 @@ if nargin<4
     init_log_output_scale = log(0.1);
 end
 
-for i = 1:length(init_log_lengthscales);
+for i = 1:size(init_log_lengthscales,1);
     init_hypers.cov = [init_log_lengthscales(i, :) init_log_output_scale]; 
     % Fit the model, but not the likelihood hyperparam (which stays fixed).    
     [gp_hypers{i} fX] = minimize(init_hypers, @gp_fixedlik, opt_min, ...
