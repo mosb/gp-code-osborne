@@ -97,7 +97,7 @@ fprintf('Lengthscales on logL: '); disp(exp(tl_gp_hypers.log_input_scales));
     
 
 set_fig_units_cm( col_width, 4 );
-matlabfrag('~/Dropbox/papers/sbq-paper/figures/log_transform');    
+matlabfrag('~/Dropbox/papers/sbq-paper/figures/log_transform2');    
 
 
 end

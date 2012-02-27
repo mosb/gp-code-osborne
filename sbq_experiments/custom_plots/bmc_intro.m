@@ -42,14 +42,14 @@ dmu_dl = @(x)( ( quad_kernel_dl_at_data(x) * C - quad_kernel_at_data(x) * C * K_
 % Plot posterior variance.
 clf;
 edges = [posterior(xrange)+2*sqrt(posterior_variance(xrange)); flipdim(posterior(xrange)-2*sqrt(posterior_variance(xrange)),1)];
-hc1 = fill([xrange; flipdim(xrange,1)], edges, [6 6 8]/8, 'EdgeColor', 'none'); hold on;
+hc1 = fill([xrange; flipdim(xrange,1)], edges, [6.5 6.5 8]/8, 'EdgeColor', 'none'); hold on;
 
-[h,g] = crosshatch_poly([xrange; flipdim(xrange,1)], [posterior(xrange); zeros(size(xrange))], -30, 1, ...
+[h,g] = crosshatch_poly([xrange; flipdim(xrange,1)], [posterior(xrange); zeros(size(xrange))], -20, 1, ...
     'linestyle', '-', 'linecolor', [ 0 .8 0 ], 'linewidth', lw, 'hold', 1);
 fill( [xrange; flipdim(xrange,1)], [posterior(xrange); 10.*ones(size(xrange))], [ 1 1 1], 'EdgeColor', 'none');
 
 edges = [posterior(xrange)+2*sqrt(posterior_variance(xrange)); flipdim(posterior(xrange),1)];
-hc1 = fill([xrange; flipdim(xrange,1)], edges, [6 6 8]/8, 'EdgeColor', 'none'); hold on;
+hc1 = fill([xrange; flipdim(xrange,1)], edges, [6.5 6.5 8]/8, 'EdgeColor', 'none'); hold on;
 
 
 h1 = plot( xrange, posterior(xrange), 'b-', 'Linewidth', lw); hold on;

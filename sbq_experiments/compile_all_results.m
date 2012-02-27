@@ -4,18 +4,18 @@ function compile_all_results( results_dir, paper_dir )
 % outdir: The directory to look in for all the results.
 % plotdir: The directory to put all the pplots.
 
-draw_plots = true;
+draw_plots = false;
 
-%if nargin < 1; results_dir = '~/large_results/fear_sbq_results_ok_morning_24_feb/'; end
+if nargin < 1; results_dir = '~/large_results/fear_sbq_results_ok_morning_24_feb/'; end
 %if nargin < 1; results_dir = '~/large_results/fear_sbq_results/'; end
-if nargin < 1; results_dir = '~/large_results/sbq_results/'; end
+%if nargin < 1; results_dir = '~/large_results/sbq_results/'; end
 if nargin < 2; paper_dir = '~/Dropbox/papers/sbq-paper/'; end
 plotdirshort = 'figures/plots/';  % Paths relative to paper_dir.
 tabledirshort = 'tables/';
 plotdir = [paper_dir plotdirshort];
 tabledir = [paper_dir tabledirshort];
 
-min_samples = 5; % The minimum number of examples before we start making plots.
+min_samples = 30; % The minimum number of examples before we start making plots.
 
 fprintf('Compiling all results...\n');
 
@@ -35,7 +35,8 @@ addpath(genpath(pwd))
 % Get the experimental configuration from the definition scripts.
 problems = define_integration_problems();
 methods = define_integration_methods();
-sample_sizes = 1:define_sample_sizes();
+sample_sizes = 1:150;%define_sample_sizes();
+max_samples = sample_sizes(end);
 
 num_problems = length(problems);
 num_methods = length(methods);
@@ -203,9 +204,9 @@ combined_calibration = mean(correct(:, 1:end-3)');
 combined_synth = [combined_nll; combined_se; combined_calibration];
 
 
-method_names = cellfun(@(x) ['\\acro{',x,'}'],method_names, 'UniformOutput', false);
+table_method_names = cellfun(@(x) ['\\acro{\\lowercase{',x,'}}'],method_names, 'UniformOutput', false);
 headers = {'$-\log p(\mathbf{Z})$', '\acro{RMNSE}', '$\mathcal{C}$'};
-final_results_table( [tabledir, 'combined_synth.tex'], combined_synth', method_names, headers, ...
+final_results_table( [tabledir, 'combined_synth.tex'], combined_synth', table_method_names, headers, ...
      'Combined Synthetic Results');
 fprintf(autocontent, '\\input{%s}\n', [tabledirshort, 'combined_synth.tex']);
 
@@ -215,7 +216,7 @@ combined_se = sqrt(mean(squared_error(:, end-2:end)'));
 combined_calibration = mean(correct(:, end-2:end)');
 combined_prawn = [combined_nll; combined_se; combined_calibration];
 
-final_results_table( [tabledir, 'combined_prawn.tex'], combined_prawn', method_names, headers, ...
+final_results_table( [tabledir, 'combined_prawn.tex'], combined_prawn', table_method_names, headers, ...
      'Combined Prawn Results');
 fprintf(autocontent, '\\input{%s}\n', [tabledirshort, 'combined_prawn.tex']);
 
@@ -262,7 +263,7 @@ label_fontsize = 10;
 
 % Plot log likelihood of true answer, versus number of samples
 % ===============================================================
-plotted_sample_set = min_samples:num_sample_sizes;
+plotted_sample_set = min_samples:max_samples;
 %figure_string = '\n\\begin{figure}\n\\centering\\setlength\\fheight{14cm}\\setlength\\fwidth{12cm}\\input{%s}\n\\end{figure}\n';
 figure_string = '\\psfragfig{%s}\n';
 
@@ -298,9 +299,9 @@ for p_ix = 1:num_problems
         end
         
         xlabel('Number of samples', 'fontsize', label_fontsize);
-        ylabel('$-\\log(p(Z))$', 'fontsize', label_fontsize, 'Rotation',90,'Interpreter','latex');
-        title(cur_problem_name, 'fontsize', label_fontsize);
-        xlim([min_samples, sample_sizes(end)]);
+        ylabel('$-\log(p(Z))$', 'fontsize', label_fontsize, 'Rotation',90,'Interpreter','latex');
+        %title(cur_problem_name, 'fontsize', label_fontsize);
+        xlim([min_samples, max_samples]);
         filename = sprintf('log_of_truth_plot_%s', strrep(cur_problem_name, ' ', '_'));
 
         set_fig_units_cm( 8, 6 );
@@ -340,9 +341,9 @@ for p_ix = 1:num_problems
         xlabel('Number of samples');
         ylabel('Squared Error');
         set(get(gca,'XLabel'),'Rotation',0,'Interpreter','latex', 'Fontsize', 8);
-        set(get(gca,'YLabel'),'Rotation',0,'Interpreter','latex', 'Fontsize', 8);        
-        title(cur_problem_name);
-        xlim([min_samples, sample_sizes(end)]);
+        set(get(gca,'YLabel'),'Rotation',90,'Interpreter','latex', 'Fontsize', 8);        
+        %title(cur_problem_name);
+        xlim([min_samples, max_samples]);
 
         filename = sprintf('se_plot_%s', strrep(cur_problem_name, ' ', '_'));
         set_fig_units_cm( 8, 6 );
@@ -366,7 +367,8 @@ chosen_repetition = 1;
 for p_ix = 1:num_problems
     cur_problem_name = problem_names{p_ix};
     figure; clf;
-    %try
+    try
+        set(gco,'LineSmoothing','on') 
         true_log_evidence = true_log_ev( p_ix );
         for m_ix = 1:num_methods
                    
@@ -383,10 +385,10 @@ for p_ix = 1:num_problems
             
             % Draw transparent part.
             mean_predictions(m_ix, :) = exp(squeeze(mean_log_ev_table( m_ix, p_ix, ...
-                                                          :, chosen_repetition ))' - true_log_evidence);
+                                                          :, chosen_repetition ))');% - true_log_evidence);
             %if m_ix ~= 2
             std_predictions = (sqrt(exp(real(squeeze(var_log_ev_table( m_ix, p_ix, ...
-                                                          :, chosen_repetition ))') - 2*true_log_evidence)));
+                                                          :, chosen_repetition ))'))));% - 2*true_log_evidence)));
             jbfill(plotted_sample_set, mean_predictions(m_ix, plotted_sample_set) + 2.*std_predictions(plotted_sample_set), ...
                                  mean_predictions(m_ix, plotted_sample_set) - 2.*std_predictions(plotted_sample_set), ...
                                  color(m_ix,:), edgecolor, 1, opacity); hold on;
@@ -399,22 +401,24 @@ for p_ix = 1:num_problems
         true_log_evidence = squeeze(true_log_ev_table( 1, p_ix, ...
                                                           :, chosen_repetition ))';
         truth_handle = plot( plotted_sample_set, ...
-            1, 'k-', 'LineWidth', 1); hold on;
+            exp(true_log_evidence(1)).*ones(size(plotted_sample_set)), 'k-', 'LineWidth', 1); hold on;
         xlabel('Number of samples');
-        ylabel('log evidence');
+        ylabel('$Z$');
         set(get(gca,'XLabel'),'Rotation',0,'Interpreter','latex', 'Fontsize', 8);
-        set(get(gca,'YLabel'),'Rotation',90,'Interpreter','latex', 'Fontsize', 8);        
+        set(get(gca,'YLabel'),'Rotation',0,'Interpreter','latex', 'Fontsize', 8);        
 %        title(cur_problem_name);
-        ylim( [min(min((mean_predictions(:, plotted_sample_set)))), max(max((mean_predictions(:, plotted_sample_set)))) + 1] );
+        ylim( [min(min((mean_predictions(:, plotted_sample_set)))), max(max((mean_predictions(:, plotted_sample_set))))] );
         %legend([z_handle, truth_handle], {method_names{:}, 'True value'} );
-        xlim([min_samples, sample_sizes(end)]);
+        xlim([min_samples, max_samples]);
         filename = sprintf('varplot_%s', strrep(cur_problem_name, ' ', '_'));
         set_fig_units_cm( 8, 6 );
+        %myaa(2);
+        
         matlabfrag([plotdir filename], 'renderer', 'opengl', 'dpi', 200);
         fprintf(autocontent, figure_string, [plotdirshort filename]);    
-    %catch e
-    %    e
-    %end
+    catch e
+        e
+    end
 end
 
 
@@ -468,7 +472,7 @@ for p_ix = 1:num_problems
         ylabel('sample location');
         set(get(gca,'XLabel'),'Rotation',0,'Interpreter','latex', 'Fontsize', 8);
         set(get(gca,'YLabel'),'Rotation',0,'Interpreter','latex', 'Fontsize', 8);        
-        title(cur_problem.name);
+        %title(cur_problem.name);
         xlim( [ 0 true_plot_depth ] );
         grid on;
         set(gca,'ydir','reverse')

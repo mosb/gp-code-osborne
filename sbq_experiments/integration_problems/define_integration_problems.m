@@ -310,11 +310,11 @@ real_prawn_6d_non_markov.true_log_evidence = -582.608593080991568;  % 100000 sam
 % Specify problems.
 problems = {};
 
+if 0
 problems{end+1} = simple_test_1d;
 problems{end+1} = two_spikes_1d;
 problems{end+1} = two_hills_1d;
-
-if 0
+else
 problems{end+1} = simple_test_1d;
 problems{end+1} = bumpy_1d_exp;
 problems{end+1} = two_spikes_1d;
@@ -325,6 +325,7 @@ problems{end+1} = easy_4d;
 problems{end+1} = two_spikes_4d;
 problems{end+1} = two_hills_4d;
 %problems{end+1} = friedman_7d;
+
 problems{end+1} = real_prawn_6d_mean_field;
 problems{end+1} = real_prawn_6d_markov;
 problems{end+1} = real_prawn_6d_non_markov;

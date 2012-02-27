@@ -23,6 +23,7 @@ covfunc = @covSEiso;
 [f, variance] = gp( hypers, inference, meanfunc, covfunc, likfunc, X, y, xrange );
 
 hold on;
+xrange(1) = xrange(1) + 0.01;
 edges = [f+2*sqrt(variance); flipdim(f-2*sqrt(variance),1)]; 
 hc1 = fill([xrange; flipdim(xrange,1)], edges, [0.87 0.89 1], ...
     'EdgeColor', 'none'); 
@@ -36,11 +37,11 @@ y_scale = y_limits(2) - y_limits(1);
 yval1 = y_limits(1) + 0.05.* y_scale;
 x_loc = min(X);
 line([x_loc, x_loc + lengthscale],[yval1,yval1], 'Color', 'k', 'Linewidth', 1);
-line([x_loc, x_loc],[yval1 + 0.01*y_scale,yval1 - 0.01*y_scale], 'Color', 'k', 'Linewidth', 1);
-line([x_loc + lengthscale, x_loc + lengthscale],[yval1 + 0.01*y_scale,yval1 - 0.01*y_scale], 'Color', 'k', 'Linewidth', 1);
+line([x_loc, x_loc],[yval1 + 0.02*y_scale,yval1 - 0.02*y_scale], 'Color', 'k', 'Linewidth', 1);
+line([x_loc + lengthscale, x_loc + lengthscale],[yval1 + 0.02*y_scale,yval1 - 0.02*y_scale], 'Color', 'k', 'Linewidth', 1);
 
 yval2 = y_limits(1) + 0.15.* y_scale;
-text( x_loc, yval2, 'lengthscale', 'Fontsize', 8 );
+text( x_loc, yval2, 'input scale', 'Fontsize', 8 );
 
 
 handles = [h1 hc1 h2 ];
