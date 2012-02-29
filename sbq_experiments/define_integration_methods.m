@@ -23,35 +23,30 @@ smc_method.nicename = 'Simple Monte Carlo';
 smc_method.uniquename = 'simple monte carlo v1';
 smc_method.acronym = 'SMC';
 smc_method.function = @online_smc;%@simple_monte_carlo;
-smc_method.domain = 'Z';   % Its distribution is Gaussian over logZ.
 smc_method.opt = [];
 
 ais_method.nicename = 'Annealed Importance Sampling';
 ais_method.uniquename = 'annealed importance sampling v1';
 ais_method.acronym = 'AIS';
 ais_method.function = @online_ais_mh; %@ais_mh;
-ais_method.domain = 'Z';
 ais_method.opt = [];
 
 bmc_method.nicename = 'Vanilla Bayesian Monte Carlo';
 bmc_method.uniquename = 'vanilla bayesian monte carlo ais v1';
 bmc_method.acronym = 'BMC';
 bmc_method.function = @online_bmc; %@bmc;
-bmc_method.domain = 'Z';    % Its distribution is Gaussian over Z.
 bmc_method.opt = [];
 
 log_bmc_ais_method.nicename = 'Log Bayesian Monte Carlo';
 log_bmc_ais_method.uniquename = 'log bmc ais v1';
 log_bmc_ais_method.acronym = 'LBMC';
 log_bmc_ais_method.function = @online_log_bmc;
-log_bmc_ais_method.domain = 'Z';
 log_bmc_ais_method.opt = [];
 
 bbq_method.nicename = 'Doubly Bayesian Quadrature';
 bbq_method.uniquename = 'sequential bayesian quadrature mike no marg hypers';
 bbq_method.acronym = 'BBQ';
 bbq_method.function = @sbq;
-bbq_method.domain = 'Z';
 bbq_method.opt = struct(...
                      'marginalise_scales', false);
                  
@@ -59,7 +54,6 @@ bbq_hypers_method.nicename = 'Doubly Bayesian Quadrature with marginal hypers';
 bbq_hypers_method.uniquename = 'sequential bayesian quadrature mike v1';
 bbq_hypers_method.acronym = 'BBQ*';
 bbq_hypers_method.function = @sbq;
-bbq_hypers_method.domain = 'Z';
 bbq_hypers_method.opt = struct(...
                      'marginalise_scales', true);
                  
@@ -67,7 +61,6 @@ bq_ais_method.nicename = 'Bayesian Quadrature';
 bq_ais_method.uniquename = 'bayesian quadrature no marg hypers using AIS';
 bq_ais_method.acronym = 'BQ';
 bq_ais_method.function = @online_bq_gpml_ais;
-bq_ais_method.domain = 'Z';
 bq_ais_method.opt = struct(...
                      'marginalise_scales', false);
                  
@@ -75,7 +68,6 @@ bq_hypers_ais_method.nicename = 'Bayesian Quadrature';
 bq_hypers_ais_method.uniquename = 'bayesian quadrature marg hypers using AIS';
 bq_hypers_ais_method.acronym = 'BQ*';
 bq_hypers_ais_method.function = @online_bq_gpml_ais;
-bq_hypers_ais_method.domain = 'Z';
 bq_hypers_ais_method.opt = struct(...
                      'marginalise_scales', true);
 
@@ -84,14 +76,12 @@ sbq_gpml_method.nicename = 'Doubly Bayesian Quadrature GPML';
 sbq_gpml_method.uniquename = 'sbq gpml v1';
 sbq_gpml_method.acronym = 'BBQ*';
 sbq_gpml_method.function = @sbq_gpml;
-sbq_gpml_method.domain = 'Z';
 sbq_gpml_method.opt = [];
 
 bq_gpml_ais_method.nicename = 'Bayesian Quadrature using AIS';
 bq_gpml_ais_method.uniquename = 'bayesian quadrature gpml ais v1';
 bq_gpml_ais_method.acronym = 'BQ';
 bq_gpml_ais_method.function = @online_bq_gpml_ais;
-bq_gpml_ais_method.domain = 'Z';
 bq_gpml_ais_method.opt.set_ls_var_method = 'none';
 
 

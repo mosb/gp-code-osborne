@@ -139,34 +139,21 @@ for p_ix = 1:num_problems
     for m_ix = 1:num_methods
         r = 1;
         true_log_evidence = true_log_ev( p_ix );
-        
-        squared_error(m_ix, p_ix) = (exp(mean_log_ev_table( m_ix, p_ix, end, r ) - true_log_evidence) - 1)^2;
 
+        log_mean_prediction = ...
+            mean_log_ev_table( m_ix, p_ix, end, r ) - true_log_evidence;            
+        log_var_prediction = ...
+            var_log_ev_table( m_ix, p_ix, end, r ) - 2*true_log_evidence;
         
-        % Choose between dist over Z and over logZ
-        if strcmp(method_domains{m_ix}, 'Z');
-            log_mean_prediction = ...
-                mean_log_ev_table( m_ix, p_ix, end, r ) - true_log_evidence;            
-            log_var_prediction = ...
-                var_log_ev_table( m_ix, p_ix, end, r ) - 2*true_log_evidence;
-            log_liks(m_ix, p_ix) = logmvnpdf(1, exp(log_mean_prediction), ...
-                                             exp(log_var_prediction));
-            
-            normalized_mean(m_ix, p_ix) = exp(mean_log_ev_table( m_ix, p_ix, end, r ) - true_log_evidence);
-            normalized_std(m_ix, p_ix) = sqrt(exp(var_log_ev_table( m_ix, p_ix, end, r ) - 2*true_log_evidence));
-            correct(m_ix, p_ix) = 1 < normalized_mean(m_ix, p_ix) + 0.6745 * normalized_std(m_ix, p_ix) ...
-                               && 1 > normalized_mean(m_ix, p_ix) - 0.6745 * normalized_std(m_ix, p_ix);
-        elseif strcmp(method_domains{m_ix}, 'logZ');
-            log_liks(m_ix, p_ix) = ...
-                log_lognpdf(true_log_evidence, mean_log_ev_table( m_ix, p_ix, end, r ), ...
-                                               var_log_ev_table( m_ix, p_ix, end, r ));
-            normalized_mean(m_ix, p_ix) = mean_log_ev_table( m_ix, p_ix, end, r );
-            normalized_std(m_ix, p_ix) = sqrt(var_log_ev_table( m_ix, p_ix, end, r ));
-            correct(m_ix, p_ix) = true_log_evidence < normalized_mean(m_ix, p_ix) + 0.6745 * normalized_std(m_ix, p_ix) ...
-                               && true_log_evidence > normalized_mean(m_ix, p_ix) - 0.6745 * normalized_std(m_ix, p_ix);                                           
-        else
-            error('No domain defined for this method');
-        end
+        squared_error(m_ix, p_ix) = (exp(log_mean_prediction) - 1)^2;
+
+        log_liks(m_ix, p_ix) = logmvnpdf(1, exp(log_mean_prediction), ...
+                                         exp(log_var_prediction));
+
+        normalized_mean(m_ix, p_ix) = exp(log_mean_prediction);
+        normalized_std(m_ix, p_ix) = sqrt(exp(log_var_prediction));
+        correct(m_ix, p_ix) = 1 < normalized_mean(m_ix, p_ix) + 0.6745 * normalized_std(m_ix, p_ix) ...
+                           && 1 > normalized_mean(m_ix, p_ix) - 0.6745 * normalized_std(m_ix, p_ix);
     end
 end
 latex_table( [tabledir, 'truth_prob.tex'], -log_liks', problem_names, ...
@@ -232,7 +219,7 @@ color(4, 1:3) = [.4  0.4 0.1];  % dark yellow
 color(5, 1:3) = [0.1   1   1];  % cyan
 color(6, 1:3) = [0.9 0.1 0.9];  % purple
 color(7, 1:3) = [1 1 0];  % bright yellow
-color(8:10, 1:3) = 0;  % bright yellow
+color(8:10, 1:3) = 0;  % black
 
 
 if draw_plots
@@ -274,16 +261,8 @@ for p_ix = 1:num_problems
 
     try
         for m_ix = 1:num_methods
-       %     if m_ix ~= 2  % skip AIS
             for r = 1:num_repititions
                 for s = plotted_sample_set
-                    %true_log_evidence = true_log_ev_table( 1, p_ix, s, r );
-                    %mean_prediction = mean_log_ev_table( m_ix, p_ix, s, r );
-                    %var_prediction = var_log_ev_table( m_ix, p_ix, s, r );
-                    %neg_log_liks(m_ix, s) = -real(logmvnpdf(true_log_evidence, ...
-                    %                            mean_prediction, var_prediction));
-                    %neg_lok_likes_all_probs(p_ix, m_ix, s) = neg_log_liks(m_ix, s);
-                    
                     true_log_evidence = true_log_ev( p_ix );
                     log_mean_prediction = mean_log_ev_table( m_ix, p_ix, s, r ) - true_log_evidence;
                     log_var_prediction = var_log_ev_table( m_ix, p_ix, s, r ) - 2*true_log_evidence;
@@ -295,7 +274,6 @@ for p_ix = 1:num_problems
                     real(neg_log_liks(m_ix, plotted_sample_set)), '-', ...
                     'Color', color( m_ix, :), 'LineWidth', 1); hold on;
             end
-       %     end
         end
         
         xlabel('Number of samples', 'fontsize', label_fontsize);
@@ -311,10 +289,6 @@ for p_ix = 1:num_problems
         %e
     end
 end
-
-
-
-
 
 
 
@@ -371,18 +345,6 @@ for p_ix = 1:num_problems
         set(gco,'LineSmoothing','on') 
         true_log_evidence = true_log_ev( p_ix );
         for m_ix = 1:num_methods
-                   
-      %      log_mean_prediction = ...
-      %          mean_log_ev_table( m_ix, p_ix, end, r ) - true_log_evidence;            
-      %      log_var_prediction = ...
-      %          var_log_ev_table( m_ix, p_ix, end, r ) - 2*true_log_evidence;
-      %      log_liks(m_ix, p_ix) = logmvnpdf(1, exp(log_mean_prediction), ...
-      %                                       exp(log_var_prediction));
-            
-            %normalized_mean(m_ix, p_ix) = exp(mean_log_ev_table( m_ix, p_ix, end, r ) - true_log_evidence);
-            %normalized_std(m_ix, p_ix) = sqrt(exp(var_log_ev_table( m_ix, p_ix, end, r ) - 2*true_log_evidence));
-            
-            
             % Draw transparent part.
             mean_predictions(m_ix, :) = exp(squeeze(mean_log_ev_table( m_ix, p_ix, ...
                                                           :, chosen_repetition ))');% - true_log_evidence);
@@ -492,8 +454,6 @@ end
 figure; clf;
 try
     for m_ix = 1:num_methods
-          %                                                             exp(log_var_prediction)));
-           %         neg_lok_likes_all_probs(p_ix, m_ix, s) = neg_log_liks(m_ix, s);  
         z_handle(m_ix) = plot( plotted_sample_set, ...
             squeeze(mean(neg_lok_likes_all_probs(:, m_ix, plotted_sample_set), 1)), '-', ...
             'Color', color( m_ix, :), 'LineWidth', 1); hold on;
