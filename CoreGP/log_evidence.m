@@ -203,11 +203,11 @@ sqd_x_sub_mu_stack_s = sqd_x_sub_mu_stack_sc(1:num_samples, :, :);
 x_sub_mu_stack_s = x_sub_mu_stack_sc(1:num_samples, :, :);
 
 % calculate ups for the likelihood, where ups is defined as
-% ups_s = int K(x, x_s)  priol(x) dx
+% ups_s = int K(x, x_s)  p(x) dx
 ups_l = small_ups_vec(sqd_x_sub_mu_stack_s, l_gp_hypers, prior);
 
 % calculate ups for the likelihood, where ups is defined as
-% ups_s = int K(x, x_s)  priol(x) dx
+% ups_s = int K(x, x_s)  p(x) dx
 ups_tl = small_ups_vec(sqd_x_sub_mu_stack_s, tl_gp_hypers, prior);
 
 
@@ -239,7 +239,7 @@ Ups_inv_K_del_l = solve_chol(R_l, Ups_del_l')';
 minty_del_l = del_inv_K_del * Ups_inv_K_del_l * l_s;
 
 % calculate ups for delta, where ups is defined as
-% ups_s = int K(x, x_s)  priol(x) dx
+% ups_s = int K(x, x_s)  p(x) dx
 ups_del = small_ups_vec(sqd_x_sub_mu_stack_sc, del_gp_hypers, prior);
 
 % compute mean of int delta(x) p(x) dx given l_s and delta_tl_sc 
@@ -262,16 +262,16 @@ log_mean_evidence = samples.max_log_l + log(mean_ev);
 % ======================================================
 
 % calculate ups2 for the likelihood, where ups2 is defined as
-% ups2_s = int int K(x, x') K(x', x_s) priol(x) prior(x') dx dx'
+% ups2_s = int int K(x, x') K(x', x_s) p(x) prior(x') dx dx'
 ups2_l = small_ups2_vec(sqd_x_sub_mu_stack_s, tl_gp_hypers, ...
     l_gp_hypers, prior);  
 
 % calculate chi for the likelihood, where chi is defined as
-% chi = int int K(x, x') priol(x) prior(x') dx dx'
+% chi = int int K(x, x') p(x) prior(x') dx dx'
 chi_tl = small_chi_const(tl_gp_hypers, prior);
       
 % calculate Chi for the likelihood, where Chi is defined as
-% Chi_l = int int K(x_s, x) K(x, x') K(x', x_s) priol(x)
+% Chi_l = int int K(x_s, x) K(x, x') K(x', x_s) p(x)
 % prior(x') dx dx'
 Chi_l_tl_l = big_chi_mat(sqd_x_sub_mu_stack_s, sqd_dist_stack_s, ...
     l_gp_hypers, tl_gp_hypers, prior);
@@ -388,6 +388,7 @@ ev_params = struct(...
   'candidate_locations' , x_c, ...
   'sqd_dist_stack_s' , sqd_dist_stack_s, ...
   'sqd_dist_stack_s_sc', sqd_dist_stack_s_sc, ...
+  'sqd_x_sub_mu_stack_sc', sqd_x_sub_mu_stack_sc, ...
   'R_l_s', R_l, ...
   'K_l_s', K_l, ...
   'R_tl_s' , R_tl, ...

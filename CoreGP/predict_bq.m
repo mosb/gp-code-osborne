@@ -1,5 +1,5 @@
 function [mean_out, sd_out, unadj_mean_out, unadj_sd_out] = ...
-    predict_bq(sample_struct, priol_struct, ...
+    predict_bq(sample_struct, prior, ...
     l_gp_hypers_SE, tl_gp_hypers_SE, del_gp_hypers_SE, ...
     qd_gp_hypers_SE, qdd_gp_hypers_SE, opt)
 % [mean_out, sd_out, unadj_mean_out, unadj_sd_out] = ...
@@ -69,9 +69,8 @@ if nargin<6
     opt = struct();
 end
 
-default_opt = struct('num_c', 400,...
-                    'gamma_const', 1, ...
-                    'num_box_scales', 5, ...
+default_opt = struct(...
+                    'gamma', 1, ...
                     'no_adjustment', false, ...
                     'allowed_cond_error',10^-14, ... % allowed conditioning error
                     'print', true);
@@ -84,19 +83,6 @@ opt = set_defaults( opt, default_opt );
     
 x_s = samples.locations;
 num_s = size(x_s);
-
-% rescale all log-likelihood values for numerical accuracy; we'll correct
-% for this at the end of the function
-l_s = samples.scaled_l;
-
-% opt.gamma is corrected for after l_s has already been divided by
-% exp(samples.max_log_l_s). tl_s is its correct value, but log(opt.gamma) has
-% effectively had samples.max_log_l_s subtracted from it. 
-tl_s = samples.tl;
-
-% candidate locations
-x_c = ev_params.x_c;
-
 
 if isfield(sample_struct, 'mean_y')
 
@@ -124,14 +110,15 @@ elseif isfield(sample_struct, 'qd')
     end
 
 end
-num_star = size(qd_s, 2);
     
+gamma_l = opt.gamma;
+gamma_qdd = opt.gamma_const * max(eps,max(qdd_s));
 
 % rescale by subtracting appropriate prior means
 qdmm_s = bsxfun(@minus, qd_s, qd_gp_hypers_SE.prior_mean);
 qddmm_s = bsxfun(@minus, qdd_s, qdd_gp_hypers_SE.prior_mean);
 
-tqdd_s = log_transform(qd_s);
+tqdd_s = log_transform(qd_s, gamma_qdd);
 
 % IMPORTANT NOTE: THIS NEEDS TO BE CHANGED TO MATCH WHATEVER MEAN IS USED
 % FOR qdd
@@ -146,13 +133,12 @@ tqddmm_s = bsxfun(@minus, tqdd_s, mu_tqdd);
 % follows we use a gaussian covariance. We correct the output scales
 % appropriately.
 l_gp_hypers = sqdexp2gaussian(l_gp_hypers_SE);
-tl_gp_hypers = sqdexp2gaussian(tl_gp_hypers_SE);
 qd_gp_hypers = sqdexp2gaussian(qd_gp_hypers_SE);
 qdd_gp_hypers = sqdexp2gaussian(qdd_gp_hypers_SE);
-del_gp_hypers = sqdexp2gaussian(del_gp_hypers_SE);
+eps_gp_hypers = sqdexp2gaussian(del_gp_hypers_SE);
 
 % we assume the gps for qd and tqd share hyperparameters, as do qdd and
-% tqdd. eps_rr, eps_qdr, eps_rqdd, eps_qddr are assumed to all have the
+% tqdd. eps_ll, eps_qdl, eps_lqdd, eps_qddl are assumed to all have the
 % same hypers as del (the output scales are probably wildly wrong, but are
 % not that important as they should cancel out)
 tqd_gp_hypers = qd_gp_hypers;
@@ -161,7 +147,7 @@ tqdd_gp_hypers = qdd_gp_hypers;
 sqd_dist_stack_s = ev_params.sqd_dist_stack_s;
 sqd_dist_stack_s_sc = ev_params.sqd_dist_stack_s_sc;
 
-importance_s = l_s.*mean(abs(qdmm_s),2);
+importance_s = samples.scaled_l.*mean(abs(qdmm_s),2);
 
 % The gram matrix over the predictive mean qd and its cholesky factor
 K_qd = gaussian_mat(sqd_dist_stack_s, qd_gp_hypers);
@@ -195,8 +181,8 @@ inv_K_tqdd_tqddmm = solve_chol(R_tqdd, tqddmm_s);
 % The covariance over the transformed qdd between x_sc and x_s
 K_tqdd_sc = gaussian_mat(sqd_dist_stack_s_sc, tqdd_gp_hypers);
 
-% The gram matrix over the predictive second moment qdd and its cholesky 
-% factor
+% The cholesky factor of the Gram matrix over delta; assumed identical to
+% that over various eps quantities
 R_eps = ev_params.R_del_sc;
  
 % Compute eps quantities
@@ -216,7 +202,7 @@ mean_tqdd_sc = bsxfun(@plus, mu_tqdd, K_tqdd_sc' * inv_K_tqdd_tqddmm);
 
 % the difference between the mean of the transformed (log) likelihood and
 % the transform of the mean likelihood
-delta_tqdd_sc = mean_tqdd_sc - log_transform(mean_qdd_sc, opt.gamma);
+delta_tqdd_sc = mean_tqdd_sc - log_tlansform(mean_qdd_sc, opt.gamma);
 
 mean_l_sc = ev_params.mean_tl_sc;
 delta_tl_sc = ev_params.delta_tl_sc;
@@ -231,66 +217,102 @@ eps_qddl_sc = bsxfun(@times, mean_qdd_sc, delta_tl_sc);
 % Compute various Gaussian-derived quantities required to evaluate the mean
 % integrals over qd and qdd
 % ======================================================
-       
 
-ups_inv_K_eps
+sqd_x_sub_mu_stack_sc = ev_params.sqd_x_sub_mu_stack_sc;
+sqd_x_sub_mu_stack_s = sqd_x_sub_mu_stack_sc(1:num_samples, :, :);
 
-inv_K_Yot_inv_K_qd_l
+% calculate ups for eps, where ups is defined as
+% ups_s = int K(x, x_s)  prior(x) dx
+ups_eps = small_ups_vec(sqd_x_sub_mu_stack_sc, eps_gp_hypers, prior);
 
-inv_K_Yot_inv_K_qd_eps
+% calculate Ups for qd & the likelihood, where Ups is defined as
+% Ups_s_s' = int K(x_s, x) K(x, x_s') prior(x) dx
+Ups_qd_l = big_ups_mat...
+    (sqd_x_sub_mu_stack_s, sqd_x_sub_mu_stack_s, ...
+    tr(sqd_dist_stack_s), ...
+    qd_gp_hypers, l_gp_hypers, prior);
 
-    inv_K_Yot_inv_K_qdd_r
+% calculate Ups for qd & eps, where Ups is defined as
+% Ups_s_s' = int K(x_s, x) K(x, x_s') prior(x) dx
+Ups_qd_eps = big_ups_mat...
+    (sqd_x_sub_mu_stack_s, sqd_x_sub_mu_stack_s, ...
+    tr(sqd_dist_stack_s), ...
+    qd_gp_hypers, eps_gp_hypers, prior);
+
+% calculate Ups for qdd & the likelihood, where Ups is defined as
+% Ups_s_s' = int K(x_s, x) K(x, x_s') prior(x) dx
+Ups_qdd_l = big_ups_mat...
+    (sqd_x_sub_mu_stack_s, sqd_x_sub_mu_stack_s, ...
+    tr(sqd_dist_stack_s), ...
+    qdd_gp_hypers, l_gp_hypers, prior);
+
+% calculate Ups for qdd & eps, where Ups is defined as
+% Ups_s_s' = int K(x_s, x) K(x, x_s') prior(x) dx
+Ups_qdd_eps = big_ups_mat...
+    (sqd_x_sub_mu_stack_s, sqd_x_sub_mu_stack_s, ...
+    tr(sqd_dist_stack_s), ...
+    qdd_gp_hypers, eps_gp_hypers, prior);
+
+
+ups_inv_K_eps = solve_chol(R_eps, ups_eps)';
+
+inv_K_Ups_inv_K_qd_l = solve_chol(R_qd, solve_chol(R_l, Ups_qd_l')');
+inv_K_Ups_inv_K_qd_eps = solve_chol(R_qd, solve_chol(R_eps, Ups_qd_eps')');
+inv_K_Ups_inv_K_qdd_l = solve_chol(R_qdd, solve_chol(R_l, Ups_qdd_l')');
+inv_K_Ups_inv_K_qdd_eps = solve_chol(R_qdd, solve_chol(R_eps, Ups_qdd_eps')');
     
-    inv_K_Yot_inv_K_qdd_eps
+% Compute various integrals over qd and qdd
+% ======================================================
 
-minty_r = ev_params.minty_l;
-minty_delta_tl = ups_inv_K_eps * delta_tl_sc;
-minty_eps_rr = ups_inv_K_eps * eps_ll_sc;
-minty_eps_qdr = (ups_inv_K_eps * eps_qdl_sc)';
-minty_eps_rqdd = (ups_inv_K_eps * eps_lqdd_sc)';
-minty_eps_qddr = (ups_inv_K_eps * eps_qddl_sc)';
+% integrals required to compute uncorrected estimates
+minty_l = ev_params.minty_l;
+minty_qd_l = qdmm_s' * inv_K_Ups_inv_K_qd_l * l_s;
+minty_qdd_l = qddmm_s' * inv_K_Ups_inv_K_qdd_l * l_s;
 
-
-
-
-% all the quantities below need to be adjusted to account for the non-zero
+% all the quantities below have been adjusted to account for the non-zero
 % prior means of qd and qdd
-minty_qd_r = qdmm_s' * inv_K_Yot_inv_K_qd_l * l_s;
-rhod = minty_qd_r / minty_r + mu_qd';
-minty_qd_eps_rr = qdmm_s' * inv_K_Yot_inv_K_qd_eps * eps_ll_sc + ...
-                mu_qd' * minty_eps_rr;
 
-             
-minty_qdd_r = qddmm_s' * inv_K_Yot_inv_K_qdd_r * l_s;
-rhodd = minty_qdd_r / minty_r + mu_qdd';
+% uncorrected estimates for the integrals over qd & qdd
+rhod = minty_qd_l / minty_l + mu_qd';
+rhodd = minty_qdd_l / minty_l + mu_qdd';
+
+% integrals required for adjustment factors
+minty_delta_tl = ups_inv_K_eps * delta_tl_sc;
+minty_eps_ll = ups_inv_K_eps * eps_ll_sc;
+minty_eps_qdl = (ups_inv_K_eps * eps_qdl_sc)';
+minty_eps_lqdd = (ups_inv_K_eps * eps_lqdd_sc)';
+minty_eps_qddl = (ups_inv_K_eps * eps_qddl_sc)';
+
+minty_qd_eps_ll = qdmm_s' * inv_K_Ups_inv_K_qd_eps * eps_ll_sc + ...
+                mu_qd' * minty_eps_ll;
+minty_qdd_eps_ll = qddmm_s' * inv_K_Ups_inv_K_qdd_eps * eps_ll_sc + ...
+                mu_qdd' * minty_eps_ll;
 % only need the diagonals of this quantity, the full covariance is not
 % required
-minty_qdd_eps_rqdd = ...
-    sum((qddmm_s' * inv_K_Yot_inv_K_qdd_eps) .* eps_lqdd_sc', 2) + ...
-                mu_qdd' .* minty_eps_rqdd;
-minty_qdd_eps_rr = qddmm_s' * inv_K_Yot_inv_K_qdd_eps * eps_ll_sc + ...
-                mu_qdd' * minty_eps_rr;
+minty_qdd_eps_lqdd = ...
+    sum((qddmm_s' * inv_K_Ups_inv_K_qdd_eps) .* eps_lqdd_sc', 2) + ...
+                mu_qdd' .* minty_eps_lqdd;
 
+% adjustment factors
+adj_rhod_tl = (minty_qd_eps_ll + gamma_l * minty_eps_qdl ...
+                -(minty_eps_ll + gamma_l * minty_delta_tl) * rhod) / minty_l;         
 
+            adj_rhodd_tq = (minty_qdd_eps_lqdd + gamma_qdd * minty_eps_lqdd) / minty_l;
+adj_rhodd_tl = (minty_qdd_eps_ll + gamma_l * minty_eps_qddl ...
+    -(minty_eps_ll + gamma_l * minty_delta_tl) * rhodd) / minty_l;
 
-
-
-adj_rhod_tr = (minty_qd_eps_rr + gamma_r * minty_eps_qdr ...
-                -(minty_eps_rr + gamma_r * minty_delta_tl) * rhod) / minty_r;         
-adj_rhodd_tq = (minty_qdd_eps_rqdd + gamma_qdd * minty_eps_rqdd) / minty_r;
-adj_rhodd_tr = (minty_qdd_eps_rr + gamma_r * minty_eps_qddr ...
-    -(minty_eps_rr + gamma_r * minty_delta_tl) * rhodd) / minty_r;
-end
 if opt.no_adjustment
-    adj_rhod_tr = 0;
+    adj_rhod_tl = 0;
     adj_rhodd_tq = 0;
-    adj_rhodd_tr = 0;
+    adj_rhodd_tl = 0;
 end
 
-
-mean_out = rhod + adj_rhod_tr;
+% final adjusted quantities
+mean_out = rhod + adj_rhod_tl;
 unadj_mean_out = mean_out;
-second_moment = rhodd + adj_rhodd_tq + adj_rhodd_tr;
+
+second_moment = rhodd + adj_rhodd_tq + adj_rhodd_tl;
+
 if want_posterior
     mean_out = second_moment;
     sd_out = nan;
@@ -307,17 +329,3 @@ else
     
     unadj_sd_out = sqrt(var_out);
 end
-
-% for i = 1:num_hps
-%     figure(i);clf;
-%     hold on
-%     plot(phi(:,i), qd, '.k');
-%     plot(phi(:,i), qdd, '.r');
-%     xlabel(['x_',num2str(i)]);
-% end
-% 
-% [qd_noise_sd, qd_input_scales, qd_output_scale] = ...
-%         hp_heuristics(phi, qd, 10);
-%     
-% [qdd_noise_sd, qdd_input_scales, qdd_output_scale] = ...
-%         hp_heuristics(phi, qdd, 10);

@@ -1,4 +1,5 @@
-function [log_mean_evidences, log_var_evidences, samples, tl_gp_hypers] = ...
+function [log_mean_evidences, log_var_evidences, samples, ...
+    l_gp_hypers, tl_gp_hypers, del_gp_hypers, ev_params] = ...
     sbq(log_likelihood_fn, prior, opt)
 % Take samples samples_mat so as to best estimate the
 % evidence, an integral over exp(log_l_fn) against the prior in prior_struct.
@@ -17,8 +18,8 @@ function [log_mean_evidences, log_var_evidences, samples, tl_gp_hypers] = ...
 % - log_likelihood_fn: a function that takes a single argument, a 1*n vector of
 %                      hyperparameters, and returns the log of the likelihood.
 % - prior: requires fields
-%                 * means
-%                 * sds
+%                 * mean
+%                 * covariance
 % - opt: takes fields:
 %        * num_samples: the number of samples to draw. If opt is a number rather
 %          than a structure, it's assumed opt = num_samples.

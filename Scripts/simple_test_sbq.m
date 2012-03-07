@@ -3,7 +3,7 @@ randn('state', 0);
 rand('twister', 0);  
 close all
     
-% Set up a simple toy function to test SQB.
+% Set up a simple toy function to test SBQ.
 r_mean1 = 2000;
 r_sd1 = 500;
 r_mean2 = 4000;
