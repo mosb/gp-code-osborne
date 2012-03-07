@@ -82,7 +82,12 @@ opt = set_defaults( opt, default_opt );
 % ======================================================
     
 x_s = samples.locations;
-num_s = size(x_s);
+num_s = size(x_s, 1);
+
+% rescale all log-likelihood values for numerical accuracy; we'll correct
+% for this at the end of the function
+l_s = samples.scaled_l;
+
 
 if isfield(samples, 'mean_y')
 
@@ -130,9 +135,6 @@ qddmm_s = bsxfun(@minus, qdd_s, mu_qdd);
 tqddmm_s = bsxfun(@minus, tqdd_s, mu_tqdd);
 
 
-
-
-
 % Compute our covariance matrices and their cholesky factors
 % ======================================================
 
@@ -155,6 +157,9 @@ sqd_dist_stack_s = ev_params.sqd_dist_stack_s;
 sqd_dist_stack_s_sc = ev_params.sqd_dist_stack_s_sc;
 
 importance_s = samples.scaled_l.*mean(abs(qdmm_s),2);
+
+% The cholesky factor of the Gram matrix over the likelihood
+R_l = ev_params.R_l_s;
 
 % The gram matrix over the predictive mean qd and its cholesky factor
 K_qd = gaussian_mat(sqd_dist_stack_s, qd_gp_hypers);
@@ -226,7 +231,7 @@ eps_qddl_sc = bsxfun(@times, mean_qdd_sc, delta_tl_sc);
 % ======================================================
 
 sqd_x_sub_mu_stack_sc = ev_params.sqd_x_sub_mu_stack_sc;
-sqd_x_sub_mu_stack_s = sqd_x_sub_mu_stack_sc(1:num_samples, :, :);
+sqd_x_sub_mu_stack_s = sqd_x_sub_mu_stack_sc(1:num_s, :, :);
 
 % calculate ups for eps, where ups is defined as
 % ups_s = int K(x, x_s)  prior(x) dx
@@ -236,28 +241,28 @@ ups_eps = small_ups_vec(sqd_x_sub_mu_stack_sc, eps_gp_hypers, prior);
 % Ups_s_s' = int K(x_s, x) K(x, x_s') prior(x) dx
 Ups_qd_l = big_ups_mat...
     (sqd_x_sub_mu_stack_s, sqd_x_sub_mu_stack_s, ...
-    tr(sqd_dist_stack_s), ...
+    sqd_dist_stack_s, ...
     qd_gp_hypers, l_gp_hypers, prior);
 
 % calculate Ups for qd & eps, where Ups is defined as
 % Ups_s_s' = int K(x_s, x) K(x, x_s') prior(x) dx
 Ups_qd_eps = big_ups_mat...
-    (sqd_x_sub_mu_stack_s, sqd_x_sub_mu_stack_s, ...
-    tr(sqd_dist_stack_s), ...
+    (sqd_x_sub_mu_stack_s, sqd_x_sub_mu_stack_sc, ...
+    sqd_dist_stack_s_sc, ...
     qd_gp_hypers, eps_gp_hypers, prior);
 
 % calculate Ups for qdd & the likelihood, where Ups is defined as
 % Ups_s_s' = int K(x_s, x) K(x, x_s') prior(x) dx
 Ups_qdd_l = big_ups_mat...
     (sqd_x_sub_mu_stack_s, sqd_x_sub_mu_stack_s, ...
-    tr(sqd_dist_stack_s), ...
+    sqd_dist_stack_s, ...
     qdd_gp_hypers, l_gp_hypers, prior);
 
 % calculate Ups for qdd & eps, where Ups is defined as
 % Ups_s_s' = int K(x_s, x) K(x, x_s') prior(x) dx
 Ups_qdd_eps = big_ups_mat...
-    (sqd_x_sub_mu_stack_s, sqd_x_sub_mu_stack_s, ...
-    tr(sqd_dist_stack_s), ...
+    (sqd_x_sub_mu_stack_s, sqd_x_sub_mu_stack_sc, ...
+    sqd_dist_stack_s_sc, ...
     qdd_gp_hypers, eps_gp_hypers, prior);
 
 
@@ -320,19 +325,14 @@ unadj_mean_out = mean_out;
 
 second_moment = rhodd + adj_rhodd_tq + adj_rhodd_tl;
 
-if want_posterior
-    mean_out = second_moment;
-    sd_out = nan;
-else
-    var_out = second_moment - mean_out.^2;
-    problems = var_out<0;
-    var_out(problems) = qdd_s(max_ind,problems) - qd_s(max_ind,problems).^2;
-    
-    sd_out = sqrt(var_out);
-    
-    var_out = rhodd - mean_out.^2;
-    problems = var_out<0;
-    var_out(problems) = qdd_s(max_ind,problems) - qd_s(max_ind,problems).^2;
-    
-    unadj_sd_out = sqrt(var_out);
-end
+var_out = second_moment - mean_out.^2;
+problems = var_out<0;
+var_out(problems) = qdd_s(max_ind,problems) - qd_s(max_ind,problems).^2;
+
+sd_out = sqrt(var_out);
+
+var_out = rhodd - mean_out.^2;
+problems = var_out<0;
+var_out(problems) = qdd_s(max_ind,problems) - qd_s(max_ind,problems).^2;
+
+unadj_sd_out = sqrt(var_out);
