@@ -1,9 +1,9 @@
 function [mean_out, sd_out, unadj_mean_out, unadj_sd_out] = ...
-    predict_bq(sample_struct, prior, ...
+    predict_bq(samples, prior, ...
     l_gp_hypers_SE, tl_gp_hypers_SE, del_gp_hypers_SE, ...
-    qd_gp_hypers_SE, qdd_gp_hypers_SE, opt)
+    qd_gp_hypers_SE, qdd_gp_hypers_SE, ev_params, opt)
 % [mean_out, sd_out, unadj_mean_out, unadj_sd_out] = ...
-%    predict_bq(sample_struct, priol_struct, ...
+%    predict_bq(samples, priol_struct, ...
 %    l_gp_hypers_SE, tl_gp_hypers_SE, ...
 %    qd_gp_hypers_SE, qdd_gp_hypers_SE, opt)
 % 
@@ -84,10 +84,10 @@ opt = set_defaults( opt, default_opt );
 x_s = samples.locations;
 num_s = size(x_s);
 
-if isfield(sample_struct, 'mean_y')
+if isfield(samples, 'mean_y')
 
-    mean_y = sample_struct.mean_y;
-    var_y = sample_struct.var_y;
+    mean_y = samples.mean_y;
+    var_y = samples.var_y;
 
     % these quantities need to be num_s by num_star matrices
     if size(mean_y, 1) ~= num_s
@@ -100,30 +100,37 @@ if isfield(sample_struct, 'mean_y')
     qd_s = mean_y;
     qdd_s = var_y + mean_y.^2;
 
-elseif isfield(sample_struct, 'qd') 
+elseif isfield(samples, 'qd') 
 
-    qd_s = sample_struct.qd;
-    if isfield(sample_struct, 'qdd')
-        qdd_s = sample_struct.qdd;
+    qd_s = samples.qd;
+    if isfield(samples, 'qdd')
+        qdd_s = samples.qdd;
     else
-        qdd_s = sample_struct.qd;
+        qdd_s = samples.qd;
     end
 
 end
     
 gamma_l = opt.gamma;
-gamma_qdd = opt.gamma_const * max(eps,max(qdd_s));
-
-% rescale by subtracting appropriate prior means
-qdmm_s = bsxfun(@minus, qd_s, qd_gp_hypers_SE.prior_mean);
-qddmm_s = bsxfun(@minus, qdd_s, qdd_gp_hypers_SE.prior_mean);
+gamma_qdd = opt.gamma * max(eps,max(qdd_s));
 
 tqdd_s = log_transform(qd_s, gamma_qdd);
 
 % IMPORTANT NOTE: THIS NEEDS TO BE CHANGED TO MATCH WHATEVER MEAN IS USED
 % FOR qdd
+[max_log_l, max_ind] = max(samples.log_l);
+
+mu_qd = qd_s(max_ind, :);
+mu_qdd = qdd_s(max_ind, :);
 mu_tqdd = tqdd_s(max_ind,:);
+
+% rescale by subtracting appropriate prior means
+qdmm_s = bsxfun(@minus, qd_s, mu_qd);
+qddmm_s = bsxfun(@minus, qdd_s, mu_qdd);
 tqddmm_s = bsxfun(@minus, tqdd_s, mu_tqdd);
+
+
+
 
 
 % Compute our covariance matrices and their cholesky factors
@@ -202,7 +209,7 @@ mean_tqdd_sc = bsxfun(@plus, mu_tqdd, K_tqdd_sc' * inv_K_tqdd_tqddmm);
 
 % the difference between the mean of the transformed (log) likelihood and
 % the transform of the mean likelihood
-delta_tqdd_sc = mean_tqdd_sc - log_tlansform(mean_qdd_sc, opt.gamma);
+delta_tqdd_sc = mean_tqdd_sc - log_transform(mean_qdd_sc, opt.gamma);
 
 mean_l_sc = ev_params.mean_tl_sc;
 delta_tl_sc = ev_params.delta_tl_sc;

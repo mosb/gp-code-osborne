@@ -121,6 +121,8 @@ for i = 1:opt.num_samples
                                  
         gp_train_opt.optim_time = opt.train_gp_time;
         
+        del_gp_hypers = [];
+        
     elseif retrain_now
         % Retrain gp.
         [l_gp, quad_l_gp] = train_gp('sqdexp', 'constant', l_gp, ...
@@ -130,6 +132,8 @@ for i = 1:opt.num_samples
         [tl_gp, quad_tl_gp] = train_gp('sqdexp', 'constant', tl_gp, ...
                                      samples.locations, samples.tl, ...
                                      gp_train_opt);            
+                                 
+        del_gp_hypers = [];
                                  
         retrain_inds(1) = [];   % Move to next retraining index. 
     else
@@ -149,7 +153,7 @@ for i = 1:opt.num_samples
     % del_gp_hypers = del_hyperparams(tl_gp_hypers);
     
     [log_mean_evidences(i), log_var_evidences(i), ev_params, del_gp_hypers] = ...
-        log_evidence(samples, prior, l_gp_hypers, tl_gp_hypers, [], opt);
+        log_evidence(samples, prior, l_gp_hypers, tl_gp_hypers, del_gp_hypers, opt);
 
     tic;
     % Choose the next sample point.

@@ -5,23 +5,25 @@ clear;
 
 problem_bbq_predict_bq;
 
-opt.num_samples = 30;
+opt.num_samples = 10;
+opt.num_retrains = 3;
 [log_ev, log_var_ev, samples, ...
     l_gp_hypers_SE, tl_gp_hypers_SE, del_gp_hypers_SE, ev_params] = ...
     sbq(log_l_fn, prior, opt);
 
-samples.qd = q_fn(samples.locations);
+for i = 1:size(samples.locations, 1)
+    samples.qd(i,1) = q_fn(samples.locations(i,:));
+end
 
 % GP training options.
-gp_train_opt.optim_time = opt.train_gp_time;
+gp_train_opt.optim_time = 60;
 gp_train_opt.noiseless = true;
-gp_train_opt.prior_mean = 0;
 % print to screen diagnostic information about gp training
-gp_train_opt.print = opt.train_gp_print;
+gp_train_opt.print = 0;
 % plot diagnostic information about gp training
 gp_train_opt.plots = false;
-gp_train_opt.parallel = opt.parallel;
-gp_train_opt.num_hypersamples = opt.train_gp_num_samples;
+gp_train_opt.parallel = true;
+gp_train_opt.num_hypersamples = 10;
 
 
 
@@ -31,8 +33,9 @@ qd_gp = train_gp('sqdexp', 'constant', [], ...
 
 % Put the values of the best hyperparameters into dedicated structures.
 qd_gp_hypers_SE = best_hyperparams(qd_gp);
+qdd_gp_hypers_SE = qd_gp_hypers_SE;
 
 [mean_out, sd_out, unadj_mean_out, unadj_sd_out] = ...
-    predict_bq(sample_struct, prior, ...
+    predict_bq(samples, prior, ...
     l_gp_hypers_SE, tl_gp_hypers_SE, del_gp_hypers_SE, ...
-    qd_gp_hypers_SE, qdd_gp_hypers_SE, opt);
+    qd_gp_hypers_SE, qdd_gp_hypers_SE, ev_params, opt);
