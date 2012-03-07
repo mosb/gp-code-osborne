@@ -188,8 +188,8 @@ xrange = test_pts(:,end);
 
 % Plot the prior.
 scale_factor = max(losses(:)) / mvnpdf(0, 0, prior.covariance);
-h_prior = plot3(repmat(i + 1,N,1), xrange,...
-    mvnpdf(xrange, prior.mean, prior.covariance) * scale_factor, 'g--', 'LineWidth', 1); hold on;
+% h_prior = plot3(repmat(i + 1,N,1), xrange,...
+%     mvnpdf(xrange, prior.mean, prior.covariance) * scale_factor, 'g--', 'LineWidth', 1); hold on;
 
 % Plot the true function.
 true_plot_depth = i + 1;

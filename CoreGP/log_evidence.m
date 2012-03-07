@@ -3,7 +3,7 @@ function [log_mean_evidence, log_var_evidence, ev_params, del_gp_hypers_SE] = ..
     l_gp_hypers_SE, tl_gp_hypers_SE, del_gp_hypers_SE, opt)
 % [log_mean_evidence, log_var_evidence, ev_params] = ...
 %     log_evidence(samples, prior, ...
-%     l_gp_hypers, tl_gp_hypers, del_gp_hypers, opt)
+%     l_gp_hypers_SE, tl_gp_hypers_SE, del_gp_hypers, opt)
 %
 % Returns the log of the mean-evidence, the log of the variance of the
 % evidence, and a  a structure ev_params to ease its future computation.
@@ -12,44 +12,45 @@ function [log_mean_evidence, log_var_evidence, ev_params, del_gp_hypers_SE] = ..
 % - log_mean_evidence
 % - log_var_evidence
 % - ev_params: (see expected_uncertainty_evidence.m) has fields
-%   'x_c
-%   'sqd_dist_stack_s
-%   'R_tl_s
-%   'K_tl_s
-%   'inv_K_tl_s
-%   'jitters_l
-%   'sqd_dist_stack_s
-%   'R_del
-%   'K_del
-%   'ups_l
-%   'ups_del
-%   'Ups_sc_s
-%   'del_inv_K_del
-%   'delta_tl_sc
-%   'minty_del
-%   'log_mean_second_moment
+%   - x_c
+%   - sqd_dist_stack_s
+%   - R_tl_s
+%   - K_tl_s
+%   - inv_K_tl_s
+%   - jitters_l
+%   - sqd_dist_stack_s
+%   - R_del
+%   - K_del
+%   - ups_l
+%   - ups_del
+%   - Ups_sc_s
+%   - del_inv_K_del
+%   - delta_tl_sc
+%   - minty_del
+%   - log_mean_second_moment
 %
 % INPUTS
 % - samples: requires fields
-%   'locations
-%   'log_l
+%   - locations
+%   - scaled_l: likelihoods divided by maximum likelihood
+%   - tl: log-transformed scaled likelihoods
+%   - max_log_l: max log likelihood
 % - prior requires fields
-%   'mean
-%   'covariance
+%   - mean
+%   - covariance
 % - l_gp_hypers_SE: hypers for sqd exp covariance over l, with fields
-%   * log_output_scale
-%   * log_input_scales
+%   - log_output_scale
+%   - log_input_scales
 % - tl_gp_hypers_SE: hypers for sqd exp covariance over tl, with fields
-%   * log_output_scale
-%   * log_input_scales
+%   - log_output_scale
+%   - log_input_scales
 % - del_gp_hypers_SE: hypers for sqd exp covariance over del, with fields
-%   * log_output_scale
-%   * log_input_scales
+%   - log_output_scale
+%   - log_input_scales
 
 % Load options, set to default if not available
 % ======================================================
 
-no_ev_params = nargin<3;
 if nargin<4
     opt = struct();
 end
@@ -63,6 +64,9 @@ default_opt = struct('num_c', 400,... % number of candidate points
                      'marginalise_scales', true ... % approximately marginalise log input scales of gp over log likelihood
                         );
 opt = set_defaults( opt, default_opt );
+
+% Load data
+% ======================================================
 
 num_samples = size(samples.locations, 1);
 
@@ -186,7 +190,8 @@ if opt.plots && D == 1
         l_gp_hypers, tl_gp_hypers, del_gp_hypers, samples, opt); 
 end
 
-% Compute various quantities required to evaluate the mean evidence
+% Compute various Gaussian-derived quantities required to evaluate the mean
+% evidence
 % ======================================================
 
 % squared distances are expensive to compute, so we store them for use in
@@ -382,6 +387,7 @@ log_mean_second_moment = 2*samples.max_log_l + log(mean_second_moment);
 ev_params = struct(...
   'candidate_locations' , x_c, ...
   'sqd_dist_stack_s' , sqd_dist_stack_s, ...
+  'sqd_dist_stack_s_sc', sqd_dist_stack_s_sc, ...
   'R_l_s', R_l, ...
   'K_l_s', K_l, ...
   'R_tl_s' , R_tl, ...
@@ -394,7 +400,9 @@ ev_params = struct(...
   'ups_del_sc' , ups_del, ...
   'Ups_sc_s' , Ups_del_l, ...
   'del_inv_K' , del_inv_K_del, ...
+  'mean_l_sc', mean_l_sc, ...
   'delta_tl_sc' , delta_tl_sc, ...
+  'minty_l', minty_l, ...
   'minty_del' , minty_del, ...
   'log_mean_second_moment', log_mean_second_moment ...
    );
