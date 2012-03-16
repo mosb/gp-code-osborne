@@ -1,12 +1,13 @@
 import numpy as np
 import orbit_rvonly as o
 import sys
+import os
 
-root = '/homes/mlghomes/dkd23/Dropbox/code/gp-code-osborne/kepler'
 mayor = 'RVs_Mayor2009'
 vogt = 'RVs_Vogt2010'
 
 def ReadData():
+    root = os.path.dirname(__file__)
     X = np.genfromtxt('%s/%s' % (root, mayor)).T
     jd_m, rv_m, erv_m = X[0], X[1] * 1e3, X[2] * 1e3
     X = np.genfromtxt('%s/%s' % (root, vogt)).T

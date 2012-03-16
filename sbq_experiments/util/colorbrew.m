@@ -16,5 +16,5 @@ c_array(8, :) = [ 166, 86, 40 ];   % brown
 c_array(9, :) = [ 247, 129, 191 ]; % pink
 c_array(10, :) = [ 153, 153, 153]; % grey
 
-c = c_array( mod(i - 1, 10) + 1, : );
+c = c_array( mod(i - 1, 10) + 1, : ) ./ 255;
 end

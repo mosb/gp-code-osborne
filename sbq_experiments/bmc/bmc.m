@@ -32,11 +32,15 @@ if nargin < 3
 end
 
 % Get sample locations from a run of AIS.
-[ais_mean_log_evidence, ais_var_log_evidence, sample_locs, sample_vals] = ...
+[ais_mean_log_evidence, ais_var_log_evidence, ais_sample_locs, ais_sample_vals, stats] = ...
     ais_mh(loglik_fn, prior, opt);
 
-[sample_locs, sample_vals] = ...
-    remove_duplicate_samples(sample_locs, sample_vals);
+%[sample_locs, sample_vals] = ...
+%    remove_duplicate_samples(sample_locs, sample_vals);
+
+sample_locs = stats.all_samples.locations;
+sample_vals = stats.all_samples.logliks;
+
 opt.num_samples = length(sample_vals);
 
 % Now call BMC using the exp of those samples.

@@ -39,13 +39,16 @@ if nargin < 3
 end
 
 % Get sample locations from a run of AIS.
-[ais_mean_log_evidence, ais_var_log_evidence, sample_locs, sample_vals] = ...
+[ais_mean_log_evidence, ais_var_log_evidence, ais_sample_locs, ais_sample_vals, stats] = ...
     ais_mh(loglik_fn, prior, opt);
 
-[sample_locs, sample_vals] = ...
-    remove_duplicate_samples(sample_locs, sample_vals);
+%[sample_locs, sample_vals] = ...
+%    remove_duplicate_samples(sample_locs, sample_vals);
+
+sample_locs = stats.all_samples.locations;
+sample_vals = stats.all_samples.logliks;
+
 opt.num_samples = length(sample_vals);
-sample_vals = sample_vals';
 
 normalized_likelihoods = exp(sample_vals - max(sample_vals));
 normalized_log_likelihoods = sample_vals - max(sample_vals);
@@ -61,28 +64,31 @@ covfunc = @covSEiso;
 
 % Now call BMC using the exp of those samples.
 [mean_evidence, var_evidence, like_hypers] = ...
-    bmc_integrate(sample_locs, normalized_likelihoods', prior, covfunc, init_hypers);
+    bmc_integrate(sample_locs, normalized_likelihoods, prior, covfunc, init_hypers);
 
 % Learn a model over the log-evidences.
 % Todo: separate the GP-learning part.
 init_hypers.lik = log(std(normalized_log_likelihoods)/100);
 [ignore1, ignore2, loglike_hypers] = ...
-    bmc_integrate(sample_locs, normalized_log_likelihoods', prior, covfunc, init_hypers);
+    bmc_integrate(sample_locs, normalized_log_likelihoods, prior, covfunc, init_hypers);
 
 % Compute the difference at a set of pseudo-points, and include that the
 % difference is zero at the evaluated points.
-mahal_scales = ones(size(prior.mean));%.*exp(loglike_hypers.cov(1:end-1));
+mahal_scales = exp(like_hypers.cov(1:end-1));
 
 % candidate locations will be constrained to a box defined by the prior
-lower_bound = prior.mean - 3*sqrt(diag(prior.covariance))';
-upper_bound = prior.mean + 3*sqrt(diag(prior.covariance))';
+%lower_bound = prior.mean - 3*sqrt(diag(prior.covariance))';
+%upper_bound = prior.mean + 3*sqrt(diag(prior.covariance))';
 
 % Find the candidate locations, far removed from existing samples, with the
 % use of a Voronoi diagram
-candidate_locs = find_farthest(sample_locs, ...
-                    [lower_bound; upper_bound], max(200,length(normalized_likelihoods)), ...
-                     mahal_scales);
-    
+%candidate_locs = find_farthest(sample_locs, ...
+%                    [lower_bound; upper_bound], max(200,length(normalized_likelihoods)), ...
+%                     mahal_scales);
+
+candidate_locs = find_candidates(sample_locs, ...
+                     max(200,length(normalized_likelihoods)), mahal_scales);
+
 %loglike_hypers.cov(1) = 0;
 %loglike_hypers.cov(2) = 0;
 
@@ -101,7 +107,7 @@ delta_vals = exp(mean_gp_loglik) - mean_gp_lik;  % Add variance as well?
 % Compute the expected correction factor.
 init_hypers.lik = log(std(delta_vals)/100);
 [mean_correction, var_correction, delta_hypers] = ...
-    bmc_integrate(delta_locs, delta_vals', prior, covfunc, init_hypers);
+    bmc_integrate(delta_locs, delta_vals, prior, covfunc, init_hypers);
 
 delta_mean = gp_mean2( delta_hypers, delta_locs, delta_locs, delta_vals);
 

@@ -122,6 +122,51 @@ easy_20d.true_log_evidence = ...
                                      easy_20d.prior.covariance, ...
                                      likelihood.mean, likelihood.covariance);                                 
 
+
+                                 
+spike_1d.name = 'spike 1d';
+spike_1d.description = 'A spiky function designed to check searching behavior';
+spike_1d.dimension = 1;
+spike_1d.prior.mean = .1 .* ones(1, spike_1d.dimension);
+spike_1d.prior.covariance = diag(1.1 .* ones(spike_1d.dimension,1));
+likelihood.mean = 1.35 .* ones(1, spike_1d.dimension);
+likelihood.covariance = diag( 0.01 .* ones(spike_1d.dimension,1));
+spike_1d.log_likelihood_fn = ...
+    @(x) logmvnpdf( x, likelihood.mean, likelihood.covariance ); 
+spike_1d.true_log_evidence = ...
+    log_volume_between_two_gaussians(spike_1d.prior.mean, ...
+                                     spike_1d.prior.covariance, ...
+                                     likelihood.mean, likelihood.covariance);
+                                 
+spike_2d.name = 'spike 2d';
+spike_2d.description = 'A spiky function designed to check searching behavior';
+spike_2d.dimension = 2;
+spike_2d.prior.mean = .1 .* ones(1, spike_2d.dimension);
+spike_2d.prior.covariance = diag(1.1 .* ones(spike_2d.dimension,1));
+likelihood.mean = .5 .* ones(1, spike_2d.dimension);
+likelihood.covariance = diag( 0.01 .* ones(spike_2d.dimension,1));
+spike_2d.log_likelihood_fn = ...
+    @(x) logmvnpdf( x, likelihood.mean, likelihood.covariance ); 
+spike_2d.true_log_evidence = ...
+    log_volume_between_two_gaussians(spike_2d.prior.mean, ...
+                                     spike_2d.prior.covariance, ...
+                                     likelihood.mean, likelihood.covariance);
+
+
+spike_10d.name = 'spike 10d';
+spike_10d.description = 'A spiky function designed to check searching behavior';
+spike_10d.dimension = 10;
+spike_10d.prior.mean = .1 .* ones(1, spike_10d.dimension);
+spike_10d.prior.covariance = diag(1.1 .* ones(spike_10d.dimension,1));
+likelihood.mean = .5 .* ones(1, spike_10d.dimension);
+likelihood.covariance = diag( 0.01 .* ones(spike_10d.dimension,1));
+spike_10d.log_likelihood_fn = ...
+    @(x) logmvnpdf( x, likelihood.mean, likelihood.covariance ); 
+spike_10d.true_log_evidence = ...
+    log_volume_between_two_gaussians(spike_10d.prior.mean, ...
+                                     spike_10d.prior.covariance, ...
+                                     likelihood.mean, likelihood.covariance);                                 
+                                 
                                  
 % bumpy_1d.name = 'bumpy 1d';
 % bumpy_1d.description = 'a highly varying function';
@@ -307,6 +352,19 @@ real_prawn_6d_non_markov.true_log_evidence = -582.349953252928572;  % 1000000 sa
 
 
 
+% Define Kepler problems.
+% =================================
+
+kepler_1planet.name = 'kepler 1 planet';
+kepler_1planet.description = 'Kepler model with only one planet';
+kepler_1planet.dimension = 9;
+kepler_1planet.prior.mean = zeros(1, kepler_1planet.dimension);
+kepler_1planet.prior.covariance = diag(ones(kepler_1planet.dimension, 1) .* 4);
+kepler_1planet.log_likelihood_fn = ...
+    @(x) call_python_numeric('call_rvs.py', x);
+kepler_1planet.true_log_evidence = NaN;
+
+
 % Specify problems.
 problems = {};
 
@@ -315,20 +373,26 @@ problems{end+1} = simple_test_1d;
 problems{end+1} = two_spikes_1d;
 problems{end+1} = two_hills_1d;
 else
-problems{end+1} = simple_test_1d;
-problems{end+1} = bumpy_1d_exp;
-problems{end+1} = two_spikes_1d;
-problems{end+1} = two_hills_1d;
-problems{end+1} = funnel_2d;
-%problems{end+1} = friedman_3d;
-problems{end+1} = easy_4d;
+%problems{end+1} = simple_test_1d;
+problems{end+1} = spike_1d;
+problems{end+1} = spike_2d;
+problems{end+1} = spike_10d;
+%problems{end+1} = bumpy_1d_exp;
+%problems{end+1} = two_spikes_1d;
+%problems{end+1} = two_hills_1d;
+%problems{end+1} = funnel_2d;
+
+%problems{end+1} = easy_4d;
 problems{end+1} = two_spikes_4d;
 problems{end+1} = two_hills_4d;
+
+%problems{end+1} = friedman_3d;
 %problems{end+1} = friedman_7d;
 
-problems{end+1} = real_prawn_6d_mean_field;
-problems{end+1} = real_prawn_6d_markov;
-problems{end+1} = real_prawn_6d_non_markov;
+%problems{end+1} = real_prawn_6d_mean_field;
+%problems{end+1} = real_prawn_6d_markov;
+%problems{end+1} = real_prawn_6d_non_markov;
+problems{end+1} = kepler_1planet;
 end
 %problems{end+1} = bumpy_1d;
 %problems{end+1} = easy_10d;
@@ -362,4 +426,5 @@ function logZ = brute_force_integrate_2d(problem)
     end
     logZ = log(Z*dx^2);
 end
+
 

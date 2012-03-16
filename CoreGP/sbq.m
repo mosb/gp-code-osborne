@@ -1,8 +1,8 @@
 function [log_mean_evidences, log_var_evidences, samples, ...
     l_gp_hypers, tl_gp_hypers, del_gp_hypers, ev_params] = ...
     sbq(log_likelihood_fn, prior, opt)
-% Take samples samples_mat so as to best estimate the
-% evidence, an integral over exp(log_l_fn) against the prior in prior_struct.
+% Take samples so as to best estimate the evidence,
+% an integral over exp(log_likelihood_fn) against the prior.
 % 
 % OUTPUTS
 % - mean_log_evidences: our mean estimates for the log of the evidence;
@@ -10,8 +10,8 @@ function [log_mean_evidences, log_var_evidences, samples, ...
 % - var_log_evidences: the variances for the log of the evidence;
 %       the ith element corresponds to our variance after i samples
 % - samples: n*d matrix of hyperparameter samples - tl_gp_hypers: the
-% (quadrature) hyperparameters of the gp fitted to the log-likelihood
-% surface
+%       (quadrature) hyperparameters of the gp fitted to the log-likelihood
+%       surface
 % 
 % INPUTS
 % - start_pt: 1*n vector expressing starting point for algorithm

@@ -29,12 +29,13 @@ elseif ispc
   [status, result] = dos(pythonCmd)
 else
   [status ignore] = unix('which python'); %#ok
-  if (status == 0)
+  %if (status == 0)  % Why not try anyways?
     cmdString = ['python', cmdString];
     [status, result] = unix(cmdString);
-  else
-    error('MATLAB:python:NoExecutable', errTxtNoPython);
-  end
+  %else
+  %   
+  %  error('MATLAB:python:NoExecutable', errTxtNoPython);
+  %end
 end
 if nargout < 2 && status~=0
   error('MATLAB:python:ExecutionError', ...

@@ -90,11 +90,16 @@ retrain_inds(end) = inf;
 % Start of actual SBQ algorithm
 % =======================================
 
-[ais_mean_log_evidence, ais_var_log_evidence, sample_locs, sample_vals] = ...
-    ais_mh(log_likelihood_fn, prior, opt);
+% Get sample locations from a run of AIS.
+[ais_mean_log_evidence, ais_var_log_evidence, ais_sample_locs, ais_sample_vals, stats] = ...
+    ais_mh(loglik_fn, prior, opt);
 
-[sample_locs, sample_vals] = ...
-    remove_duplicate_samples(sample_locs, sample_vals);
+%[sample_locs, sample_vals] = ...
+%    remove_duplicate_samples(sample_locs, sample_vals);
+
+sample_locs = stats.all_samples.locations;
+sample_vals = stats.all_samples.logliks;
+
 opt.num_samples = length(sample_vals);
 
 % Update sample struct.

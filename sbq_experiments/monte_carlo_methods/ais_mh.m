@@ -1,4 +1,4 @@
-function [mean_log_evidence, var_log_evidence, samples, sample_vals, stats] = ...
+function [mean_log_evidence, var_log_evidence, sample_locs, logliks, stats] = ...
     ais_mh(loglik_fn, prior, opt)
 % Annealed Importance Sampling w.r.t. a Gaussian prior
 % using a Metropolis-Hastings sampler with a Gaussian proposal distribution.
@@ -26,11 +26,17 @@ function [mean_log_evidence, var_log_evidence, samples, sample_vals, stats] = ..
 %   mean_log_evidence: the mean of our poterior over the log of the evidence.
 %   var_log_evidence: the variance of our posterior over the log of the
 %                     evidence.
-%   samples: n*d matrix of the locations of the samples.
+%   samples
+%          * locations: n*d matrix of the locations of the samples.
+%          * logliks
+%
 %   sample_vals:
 %   stats: a struct of stats about the run, containing:
 %          * weights: n*1 list of weights.
 %          * acceptance ratio.
+%          * all_samples
+%                locations: n*d matrix of the locations of the samples.
+%                logliks
 %
 %
 % David Duvenaud
@@ -48,50 +54,55 @@ opt.proposal_covariance = prior.covariance./10;
 % Define annealing schedule.  This can be anything, as long as it starts
 % from zero and doesn't go above one.
 temps = linspace( 0, 1, opt.num_samples + 1);
-
-% Define annealed pdf.
 log_prior_fn = @(x) logmvnpdf(x, prior.mean, prior.covariance);
-log_annealed_pdf = @(x, temp) temp.*loglik_fn(x) + log_prior_fn(x);
 
 % Allocate memory.
 weights = nan(opt.num_samples, 1);
-samples = nan(opt.num_samples, numel(prior.mean));
+sample_locs = nan(opt.num_samples - 1, numel(prior.mean));
+logliks = nan(opt.num_samples - 1, 1);
+stats.all_samples.locations = nan(opt.num_samples - 1, numel(prior.mean));
+stats.all_samples.logliks = nan(opt.num_samples - 1, 1);
 
 % Start with a sample from the prior.
 cur_pt = mvnrnd( prior.mean, prior.covariance );
+cur_ll = loglik_fn(cur_pt);
 
 num_accepts = 1;
 for t = 2:length(temps)
     
     % Compute MH proposal.
     proposal = mvnrnd( cur_pt, opt.proposal_covariance );
-    proposal_ll = log_annealed_pdf(proposal, temps(t));
-    cur_pt_ll = log_annealed_pdf(cur_pt, temps(t));
+    proposal_ll = loglik_fn(proposal);
     
     % Possibly take a MH step.
-    ratio = exp(proposal_ll - cur_pt_ll);
+    annealed_proposal_ll = temps(t)*proposal_ll + log_prior_fn(proposal);
+    annealed_cur_ll = temps(t)*cur_ll + log_prior_fn(cur_pt);
+    ratio = exp(annealed_proposal_ll - annealed_cur_ll);
     if ratio > rand
         num_accepts = num_accepts + 1;
         cur_pt = proposal;
+        cur_ll = proposal_ll;
     end
 
     % Compute weights.
-    sample_vals(t) = loglik_fn(cur_pt);
-    weights(t) = sample_vals(t) * (temps(t) - temps(t - 1));
-    samples(t, :) = cur_pt;
+    weights(t - 1) = cur_ll*(temps(t) - temps(t - 1));
+
+    % Record locations.
+    sample_locs(t - 1, :) = cur_pt;
+    logliks(t - 1) = cur_ll;
+    stats.all_samples.locations(t - 1, :) = proposal;
+    stats.all_samples.logliks(t - 1) = proposal_ll;
 end
+
+mean_log_evidence = sum(weights);
 
 stats.acceptance_ratio = num_accepts / length(temps);
 fprintf('\nAcceptance ratio: %f \n', stats.acceptance_ratio);
 
-weights(1) = [];
-samples(1, :) = [];
-sample_vals(1) = [];
-mean_log_evidence = sum(weights);
-
+% Try to estimate variance, in a not so great way.
 rho = auto_correlation(weights);
 effective_sample_size = opt.num_samples * ( 1 - rho ) / (1 + rho );
-var_log_evidence = var(weights)*opt.num_samples/effective_sample_size^2;  % todo: double check this.
+var_log_evidence = var(weights)*opt.num_samples/effective_sample_size^2;
 end
 
 

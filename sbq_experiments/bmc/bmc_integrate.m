@@ -51,8 +51,8 @@ else
 end
 
 % Fill in gram matrix
-K = covfunc( hypers.cov, X );% + diag(ones(N,1)) .* exp(2*hypers.lik);
-K = improve_covariance_conditioning(K);
+K = covfunc( hypers.cov, X ) + diag(ones(N,1)) .* exp(2*hypers.lik);
+%K = improve_covariance_conditioning(K);
 % Formulas from Carl and Zoubin's paper for the mean and variance.
 w_lengths = exp(hypers.cov(1));
 w_0 = exp(2*hypers.cov(2));
@@ -66,7 +66,7 @@ for i = 1:N
     z(i) = c .* exp( -0.5 * ( a(i,:)' - b)' * ((A + B) \ (a(i,:)' - b)));
 end
 
-expected_Z = z * (K \ y');
+expected_Z = z * (K \ y);
 variance = w_0 ./ sqrt(det(2.*(A \ B) + eye(D))) - z * (K \ z');
 end
 
