@@ -45,28 +45,28 @@ log_bmc_ais_method.opt = [];
 
 bbq_method.nicename = 'Doubly Bayesian Quadrature';
 bbq_method.uniquename = 'sequential bayesian quadrature mike no marg hypers';
-bbq_method.acronym = 'BBQ';
+bbq_method.acronym = 'BBQ M';
 bbq_method.function = @sbq;
 bbq_method.opt = struct(...
                      'marginalise_scales', false);
                  
 bbq_hypers_method.nicename = 'Doubly Bayesian Quadrature with marginal hypers';
 bbq_hypers_method.uniquename = 'sequential bayesian quadrature mike v1';
-bbq_hypers_method.acronym = 'BBQ*';
+bbq_hypers_method.acronym = 'BBQ* M';
 bbq_hypers_method.function = @sbq;
 bbq_hypers_method.opt = struct(...
                      'marginalise_scales', true);
                  
 bq_ais_method.nicename = 'Bayesian Quadrature';
 bq_ais_method.uniquename = 'bayesian quadrature no marg hypers using AIS';
-bq_ais_method.acronym = 'BQ';
+bq_ais_method.acronym = 'BQ G';
 bq_ais_method.function = @online_bq_gpml_ais;
 bq_ais_method.opt = struct(...
                      'marginalise_scales', false);
                  
 bq_hypers_ais_method.nicename = 'Bayesian Quadrature';
 bq_hypers_ais_method.uniquename = 'bayesian quadrature marg hypers using AIS';
-bq_hypers_ais_method.acronym = 'BQ*';
+bq_hypers_ais_method.acronym = 'BQ* G';
 bq_hypers_ais_method.function = @online_bq_gpml_ais;
 bq_hypers_ais_method.opt = struct(...
                      'marginalise_scales', true);
@@ -74,13 +74,13 @@ bq_hypers_ais_method.opt = struct(...
 
 sbq_gpml_method.nicename = 'Doubly Bayesian Quadrature GPML';
 sbq_gpml_method.uniquename = 'sbq gpml v1';
-sbq_gpml_method.acronym = 'BBQ*';
+sbq_gpml_method.acronym = 'BBQ* G';
 sbq_gpml_method.function = @sbq_gpml;
 sbq_gpml_method.opt = [];
 
 bq_gpml_ais_method.nicename = 'Bayesian Quadrature using AIS';
 bq_gpml_ais_method.uniquename = 'bayesian quadrature gpml ais v1';
-bq_gpml_ais_method.acronym = 'BQ';
+bq_gpml_ais_method.acronym = 'BQ* G';
 bq_gpml_ais_method.function = @online_bq_gpml_ais;
 bq_gpml_ais_method.opt.set_ls_var_method = 'none';
 

@@ -26,8 +26,7 @@ autocontent = fopen(autocontent_filename, 'w');
 fprintf(autocontent, ['\\documentclass{article}\n' ...
     '\\usepackage{preamble}\n' ...
     '\\usepackage[margin=0.1in]{geometry}' ...
-    '\\begin{document}\n\n' ...
-    '\\input{tables/integrands_auto.tex\n}']);
+    '\\begin{document}\n\n']);
 addpath(genpath(pwd))
     %'\\usepackage{morefloats}\n' ...
     %'\\usepackage{pgfplots}\n' ...
@@ -230,7 +229,7 @@ edgecolor = 'none';
 % =====================
 figure; clf;
 for m_ix = 1:num_methods
-    z_handle(m_ix) = plot( 0, 0, '-', 'Color', sqrt(color( m_ix, :) ), 'LineWidth', 1); hold on;
+    z_handle(m_ix) = plot( 0, 0, '-', 'Color', colorbrew( m_ix), 'LineWidth', 1); hold on;
 end
 truth_handle = plot( 1, 1, 'k-', 'LineWidth', 1); hold on;
 h_l = legend([z_handle, truth_handle], {method_names{:}, 'True value'},...
@@ -239,9 +238,9 @@ legend boxoff
 axis off;
 set_fig_units_cm( 3, 4 )
 filename = 'legend';
-matlabfrag([plotdir filename]);
-fprintf(autocontent, '\\psfragfig{%s}\n', [plotdirshort filename]);    
-
+%matlabfrag([plotdir filename]);
+%fprintf(autocontent, '\\psfragfig{%s}\n', [plotdirshort filename]);    
+savepng(filename);
 
 label_fontsize = 10;
 
@@ -271,7 +270,7 @@ for p_ix = 1:num_problems
                 end
                 z_handle(m_ix) = plot( plotted_sample_set, ...
                     real(neg_log_liks(m_ix, plotted_sample_set)), '-', ...
-                    'Color', color( m_ix, :), 'LineWidth', 1); hold on;
+                    'Color', colorbrew( m_ix), 'LineWidth', 1); hold on;
             end
         end
         
@@ -308,7 +307,7 @@ for p_ix = 1:num_problems
                 end
                 z_handle(m_ix) = semilogy( plotted_sample_set, ...
                     cur_squared_error(plotted_sample_set), '-',...
-                    'Color', color( m_ix, :), 'LineWidth', 1); hold on;
+                    'Color', colorbrew( m_ix), 'LineWidth', 1); hold on;
             end
         end
         xlabel('Number of samples');
@@ -352,11 +351,11 @@ for p_ix = 1:num_problems
                                                           :, chosen_repetition ))'))));% - 2*true_log_evidence)));
             jbfill(plotted_sample_set, mean_predictions(m_ix, plotted_sample_set) + 2.*std_predictions(plotted_sample_set), ...
                                  mean_predictions(m_ix, plotted_sample_set) - 2.*std_predictions(plotted_sample_set), ...
-                                 color(m_ix,:), edgecolor, 1, opacity); hold on;
+                                 colorbrew(m_ix), edgecolor, 1, opacity); hold on;
             %end
             z_handle(m_ix) = plot( plotted_sample_set, ...
                 mean_predictions(m_ix, plotted_sample_set), '-', ...
-                'Color', color( m_ix, :), 'LineWidth', 1); hold on;
+                'Color', colorbrew( m_ix), 'LineWidth', 1); hold on;
         end
 
         true_log_evidence = squeeze(true_log_ev_table( 1, p_ix, ...
@@ -407,7 +406,7 @@ for p_ix = 1:num_problems
                 h_samples = plot3( (start_ix:end_ix)', ...
                    cur_samples(start_ix:end_ix,1), ...
                    zeros( end_ix - start_ix + 1, 1 ), '.', ...
-                   'Color', color( m_ix, :));   hold on;      
+                   'Color', colorbrew( m_ix));   hold on;      
             end
         end
         
@@ -455,7 +454,7 @@ try
     for m_ix = 1:num_methods
         z_handle(m_ix) = plot( plotted_sample_set, ...
             squeeze(mean(neg_lok_likes_all_probs(:, m_ix, plotted_sample_set), 1)), '-', ...
-            'Color', color( m_ix, :), 'LineWidth', 1); hold on;
+            'Color', colorbrew( m_ix), 'LineWidth', 1); hold on;
     end
 
     xlabel('Number of samples', 'fontsize', label_fontsize);
@@ -479,7 +478,7 @@ try
     for m_ix = 1:num_methods
         z_handle(m_ix) = plot( plotted_sample_set, ...
             squeeze(nanmean(squared_error_all_probs(:, m_ix, plotted_sample_set), 1)), '-', ...
-            'Color', color( m_ix, :), 'LineWidth', 1); hold on;
+            'Color', colorbrew( m_ix), 'LineWidth', 1); hold on;
     end
 
     xlabel('Number of samples', 'fontsize', label_fontsize);
@@ -499,3 +498,45 @@ fprintf(autocontent, '\n\n\\end{document}');
 fclose(autocontent);
 
 %close all;
+
+if 1
+% Plot sample distances to mean of spike.
+% ===============================================================
+
+chosen_repetition = 1;
+for p_ix = 1:3
+    cur_problem = problems{p_ix};
+    figure; clf;
+    try
+        for m_ix = 1:num_methods
+            cur_samples = samples{m_ix, p_ix};
+            if isfield(cur_samples, 'locations')
+                cur_samples = cur_samples.locations;
+            end
+            if ~isempty(cur_samples)
+%                z_handle(m_ix) = plot( cur_samples(:,1), '.', ...
+ %                   'Color', color( m_ix, :), 'LineWidth', 1); hold on;
+                % Plot the sample locations.
+                dists = sqrt(sum(((cur_samples - .5 .* ones(size(cur_samples,1), cur_problem.dimension)).^2), 2));
+                h_samples = plot( 1:size(cur_samples, 1), dists, ...
+                   'Color', colorbrew( m_ix )); hold on;      
+            end
+        end
+        
+
+
+        xlabel('Number of samples');
+        ylabel('sample distance to mode');
+        title(cur_problem.name);
+        
+        filename = sprintf('sampleplot_%s', strrep(cur_problem.name, ' ', '_'));
+        set_fig_units_cm( 20, 20 );
+        savepng(filename);
+        %matlabfrag([plotdir filename]);
+        %fprintf(autocontent, figure_string, [plotdirshort filename]);    
+    catch e
+        e
+    end
+end
+end
+
