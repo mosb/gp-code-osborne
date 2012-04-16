@@ -42,9 +42,10 @@ fstar_vals = f(xstar);
 % Choose some points to sample.
 prior_mu = [0 0];
 prior_sigma = [ .3 0; 0 .3 ];
-N = 10;
+N = 4;
 samples = mvnrnd(prior_mu, prior_sigma, N);
-sample_f_vals = f(samples);    % Evaluate function at sample points.
+%samples = [ones(N,1), (1:N)' ./2 - 3];
+sample_f_vals = f(samples);  %ones(N,1);  % Evaluate function at sample points.
 %sp_handle = plot3( samples(:, 1), samples(:, 2), sample_f_vals, 'gx' );
 
 % Model likelihood with a GP.
@@ -102,7 +103,7 @@ set(sp_handle, 'MarkerSize', 6);
 
 %  Show prior isocontours
 n_contours = 3;
-contour_radiuses = [3 2 1]
+contour_radiuses = [3 2 1];
 points_per_contour = 300;
 angles = linspace(0, 2*pi, points_per_contour);
 for c_ix = 1:n_contours
@@ -156,13 +157,20 @@ marg_varhandle_y = fill3(marg_location.*ones(1, 2*size(xrange,2)), ...
          marginal_y_vals(end:-1:1)' - 2 .* marginal_y_variance(end:-1:1)'], ...
         colorbrew(3), 'EdgeColor', 'none', 'FaceAlpha', opacity * 3);
 
+% Plot the data on top of each marginal.
+% Todo: size according to its prob. under the prior.
+marg_data_x = plot3( samples(:, 1), marg_location*ones(1, N), sample_f_vals, ...
+    'x', 'Color', colorbrew(2).^2); hold on;
+marg_data_y = plot3( marg_location*ones(1, N), samples(:, 2), sample_f_vals, ...
+    'x', 'Color', colorbrew(3).^2);
+    
 hl1 = legend( [ sp_handle, h_2d_mean, prior_h, marg_handle_x, marg_varhandle_x, marg_handle_y, marg_varhandle_y ], ...
         { 'sample points', '2d posterior mean', ...
         'prior on (x,y)',  'marginal mean of x','marginal variance of x'...
         'marginal mean of y','marginal variance of y'}, ...
         'Fontsize', 10, 'Location', 'EastOutside' );
+legend boxoff
 
-legend boxoff  
 set( gca, 'xTick', [] );
 set( gca, 'yTick', [] );
 set( gca, 'zTick', [] );

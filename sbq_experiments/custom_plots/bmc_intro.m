@@ -45,7 +45,7 @@ edges = [posterior(xrange)+2*sqrt(posterior_variance(xrange)); flipdim(posterior
 hc1 = fill([xrange; flipdim(xrange,1)], edges, [6.5 6.5 8]/8, 'EdgeColor', 'none'); hold on;
 
 [h,g] = crosshatch_poly([xrange; flipdim(xrange,1)], [posterior(xrange); zeros(size(xrange))], -20, 1, ...
-    'linestyle', '-', 'linecolor', [ 0 .8 0 ], 'linewidth', lw, 'hold', 1);
+    'linestyle', '-', 'linecolor', [ .6 .6 .6 ], 'linewidth', lw, 'hold', 1);
 fill( [xrange; flipdim(xrange,1)], [posterior(xrange); 10.*ones(size(xrange))], [ 1 1 1], 'EdgeColor', 'none');
 
 edges = [posterior(xrange)+2*sqrt(posterior_variance(xrange)); flipdim(posterior(xrange),1)];
@@ -78,7 +78,7 @@ set(gca, 'YGrid', 'off');
 legend boxoff
 
 set_fig_units_cm( col_width, 4 );
-matlabfrag('~/Dropbox/papers/sbq-paper/figures/bmc_intro');
+%matlabfrag('~/Dropbox/papers/sbq-paper/figures/bmc_intro');
 %savepng('int_hypers');
 %saveeps('int_hypers');
 
