@@ -6,6 +6,8 @@ if hi-lo <= num-1
     both = [hi,lo];
     vec = min(both):max(both);
     return;
+elseif num==0
+    vec=[];
 end
 
 vec = nan(1, num);

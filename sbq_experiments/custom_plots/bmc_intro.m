@@ -10,7 +10,7 @@ function bmc_intro
 
 col_width = 8.25381;  % ICML double column width in cm.
 lw = .5;  % line width
-N = 200;
+N = 2000;
 xrange = linspace( 0, 25, N )';
 
 % Choose function sample points.
@@ -54,15 +54,15 @@ hc1 = fill([xrange; flipdim(xrange,1)], edges, [6.5 6.5 8]/8, 'EdgeColor', 'none
 
 h1 = plot( xrange, posterior(xrange), 'b-', 'Linewidth', lw); hold on;
 h2 = plot( function_sample_points, y, 'kd', 'Marker', '.', ...
- 'MarkerSize', 5, 'Linewidth', lw );
+ 'MarkerSize', 10, 'Linewidth', lw );
  %'Color', [0.6 0.6 0.6]..
 
 % Add axes, legend, make the plot look nice, and save it.
 xlim( [xrange(1) - 0.04, xrange(end)]);
-ylim( [ -8 10] );
+ylim( [ -3 10] );
 legend( [h2 h1 hc1 g(1)], ...
         {'samples', 'posterior mean', 'posterior variance', 'expected area'}, ...
-        'Location', 'SouthEast', 'Fontsize', 6);
+        'Location', 'NorthEast', 'Fontsize', 6);
 set( gca, 'XTick', [] );
 set( gca, 'yTick', [] );
 set( gca, 'XTickLabel', '' );
@@ -77,10 +77,11 @@ set(gcf, 'color', 'white');
 set(gca, 'YGrid', 'off');
 legend boxoff
 
-set_fig_units_cm( col_width, 4 );
+set_fig_units_cm( 10, 5.5 );
 %matlabfrag('~/Dropbox/papers/sbq-paper/figures/bmc_intro');
 %savepng('int_hypers');
 %saveeps('int_hypers');
+matlabfrag('/Volumes/UNTITLED/Documents/SBQ/bmc_intro');
 
 end
 

@@ -1,4 +1,5 @@
-function [K,out2] = sensor_cov_fn(num_sensors,hps_struct,type,hp,flag)  
+function [K,out2] = sensor_cov_fn(num_sensors,hps_struct,type,hp,flag) 
+% [K,out2] = sensor_cov_fn(num_sensors,hps_struct,type,hp,flag)  
     
 num_hps = length(hp);
 input_scale_inds = hps_struct.logInputScales;

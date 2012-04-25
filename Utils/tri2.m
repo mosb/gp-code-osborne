@@ -2,7 +2,8 @@ function V=tri2(v)
 % tri(v) returns the matrix R'*R where R is the square upper triangular
 % matrix of dimension constructed from the vector v. v contains firstly the
 % log of the scale for each dimension of V, followed by the remainder of
-% the degrees of freedom.
+% the degrees of freedom (angles which are passed through a cos before
+% being put into matrix)
 
 GD=(-1+sqrt(1+8*length(v)))/2;
 if floor(GD)~=GD

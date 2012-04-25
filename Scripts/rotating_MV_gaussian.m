@@ -17,6 +17,8 @@ s2 = 1/rand;
 scalesmat = diag([s1,s2]);
 covmat = scalesmat*[1,cos(th);cos(th),1]*scalesmat;
 
+covmat = [1 1;1 2];
+
 pq = [cos(th) sin(th);-sin(th) cos(th)]*[x-mux;y-muy];
 p = pq(1,:);
 q = pq(2,:);

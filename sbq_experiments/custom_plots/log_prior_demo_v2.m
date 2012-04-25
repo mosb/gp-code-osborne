@@ -12,19 +12,20 @@
 
 % Define a likelihood function (one that is well-modeled by a gp on the log).
 likelihood = @(x)(normpdf(x,4,.4).*40);
-loglikelihood = @(x)log(likelihood(x));
+loglikelihood = @(x)log(likelihood(x)+1);
 
 % Plot likelihood.
 N = 200;
-xrange = linspace( 3.075, 5.25, N )';
+xrange = linspace( 2, 5.25, N )'
+%xrange = linspace( 3.075, 5.25, N )';
 
 clf;
 col_width = 8.25381;  % ICML double column width in cm.
 lw = 0.5;
 
 % Choose function sample points.
-n_f_samples = 3;
-function_sample_points = [ 3.1 3.6 4.7];
+n_f_samples = 4;
+function_sample_points = [ 2.5 3.1 3.6 4.7];
 
 % Evaluate likelihood and log-likelood at sample points.
 y = likelihood(function_sample_points)';
@@ -37,7 +38,7 @@ myeps = 0.05;
 % =================================
 
 % Define quadrature hypers.
-quad_length_scale = .3;
+quad_length_scale = .1;
 quad_kernel = @(x,y)exp( - 0.5 * ( ( x - y ) .^ 2 ) ./ quad_length_scale );
 quad_noise = 1e-6;
 
@@ -51,7 +52,7 @@ posterior = @(x)(bsxfun(quad_kernel, function_sample_points, x) * weights); % Co
 
 % Model log-likelihood with a GP
 % =================================
-quad_log_length_scale = quad_length_scale * 4;
+quad_log_length_scale = 0.3;
 quad_log_kernel = @(x,y)exp( - 0.5 * (( x - y ) .^ 2 ) ./ quad_log_length_scale );
 quad_log_noise = 1e-6;
 
@@ -75,7 +76,7 @@ quad_diff_noise = 1e-6;
 n_diff_samples = 6;
 diff_sample_points = [linspace( 3.2, 5.2, n_diff_samples) function_sample_points] ;
 n_diff_samples = n_diff_samples + n_f_samples;
-diff_values = log_posterior(diff_sample_points') - log(max(myeps,posterior(diff_sample_points')));
+diff_values = log_posterior(diff_sample_points') - log(max(myeps,posterior(diff_sample_points'))+1);
 
 K = bsxfun(quad_diff_kernel, diff_sample_points', diff_sample_points ); % Fill in gram matrix
 C = inv( K + quad_diff_noise^2 .* diag(ones(n_diff_samples,1)) ); % Compute inverse covariance
@@ -130,9 +131,9 @@ subaxis( 2, 1, 2,'SpacingVertical',0.1, 'MarginLeft', .1,'MarginRight',0);
 
 % Plot exp(likelihood-GP posterior).
 
-log_like_handle = plot( xrange, log(likelihood(xrange)), 'k'); hold on; % pause;
+log_like_handle = plot( xrange, log(likelihood(xrange)+1), 'k'); hold on; % pause;
 log_sp_handle = plot( function_sample_points, log(y), 'k.', 'Markersize', 10); hold on;
-log_gpf_handle = plot( xrange, log(max(myeps,posterior(xrange))), 'r'); hold on;
+log_gpf_handle = plot( xrange, log(max(myeps,posterior(xrange))+1), 'r'); hold on;
 gp_tl_handle = plot( xrange, log_posterior(xrange), 'b-.'); hold on;
 diff_points_handle = plot( diff_sample_points, diff_values', 'ko','Markersize', 5); hold on;
 delta_handle = plot( xrange, delta(xrange), 'b-'); hold on;
@@ -167,5 +168,6 @@ ylim([-1 4.5])
 %set(gca, 'Position', [position(1:2), position(3:4).*scale_factor]);
 
 set_fig_units_cm( col_width-.5, 7 );
-matlabfrag('~/Dropbox/papers/sbq-paper/figures/delta');  
+%matlabfrag('~/Dropbox/papers/sbq-paper/figures/delta');  
+matlabfrag('/Volumes/UNTITLED/Docs/SBQ/delta');  
 

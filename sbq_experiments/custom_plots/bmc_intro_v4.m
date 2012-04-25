@@ -16,7 +16,7 @@ close all;
 fontsize = 10;
 
 % Plot our function.
-N = 200;
+N = 2000;
 xrange = linspace( 0, 25, N )';
 
 % Choose function sample points.
@@ -167,9 +167,9 @@ set(hLgnd2, 'Units','pixels');
 set(hLgnd2, 'OuterPosition',legendpos);
 set(hLgnd2, 'Units','normalized');
 
-set_fig_units_cm( 10, 8 );
-%matlabfrag('~/Dropbox/papers/sbq-paper/figures/bmc_intro2');
-save2pdf('~/Dropbox/papers/herding-bmc/figures/bq_intro4.pdf', gcf, 300, true);
+set_fig_units_cm( 6, 6 );
+matlabfrag('/Volumes/UNTITLED/Documents/SBQ/');
+%save2pdf('~/Dropbox/papers/herding-bmc/figures/bq_intro4.pdf', gcf, 300, true);
 end
 
 
