@@ -46,6 +46,10 @@ if no_can_do
     cR = R;
 end
 
+lowr.UT = true;
+lowr.TRANSA = true;
+uppr.UT = true;
+
 if nargin > 4
     if ~no_can_do
         inv_tr_cR_y = revisedatahalf(R,y,inv_tr_R_y,closest_ind);
