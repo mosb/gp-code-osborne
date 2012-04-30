@@ -66,6 +66,8 @@ while cputime - start_time < opt.total_time
     % take new observation
     
     
+    best
+    
 end
 
 end
