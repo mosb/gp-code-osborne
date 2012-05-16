@@ -3,7 +3,7 @@
 close all
 clear
 
-N = 3;
+N = 20;
 % observation inputs
 X_data = linspace(1,100, 50)';
 X_data = repmat(X_data,1,N);

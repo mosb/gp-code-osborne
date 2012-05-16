@@ -393,13 +393,14 @@ problems{end+1} = two_hills_4d;
 %problems{end+1} = real_prawn_6d_markov;
 %problems{end+1} = real_prawn_6d_non_markov;
 problems{end+1} = kepler_1planet;
-end
+
 %problems{end+1} = bumpy_1d;
 %problems{end+1} = easy_10d;
-%problems{end+1} = easy_20d;
+problems{end+1} = easy_20d;
 %problems{end+1} = simple_test_trans_1d;
 %problems{end+1} = simple_test_scale_1d;
 %problems{end+1} = easy_1d;
+end
 
 end
 

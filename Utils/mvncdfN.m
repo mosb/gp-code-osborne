@@ -14,7 +14,7 @@ N = size(sigma, 3);
 y = nan(N, 1);
 
 for i = 1:N
-    y(i) = mvncdfN( xl(:, i), xu(:, i), mu(:, i), sigma(:, :, i) );
+    y(i) = mvncdf( xl(:, i), xu(:, i), mu(:, i), sigma(:, :, i) );
 end
 
 

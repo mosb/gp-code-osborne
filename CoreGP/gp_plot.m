@@ -38,6 +38,7 @@ default_params = struct('bounds', false, ...
                        'width', 15, ...
                        'height', 7, ...
                        'name', '', ...
+                       'background', false, ...
                        'mean_line', true);
  
 names = fieldnames(default_params);
@@ -80,6 +81,7 @@ observationsh = plot(obs_x, obs_y, '.');
 
 
 fh = gcf;
+fa = gca;
 
 set(fh, 'units', 'centimeters', ... 
   'NumberTitle', 'off', 'Name', 'plot');
@@ -97,10 +99,37 @@ elseif params.bounds
     axis(params.bounds);
 end
 
+if params.background
+    xlims = get(gca, 'xlim');
+    ylims = get(gca, 'ylim');
+
+    sz_x = diff(xlims);
+    sz_y = diff(ylims);
+
+    background = imread('background.jpeg');
+    [bg_x, bg_y, bg_z] = size(background);
+
+    % This creates the 'background' axes
+    ha = axes('units','normalized', ...
+    'position',get(gca, 'position'));
+
+    % Move the background axes to the bottom
+    image(background);
+
+    set(ha,'handlevisibility','off', ...
+    'visible','off')
+
+    axes(fa);
+    set(fa, 'Color', 'none');
+end
+
+
 set(gca, 'TickDir', 'out')
 set(gca, 'Box', 'off', 'FontSize', 10); 
 set(fh, 'color', 'white'); 
 set(gca, 'YGrid', 'off');
+
+
 
 set(realh, ... 
   'LineStyle', 'none', ...

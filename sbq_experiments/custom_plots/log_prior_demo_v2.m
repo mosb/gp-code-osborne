@@ -20,7 +20,7 @@ xrange = linspace( 2, 5.25, N )'
 %xrange = linspace( 3.075, 5.25, N )';
 
 clf;
-col_width = 8.25381;  % ICML double column width in cm.
+col_width = 15.5;  % NIPS double column width in cm.
 lw = 0.5;
 
 % Choose function sample points.
@@ -92,7 +92,7 @@ final = @(x)(posterior(x).*(1 + delta(x)));
 
 % Overworld
 % ==========================
-subaxis( 2, 1, 1,'SpacingVertical',0.1, 'MarginLeft', .1,'MarginRight',0);
+subaxis( 1, 2, 1,'SpacingVertical',0.1, 'MarginLeft', .1,'MarginRight',0);
 
 like_handle = plot( xrange, likelihood(xrange), 'k'); hold on; % pause;
 sp_handle = plot( function_sample_points, y, 'k.', 'Markersize', 10); hold on;
@@ -114,8 +114,8 @@ set( gca, 'XTickLabel', '' );
 %set( gca, 'yTickLabel', '' );
 xlabel( '$x$' );
 ylabel( '$\ell(x)$\qquad' );
-set(get(gca,'XLabel'),'Rotation',0,'Interpreter','latex', 'Fontsize', 8);
-set(get(gca,'YLabel'),'Rotation',90,'Interpreter','latex', 'Fontsize', 8);
+set(get(gca,'XLabel'),'Rotation',0, 'Fontsize', 8);
+set(get(gca,'YLabel'),'Rotation',90, 'Fontsize', 8);
 %set(gca, 'TickDir', 'out')
 set(gca, 'Box', 'off');
 set(gcf, 'color', 'white');
@@ -127,7 +127,7 @@ xlim([xrange(1) xrange(end)])
 
 % Underworld
 % ======================== 
-subaxis( 2, 1, 2,'SpacingVertical',0.1, 'MarginLeft', .1,'MarginRight',0);
+subaxis( 1, 2, 2,'SpacingVertical',0.1, 'MarginLeft', .1,'MarginRight',0);
 
 % Plot exp(likelihood-GP posterior).
 
@@ -140,7 +140,7 @@ delta_handle = plot( xrange, delta(xrange), 'b-'); hold on;
 
 legend( [log_sp_handle, log_like_handle, log_gpf_handle, gp_tl_handle, diff_points_handle, delta_handle], ...
         { '$\log(\ell(x_s))$', '$\log(\ell(x))$', '$\log(m(\ell(x)))$', '$m(\log(\ell(x)))$', '$\log(\ell(x_c))$', '$m(\Delta(x))$' } ...
-        , 'Fontsize', 8, 'Location', 'EastOutside', 'Interpreter','latex');
+        , 'Fontsize', 8, 'Location', 'EastOutside');
 legend boxoff  
 
 line( [xrange(1), xrange(end)], [0 0], 'linestyle', '--', 'color', 'k', 'linewidth', lw );
@@ -151,8 +151,8 @@ set( gca, 'XTickLabel', '' );
 %set( gca, 'yTickLabel', '' );
 xlabel( '$x$' );
 ylabel( '$log(\ell(x))$' );
-set(get(gca,'XLabel'),'Rotation',0,'Interpreter','latex', 'Fontsize', 8);
-set(get(gca,'YLabel'),'Rotation',90,'Interpreter','latex', 'Fontsize', 8);
+set(get(gca,'XLabel'),'Rotation',0, 'Fontsize', 8);
+set(get(gca,'YLabel'),'Rotation',90, 'Fontsize', 8);
 %set(gca, 'TickDir', 'out')
 set(gca, 'Box', 'off');
 set(gcf, 'color', 'white');
@@ -167,7 +167,7 @@ ylim([-1 4.5])
 %scale_factor = 1;%(pagewidth*fraction)/total_width;
 %set(gca, 'Position', [position(1:2), position(3:4).*scale_factor]);
 
-set_fig_units_cm( col_width-.5, 7 );
+set_fig_units_cm( col_width-.5, 3 );
 %matlabfrag('~/Dropbox/papers/sbq-paper/figures/delta');  
-matlabfrag('/Volumes/UNTITLED/Docs/SBQ/delta');  
+matlabfrag('~/Docs/sbq-paper/figures/deltav2');  
 
