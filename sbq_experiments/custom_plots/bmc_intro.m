@@ -17,21 +17,22 @@ xrange = linspace( 0, 25, N )';
 function_sample_points = [ 5 12 16 ];
 y = [ 2 8 4]';
 
+noise_sds = [0.5 0.1 1]';
 
 % Model function with a GP.
 % =================================
 
 % Define quadrature hypers.
 quad_length_scale = 2;
-quad_kernel = @(x,y)exp( -0.5 * ( ( x - y ) .^ 2 ) ./ exp(quad_length_scale) );
-quad_kernel_dl = @(x,y)( -0.5 * ( ( x - y ) .^ 2 ) .* quad_kernel(x, y) ) ./ exp(quad_length_scale);
+quad_output_scale = 3;
+quad_kernel = @(x,y)quad_output_scale * exp( -0.5 * ( ( x - y ) .^ 2 ) ./ exp(quad_length_scale) );
+quad_kernel_dl = @(x,y)quad_output_scale*( -0.5 * ( ( x - y ) .^ 2 ) .* quad_kernel(x, y) ) ./ exp(quad_length_scale);
 quad_kernel_at_data = @(x)(bsxfun(quad_kernel, x, function_sample_points));
 quad_kernel_dl_at_data = @(x)(bsxfun(quad_kernel_dl, x, function_sample_points));
-quad_noise = 1e-6;
 
 % Perform GP inference to get posterior mean function.
 K = bsxfun(quad_kernel, function_sample_points', function_sample_points ); % Fill in gram matrix
-C = inv( K + quad_noise^2 .* diag(N) ); % Compute inverse covariance
+C = inv( K + diag(noise_sds.^2) ); % Compute inverse covariance
 weights = C * y;  % Now compute kernel function weights.
 posterior = @(x)(bsxfun(quad_kernel, function_sample_points, x) * weights); % Construct posterior function.
 posterior_variance = @(x)(bsxfun(quad_kernel, x, x) - diag((bsxfun(quad_kernel, x, function_sample_points) * C) * bsxfun(quad_kernel, function_sample_points, x)'));
@@ -53,7 +54,7 @@ hc1 = fill([xrange; flipdim(xrange,1)], edges, [6.5 6.5 8]/8, 'EdgeColor', 'none
 
 
 h1 = plot( xrange, posterior(xrange), 'b-', 'Linewidth', lw); hold on;
-h2 = plot( function_sample_points, y, 'kd', 'Marker', '.', ...
+h2 = errorbar( function_sample_points, y, 2*noise_sds, 'kd', 'Marker', '.', ...
  'MarkerSize', 10, 'Linewidth', lw );
  %'Color', [0.6 0.6 0.6]..
 

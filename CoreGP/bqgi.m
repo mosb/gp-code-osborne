@@ -47,6 +47,22 @@ conv = @(m, V) mvnpdf(m, mu, V + Sigma);
 D = diag(Sigma);
 
 % prior is mvnpdf(x, mu, diag(L));
+L = diag(V);
+
+K_const = prod(2*pi*(2*L + D))^(-0.5);
+
+% we put these quantities into 2 x N shapes, as required by mvnpdf
+mu_N = repmat(mu', 2, 1);
+l_N = repmat(l', 2, 1);
+u_N = repmat(u', 2, 1);
+
+% we put this covariance into 2 x 2 x N shape, as required by mvnpdf
+up = @(x) reshape(x,1,1,N);
+K_offdiag_N = up(L.^2./(2*L + D));
+K_ondiag_N = up(L) - K_offdiag_N;
+K_cov_N = [K_ondiag_N, K_offdiag_N; K_offdiag_N, K_ondiag_N];
+
+% prior is mvnpdf(x, mu, diag(L));
 L = diag(Sigma);
 
 K_const = prod(2*pi*(2*L + D))^(-0.5);
@@ -67,13 +83,28 @@ K_cov_N = [K_ondiag_N, K_offdiag_N; K_offdiag_N, K_ondiag_N];
 % g: new gaussian convolution
 % h: old gaussian convolutions
 
+K_tt = const * sum(mvncdfN(l_N, u_N, mu_N, sigma
+
+u_sub_l = (u - l);
+K_tt_vec = -2 * normpdf(0, 0, D) + 2 * normpdf(l, u, D) + ...
+    u_sub_l./sqrt(D) .* erf(u_sub_l./(sqrt(2*D)));
+K_tt = prod(K_tt_vec);
+
 % all the required 2D Gaussian integrals between l and u
 mvncdf_lu_N = mvncdfN(l_N, u_N, mu_N, K_cov_N);
 % all the required 1D Gaussian_integrals between l and u
 normcdf_lu_N = normcdf(u, mu, K_ondiag_N(:))';
 
+
 K_tt = K_const * prod(mvncdf_lu_N);
 
+while cputime - start_time < opt.total_time
+    % take new observation
+    
+    
+    best_c
+end
+    
 K_ts = nan(1, N);
 for i = 1:N
     K_ts(i) = K_const * mvncdf_lu_N(i) * ...
