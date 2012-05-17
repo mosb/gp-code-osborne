@@ -15,7 +15,7 @@ tabledirshort = 'tables/';
 plotdir = [paper_dir plotdirshort];
 tabledir = [paper_dir tabledirshort];
 
-min_samples = 30; % The minimum number of examples before we start making plots.
+min_samples = 3; % The minimum number of examples before we start making plots.
 
 fprintf('Compiling all results...\n');
 
@@ -35,7 +35,7 @@ addpath(genpath(pwd))
 % Get the experimental configuration from the definition scripts.
 problems = define_integration_problems();
 methods = define_integration_methods();
-sample_sizes = 1:150;%define_sample_sizes();
+sample_sizes = 1:25;%define_sample_sizes();
 max_samples = sample_sizes(end);
 
 num_problems = length(problems);
@@ -110,7 +110,7 @@ end
 
 
 method_names = cellfun( @(method) method.acronym, methods, 'UniformOutput', false );
-method_domains = cellfun( @(method) method.domain, methods, 'UniformOutput', false );
+%method_domains = cellfun( @(method) method.domain, methods, 'UniformOutput', false );
 problem_names = cellfun( @(problem) problem.name, problems, 'UniformOutput', false );
 true_log_ev = cellfun( @(problem) problem.true_log_evidence, problems);
 

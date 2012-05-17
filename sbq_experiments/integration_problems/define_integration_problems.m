@@ -372,7 +372,7 @@ if 0
 problems{end+1} = simple_test_1d;
 problems{end+1} = two_spikes_1d;
 problems{end+1} = two_hills_1d;
-else
+%else
 %problems{end+1} = simple_test_1d;
 problems{end+1} = spike_1d;
 problems{end+1} = spike_2d;
@@ -392,6 +392,7 @@ problems{end+1} = two_hills_4d;
 %problems{end+1} = real_prawn_6d_mean_field;
 %problems{end+1} = real_prawn_6d_markov;
 %problems{end+1} = real_prawn_6d_non_markov;
+
 problems{end+1} = kepler_1planet;
 
 %problems{end+1} = bumpy_1d;
@@ -401,6 +402,9 @@ problems{end+1} = easy_20d;
 %problems{end+1} = simple_test_scale_1d;
 %problems{end+1} = easy_1d;
 end
+
+problems{end+1} = easy_10d;
+problems{end+1} = easy_20d;
 
 end
 

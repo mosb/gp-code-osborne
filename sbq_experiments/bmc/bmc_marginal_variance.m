@@ -26,5 +26,5 @@ for i = 1:N
 
     z = quad_height .* mvnpdf(X, cur_xstar, quad_sigma_x) ...
                     .* mvnpdf(Y, prior_mu_y, quad_sigma_y + prior_sigma_y );
-    vars(i) = t1 + z' * Kinv * z;
+    vars(i) = t1 - z' * Kinv * z;
 end
