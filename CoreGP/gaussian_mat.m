@@ -32,10 +32,9 @@ switch nargin
 end
     
 D = length(log_input_scales);
-sqd_output_scale = exp(2*log_output_scale);
 sqd_input_scales_stack = reshape(exp(2*log_input_scales),1,1,D);
-sqd_lambda = sqd_output_scale * ...
-    prod((1/sqrt(2*pi)) * exp(-log_det_input_scales));
+sqd_lambda = (2*pi)^(-D/2) * ...
+    exp(2*log_output_scale - sum(log_det_input_scales));
 
 out = sqd_lambda * exp(-0.5 * sum(bsxfun(@rdivide, ...
                     sqd_dist_stack, sqd_input_scales_stack), 3));
