@@ -21,7 +21,7 @@ xrange = linspace( 3.2, 4.9, N )'
 %xrange = linspace( 3.075, 5.25, N )';
 
 clf;
-col_width = 8.25381;  % ICML double column width in cm.
+col_width = 15.5;  % NIPS column width in cm.
 lw = 0.5;
 
 % Choose function sample points.
@@ -93,7 +93,7 @@ final = @(x)(posterior(x).*(1 + delta(x)));
 
 % Overworld
 % ==========================
-subaxis( 2, 1, 1,'SpacingVertical',0.1, 'MarginLeft', .1,'MarginRight',0);
+subaxis( 1, 2, 1,'SpacingVertical',0.1, 'MarginLeft', .1,'MarginRight',0);
 
 like_handle = plot( xrange, likelihood(xrange), 'k'); hold on; % pause;
 sp_handle = plot( function_sample_points, y, 'k.', 'Markersize', 10); hold on;
@@ -128,7 +128,7 @@ xlim([xrange(1) xrange(end)])
 
 % Underworld
 % ======================== 
-subaxis( 2, 1, 2,'SpacingVertical',0.1, 'MarginLeft', .1,'MarginRight',0);
+subaxis( 1, 2, 2,'SpacingVertical',0.1, 'MarginLeft', .1,'MarginRight',0);
 
 % Plot exp(likelihood-GP posterior).
 
@@ -171,6 +171,7 @@ ylim([0.5 4.5])
 set_fig_units_cm( 6, 6 );
 %matlabfrag('~/Dropbox/papers/sbq-paper/figures/delta');  
 
+set_fig_units_cm( col_width-.5, 3 );
 set(0, 'defaulttextinterpreter', 'none')
-matlabfrag('/Volumes/UNTITLED/Documents/SBQ/delta');  
+matlabfrag('~/Docs/sbq-paper/figures/deltav2');  
 

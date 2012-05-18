@@ -36,6 +36,10 @@ if nargin < 4
     end
 end
 
+if iscell(input_scale_inds)
+    input_scale_inds = [input_scale_inds{:}];
+end
+
 noise = exp(best_hypersample(noise_ind));
 output_scale = exp(best_hypersample(output_scale_ind));
 input_scales = exp(best_hypersample(input_scale_inds));

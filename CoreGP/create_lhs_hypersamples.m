@@ -53,7 +53,7 @@ priorMean_cell = mat2cell2d(priorMean_mat, ones(num_samples,1), ...
 active_hs_mat = nan(num_samples, num_active);
 try
     stream = RandStream('mrg32k3a');
-    RandStream.setDefaultStream(stream);
+    RandStream.setGlobalStream(stream);
 catch
     1;
 end

@@ -1,10 +1,10 @@
-function [gp, logl_gp] = train_gp(cov_fn, mean_fn, gp, X_data, y_data, opt)
-% [gp, logl_gp] = train_gp(gp, X_data, y_data, opt)
-% [gp, logl_gp] = train_gp(cov_fn, mean_fn, gp, X_data, y_data, opt);
+function gp = lw_train_gp(cov_fn, mean_fn, gp, X_data, y_data, opt)
+% gp = lw_train_gp(gp, X_data, y_data, opt)
+% gp = lw_train_gp(cov_fn, mean_fn, gp, X_data, y_data, opt);
 %
-% trains a GP by locally optimising the likelihood around each of a number
-% of hyperparameter samples. Each input scale is optimised in parallel,
-% allowing high dimensional datasets to be fitted.
+% 'light-weight' training of a GP by locally optimising the likelihood
+% around each of a number of hyperparameter samples. Each input scale is
+% optimised in parallel, allowing high dimensional datasets to be fitted.
 %
 % INPUTS
 % cov_fn: a string describing the covariance function to be used e.g.
@@ -39,17 +39,13 @@ function [gp, logl_gp] = train_gp(cov_fn, mean_fn, gp, X_data, y_data, opt)
 %
 % OUTPUTS
 % gp: trained gp structure
-% logl_gp: contains fields noise_sd, input_scales and
-%   output_scale; it describes the (quadrature) hyperparameters of the
-%   gp fitted to the log-likelihood as a function of the hyperparameters.
-
 
 % Read inputs
 % ========================================================================
 
 if ischar('cov_fn')
-    % train_gp called as
-    % [gp, logl_gp] = train_gp(cov_fn, mean_fn, gp, X_data, y_data, opt);
+    % lw_train_gp called as
+    % [gp, logl_gp] = lw_train_gp(cov_fn, mean_fn, gp, X_data, y_data, opt);
 
     if nargin<6
         opt = struct();
@@ -58,8 +54,8 @@ if ischar('cov_fn')
     opt.cov_fn = cov_fn;
     opt.mean_fn = mean_fn;
 else
-    % train_gp called as
-    % [gp, logl_gp] = train_gp(gp, X_data, y_data, opt);
+    % lw_train_gp called as
+    % [gp, logl_gp] = lw_train_gp(gp, X_data, y_data, opt);
     
     gp = cov_fn;
     X_data = mean_fn;
@@ -126,6 +122,9 @@ gp = set_gp(opt.cov_fn, opt.mean_fn, gp, X_data, [], ...
     opt.num_hypersamples);
 hps_struct = set_hps_struct(gp);
 
+% Decide what to do about noise sd hyperparameter
+% ========================================================================
+
 output_scale_ind = hps_struct.logOutputScale;
 noise_ind = hps_struct.logNoiseSD;
 gp.noise_ind = noise_ind;
@@ -141,9 +140,12 @@ if opt.noiseless
     gp.hyperparams(noise_ind).priorMean = ...
        gp.hyperparams(output_scale_ind).priorMean - 14; 
    
-    % we optimise each input scale independently by also allowing the noise to
-    % vary when performing each optimisation; such that the noise can soak
-    % up variation due to incorrect input scales in other dimensions.
+    % we optimise each input scale independently by also allowing the noise
+    % to vary when performing each optimisation; such that the noise can
+    % soak up variation due to incorrect input scales in other dimensions.
+    % The log noise sd we use for this purpose is equal to 
+    %     big_noise_const + ...
+    %         hypersamples(hypersample_ind).hyperparameters(big_noise_ind)
     big_noise_const = +9;
     big_noise_ind = noise_ind;
 else
@@ -151,8 +153,8 @@ else
     big_noise_ind = noise_ind;
 end
 
-% deal with the prior mean constant appropriately depending on the value of
-% opt.prior_mean
+% Decide what to do about prior mean constant
+% ========================================================================
 mean_inds = hps_struct.mean_inds;
 if any(strcmpi(opt.prior_mean, {'optimise','optimize','train'}))
     gp.active_hp_inds = union(gp.active_hp_inds, mean_inds);
@@ -170,8 +172,10 @@ elseif isnumeric(opt.prior_mean)
 end
 
 
-% call set_gp again to actually appropriately initialise the values of
+% Call set_gp again to actually appropriately initialise the values of
 % hyperparameters
+% ========================================================================
+
 if opt.derivative_observations
     % we have derivative observations of our function
     
@@ -274,25 +278,10 @@ elseif opt.verbose
     fprintf('Using %g likelihood evals per pass, per input\n', opt.maxevals_hs)
 end
 
-% Fit GP to log-likelihood surface
+% Begin training proper
 % ========================================================================
 
-logl_X_data = vertcat(hypersamples.hyperparameters);
-logl_y_data = vertcat(hypersamples.logL);
-
-num_hps = size(logl_X_data,2);
-logl_input_scales = nan(1,num_hps);
-[logl_noise_sd, ...
-    logl_input_scales(full_active_and_noise_inds), ...
-    logl_output_scale] = ...
-    hp_heuristics(logl_X_data(:,full_active_and_noise_inds), logl_y_data, 100);
-
-% only specified in case of early return
-logl_gp.noise_sd = logl_noise_sd;
-logl_gp.input_scales = logl_input_scales;
-logl_gp.output_scale = logl_output_scale;
-
-[max_logL, max_ind] = max(logl_y_data);
+[max_logL, max_ind] = max(vertcat(hypersamples.logL));
 
 if opt.print
 fprintf('Initial best log-likelihood: \t%g',max_logL);
@@ -306,9 +295,6 @@ if opt.print
 fprintf('\n');
 end
 
-% Begin training proper
-% ========================================================================
-
 % We'll perform a number of passes, optimising input scales in parallel
 % within each pass
 for num_pass = 1:opt.num_passes
@@ -317,60 +303,57 @@ for num_pass = 1:opt.num_passes
         fprintf('Pass %g\n', num_pass)
     end
     
-    % log_input_scale_cell{i}{j}(k, :) stores the kth log input scale
-    % vector evaluated in the process of optimising the jth input scale for
-    % the ith hyperparameter sample
-    log_input_scale_cell = cell(num_hypersamples, 1);
-    input_scale_logL_cell = cell(num_hypersamples, 1);
-    
-    other_cell = cell(num_hypersamples,1);
-    other_logL_cell = cell(num_hypersamples,1);
-    
-    parfor hypersample_ind = 1:num_hypersamples
+    % Use parallel toolbox over number of hyperparameter samples (rather
+    % than over input scales), which we typically expect to exceed the
+    % number of active input dimensions
+    for hypersample_ind = 1:num_hypersamples
         warning('off','revise_gp:small_num_data');
         
         if opt.verbose
             fprintf('Hyperparameter sample %g\n',hypersample_ind)
         end
         
+        % we optimise each input scale independently by also allowing the
+        % noise to vary when performing each optimisation; such that the
+        % noise can soak up variation due to incorrect input scales in
+        % other dimensions.
         big_log_noise_sd = big_noise_const + ...
             hypersamples(hypersample_ind).hyperparameters(big_noise_ind);
         actual_log_noise_sd = ...
             hypersamples(hypersample_ind).hyperparameters(noise_ind);
-
         hypersamples(hypersample_ind).hyperparameters(noise_ind) = ...
             big_log_noise_sd;
+        
+        current_hypersample = hypersamples(hypersample_ind);
+        current_log_input_scales = nan(num_active_dims, 1);
 
-        % optimise input scale
-
-        log_input_scale_cell{hypersample_ind} = cell(1, num_active_dims);
-        input_scale_logL_cell{hypersample_ind} = cell(1, num_active_dims);
+        % optimise input scales in parallel
         for d_ind = 1:num_active_dims 
             d = active_dims(d_ind);
             active_hp_inds = [input_inds{d}, noise_ind];
             
-
-            [inputscale_hypersample, log_input_scale_mat, input_scale_logL_mat] = ...
-                move_hypersample(...
-                hypersamples(hypersample_ind), gp, logl_input_scales, ...
-                active_hp_inds, ...
-                X_data, y_data, opt);
+            try
+                inputscale_hypersample = ...
+                    move_hypersample(...
+                    current_hypersample, gp, ...
+                    active_hp_inds, ...
+                    X_data, y_data, opt);
+            catch
+                inputscale_hypersample = current_hypersample;
+            end
             
-            log_input_scale_d = ...
+            current_log_input_scales(d_ind) = ...
                 inputscale_hypersample.hyperparameters(input_inds{d});
-
-            hypersamples(hypersample_ind).hyperparameters(input_inds{d}) = ...
-                log_input_scale_d;
-            
-            log_input_scale_cell{hypersample_ind}{d_ind} = log_input_scale_mat;
-            input_scale_logL_cell{hypersample_ind}{d_ind} = input_scale_logL_mat;
-            
-            
+                        
             if opt.verbose
                 fprintf(', \t for input_scale(%g) = %g\n', ...
-                    d, exp(log_input_scale_d));
+                    d, exp(current_log_input_scales(d_ind)));
             end
         end
+        
+        hypersamples(hypersample_ind).hyperparameters...
+            ([input_inds{1:num_active_dims}]) = ...
+                current_log_input_scales;
         
         hypersamples(hypersample_ind).hyperparameters(noise_ind) = ...
             actual_log_noise_sd;
@@ -379,17 +362,13 @@ for num_pass = 1:opt.num_passes
 
         active_hp_inds = other_active_inds;
 
-        [other_hypersample, other_mat, other_logL_mat] = ...
+        other_hypersample = ...
             move_hypersample(...
-                hypersamples(hypersample_ind), gp, logl_input_scales, ...
+                hypersamples(hypersample_ind), gp, ...
                 active_hp_inds, ...
                 X_data, y_data, opt);
             
-        other_cell{hypersample_ind} = other_mat;
-        other_logL_cell{hypersample_ind} = other_logL_mat;
-            
-
-        hypersamples(hypersample_ind) = other_hypersample;
+       hypersamples(hypersample_ind) = other_hypersample;
                 
         if opt.verbose
             fprintf(', \t for ');
@@ -399,51 +378,6 @@ for num_pass = 1:opt.num_passes
         end
 
     end
-
-    % now we estimate the scale of variation of the likelihood wrt
-    % log input_scale.
-    
-    log_input_scale_compcell = cat(1,log_input_scale_cell{:});
-    input_scale_logL_compcell = cat(1,input_scale_logL_cell{:});
-    logl_noise_sds = nan(num_dims+1,1);
-    logl_output_scales = nan(num_dims+1,1);
-        
-    for d_ind = 1:num_active_dims
-        a_hps_mat = cat(1, log_input_scale_compcell{:,d_ind});
-        logL_mat = cat(1, input_scale_logL_compcell{:,d_ind});
-        
-        sorted_logL_mat = sort(logL_mat);
-              
-        top_inds = logL_mat >= sorted_logL_mat(round(0.9*end));
-        a_hps_mat = a_hps_mat(top_inds,:);
-        logL_mat = logL_mat(top_inds,:);
-
-        [logl_noise_sds(d_ind), a_logl_input_scales, logl_output_scales(d_ind)] = ...
-            hp_heuristics(a_hps_mat,logL_mat,10);
-
-        logl_input_scales(input_ind_vector(d_ind)) = a_logl_input_scales(1);
-    end
-    
-    % now we estimate the scale of variation of the likelihood wrt
-    % log other and log noise sd.
-    a_hps_mat = cat(1,other_cell{:});
-    logL_mat = cat(1,other_logL_cell{:});
-    
-    a_hps_mat = max(a_hps_mat, -100);
-    logL_mat = max(logL_mat,-1e100);
-    sorted_logL_mat = sort(logL_mat);
-
-    top_inds = logL_mat >= sorted_logL_mat(round(0.9*end));
-    a_hps_mat = a_hps_mat(top_inds,:);
-    logL_mat = logL_mat(top_inds,:);
-
-    [logl_noise_sds(end), a_logl_input_scales, logl_output_scales(end)] = ...
-        hp_heuristics(a_hps_mat,logL_mat,10);
-
-    logl_input_scales(other_active_inds) = a_logl_input_scales;
-    
-    logl_noise_sd = min(logl_noise_sds);
-    logl_output_scale = max(logl_output_scales);
     
     if (cputime-start_time > opt.optim_time) && num_pass > 0 ...
         || num_pass == opt.num_passes
@@ -476,146 +410,39 @@ elseif opt.print
     fprintf('\n');
 end
 
-
-logl_gp.noise_sd = (logl_noise_sd);
-logl_gp.input_scales = (logl_input_scales); 
-logl_gp.output_scale = (logl_output_scale);
-
 if opt.print
     fprintf('Completed retraining of GP in %g seconds\n', cputime-start_time)
     fprintf('\n');
 end
        
 
-function [hypersample, a_hps_mat, logL_mat] = move_hypersample(...
-    hypersample, gp, logl_input_scales, active_hp_inds, X_data, y_data, opt)
+function hypersample = move_hypersample(...
+    hypersample, gp, active_hp_inds, X_data, y_data, opt)
 
 gp.hypersamples = hypersample;
-a_logl_input_scales = logl_input_scales(active_hp_inds);
+fn = @(a_hs) gp_neg_logL_fn(a_hs, X_data, y_data, gp, active_hp_inds);
+minFunc_opt.MaxFunEvals = opt.maxevals_hs;
+minFunc_opt.Display = 'off';
+a_hs_init = hypersample.hyperparameters(active_hp_inds)';
+logL_init = hypersample.logL;
+[a_hs_final, neg_logL_final] = minFunc(fn, a_hs_init, minFunc_opt);
 
-flag = false;
-i = 0;
-a_hps_mat = nan(opt.maxevals_hs,length(active_hp_inds));
-logL_mat = nan(opt.maxevals_hs,1);
-
-if opt.verbose && opt.plots
-    for a = 1:length(active_hp_inds)
-        figure(a);clf; hold on;
-        title(['Optimising hyperperparameter ',num2str(a)])
-    end
-end
-
-broken = false;
-
-while (~flag || ceil(opt.maxevals_hs/5) > i) && i < opt.maxevals_hs-1
-    i = i+1;
-    
-    try
-        gp = ...
-            revise_gp(X_data, y_data, gp, 'overwrite', [], 'all', active_hp_inds);
-    catch
-        broken = true;
-        i = i - 1;
-        break;
-    end
-    
-    logL = gp.hypersamples.logL;
-    a_hs=gp.hypersamples.hyperparameters(active_hp_inds);
-    
-    a_hps_mat(i,:) = a_hs;
-    logL_mat(i) = logL;
-    
-    if opt.verbose && opt.plots
-        for a = 1:length(active_hp_inds)
-            figure(a)
-            x = a_hs(a);
-            plot(x, logL, '.');
-
-            g = [gp.hypersamples.glogL{a}];
-            scale = a_logl_input_scales(a);
-
-            line([x-scale,x+scale],...
-                [logL-g*scale,logL+g*scale],...
-                'Color',[0 0 0],'LineWidth',1.5);
-        end
-    end
-    
-    if i>1 && logL_mat(i) < backup_logL
-        % the input scale which predicted the largest increase in logL is
-        % likely wrong
-        
-        dist_moved = (a_hs - backup_a_hs).*a_grad_logL;
-        [dummy,max_ind] = max(dist_moved);
-
-        a_logl_input_scales(max_ind) = 0.5*a_logl_input_scales(max_ind);
-        
-%         [~,a_logl_input_scales] = ...
-%             hp_heuristics(a_hps_mat(1:i,:),logL_mat(1:i,:),10);
-%         
-        a_hs = backup_a_hs;
-    else
-        backup_logL = logL;
-        backup_a_hs = a_hs;
-        a_grad_logL = [gp.hypersamples.glogL{active_hp_inds}];
-    end
-    
-
-    [a_hs, flag] = simple_zoom_pt(a_hs, a_grad_logL, ...
-                            a_logl_input_scales, 'maximise');
-    gp.hypersamples.hyperparameters(active_hp_inds) = a_hs;
-    
-end
-
-if ~broken
-    try
-
-    
-    gp = revise_gp(X_data, y_data, gp, 'overwrite');
-    logL = gp.hypersamples.logL;
-    a_hs = gp.hypersamples.hyperparameters(active_hp_inds);
-
-    i = i+1;
-    
-    a_hps_mat(i,:) = a_hs;
-    logL_mat(i) = logL;
-    catch
-    end
-end
-
-a_hps_mat = a_hps_mat(1:i,:);
-logL_mat = logL_mat(1:i,:);
-
-[max_logL,max_ind] = max(logL_mat);
-gp.hypersamples.hyperparameters(active_hp_inds) = a_hps_mat(max_ind,:);
-gp = revise_gp(X_data, y_data, gp, 'overwrite');
+hypersample.hyperparameters(active_hp_inds) = a_hs_final';
+gp.hypersamples = hypersample;
+gp = revise_gp(X_data, y_data, gp, 'overwrite', [], 'all', active_hp_inds);
 hypersample = gp.hypersamples;
 
-% not_nan = all(~isnan([a_hps_mat,logL_mat]),2);
-% 
-% [logl_noise_sd, a_logl_input_scales] = ...
-%     hp_heuristics(a_hps_mat(not_nan,:), logL_mat(not_nan), 10);
-% logl_input_scales(active_hp_inds) = a_logl_input_scales;
-
 if opt.verbose
-fprintf('LogL: %g -> %g',logL_mat(1), max_logL)
-end
-if opt.verbose && opt.plots
-    %keyboard;
+    fprintf('LogL: %g -> %g',logL_init, -neg_logL_final);
 end
 
-% hp = 4;
-% log_ins = linspace(-5,10, 1000);
-% logLs = nan(1000,1);
-% gp.hypersamples = hypersample;
-% for i =1:1000;
-%     gp.hypersamples(1).hyperparameters(hp) = log_ins(i);
-%     gp = revise_gp(X_data, y_data, gp, 'overwrite', [], 'all', hp);
-%     logLs(i) = gp.hypersamples(1).logL;
-%     dlogLs(i) = gp.hypersamples(1).glogL{hp};
-% end
-% clf
-% hold on
-% plot(log_ins, (logLs),'r')
-% plot(log_ins, (dlogLs),'k')
+function [neg_logL, neg_glogL] = ...
+    gp_neg_logL_fn(a_hs, X_data, y_data, gp, active_hp_inds)
 
+gp.hypersamples(1).hyperparameters(active_hp_inds) = a_hs';
+
+gp = revise_gp(X_data, y_data, gp, 'overwrite', [], 'all', active_hp_inds);
+
+neg_logL = -gp.hypersamples(1).logL;
+neg_glogL = -vertcat(gp.hypersamples(1).glogL{active_hp_inds});
     

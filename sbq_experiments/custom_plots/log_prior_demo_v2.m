@@ -14,18 +14,22 @@
 likelihood = @(x)(normpdf(x,4,.4).*40);
 loglikelihood = @(x)log(likelihood(x)+1);
 
+% Define a likelihood function (one that is well-modeled by a gp on the log).
+likelihood = @(x)(normpdf(x,4,.4).*40);
+loglikelihood = @(x)t(likelihood(x));
+
 % Plot likelihood.
-N = 200;
-xrange = linspace( 2, 5.25, N )'
+N = 2000;
+xrange = linspace( 3.2, 4.9, N )'
 %xrange = linspace( 3.075, 5.25, N )';
 
 clf;
-col_width = 15.5;  % NIPS double column width in cm.
+col_width = 15.5;  % NIPS column width in cm.
 lw = 0.5;
 
 % Choose function sample points.
-n_f_samples = 4;
-function_sample_points = [ 2.5 3.1 3.6 4.7];
+n_f_samples = 3;
+function_sample_points = [ 3.3 3.6 4.5];
 
 % Evaluate likelihood and log-likelood at sample points.
 y = likelihood(function_sample_points)';
@@ -38,7 +42,7 @@ myeps = 0.05;
 % =================================
 
 % Define quadrature hypers.
-quad_length_scale = .1;
+quad_length_scale = 0.8;
 quad_kernel = @(x,y)exp( - 0.5 * ( ( x - y ) .^ 2 ) ./ quad_length_scale );
 quad_noise = 1e-6;
 
@@ -52,7 +56,7 @@ posterior = @(x)(bsxfun(quad_kernel, function_sample_points, x) * weights); % Co
 
 % Model log-likelihood with a GP
 % =================================
-quad_log_length_scale = 0.3;
+quad_log_length_scale = 1.2;
 quad_log_kernel = @(x,y)exp( - 0.5 * (( x - y ) .^ 2 ) ./ quad_log_length_scale );
 quad_log_noise = 1e-6;
 

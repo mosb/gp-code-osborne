@@ -16,20 +16,20 @@ y_data = f(X_data);
 X_star = [-50:150]';
 X_star = repmat(X_star,1,N);
 
-opt.optim_time = 20;
+opt.optim_time = 60;
 opt.parallel = false;
-opt.num_hypersamples = 9;
-opt.noiseless = false;
+opt.num_hypersamples = 1;
+opt.noiseless = true;
 opt.verbose = true;
 opt.plots = false;
 
 % training
 tic
-gp = train_gp('sqdexp', 'constant', [], X_data, y_data, opt);
+gp = lw_train_gp('sqdexp', 'constant', [], X_data, y_data, opt);
 toc
 
 % testing
-[t_mean,t_sd]=predict_gp(X_star, gp);
+[t_mean,t_sd] = predict_gp(X_star, gp);
 
 % the real values at X_star
 real_star = f(X_star);

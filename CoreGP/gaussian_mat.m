@@ -34,8 +34,8 @@ end
 D = length(log_input_scales);
 sqd_output_scale = exp(2*log_output_scale);
 sqd_input_scales_stack = reshape(exp(2*log_input_scales),1,1,D);
-sqd_lambda = sqd_output_scale* ...
-    prod(2*pi*exp(2*log_det_input_scales))^(-0.5);
+sqd_lambda = sqd_output_scale * ...
+    prod((1/sqrt(2*pi)) * exp(-log_det_input_scales));
 
 out = sqd_lambda * exp(-0.5 * sum(bsxfun(@rdivide, ...
                     sqd_dist_stack, sqd_input_scales_stack), 3));
