@@ -3,9 +3,15 @@ function [exp_loss_min, next_sample_point] = ...
 %
 % Searches within a prior box.
 
-num_starts = 100;
-evals_per_start = ceil(evals/num_starts);
-num_exploits = ceil(num_starts/10);
+evals_per_start = 100;
+
+fraction_exploit = 0.3;
+fraction_continue = 0.3;
+fraction_explore = 1 - fraction_exploit - fraction_continue;
+
+num_exploits = round(fraction_exploit * evals / evals_per_start);
+num_continues = round(fraction_continue * evals / evals_per_start);
+num_explores = round(fraction_explore * evals);
 
 optim_opts = ...
     optimset('GradObj','off',...
@@ -26,15 +32,14 @@ scales = exp(tl_gp_hypers.log_input_scales);
 exploit_starts = find_candidates(max_sample, num_exploits, scales, 1);
 
 continued_starts = ...
-    find_candidates(samples.locations(end, :), num_exploits, scales, 1);
+    find_candidates(samples.locations(end, :), num_continues, scales, 1);
 
-explore_starts = mvnrnd(prior.mean, prior.covariance, num_starts-2*num_exploits);
-    
-starts = [exploit_starts;continued_starts;explore_starts];
+starts = [exploit_starts;continued_starts];
+num_starts = num_exploits + num_continues;
 
 end_points = nan(num_starts,num_dims);
 end_exp_loss = nan(num_starts,1);
-for i = 1:num_starts
+parfor i = 1:num_starts
     cur_start_pt = starts(i, :);
     [end_points(i,:), end_exp_loss(i)] = ...
         fmincon(objective_fn,cur_start_pt, ...
@@ -42,7 +47,25 @@ for i = 1:num_starts
         lower_bound,upper_bound,[],...
         optim_opts);
 end
+
+explores = mvnrnd(prior.mean, prior.covariance, num_explores);
+explore_loss = nan(num_explores, 1);
+parfor i = 1:num_explores
+    explore_loss(i) = objective_fn(explores(i, :));
+end
+end_points = [end_points; explores];
+end_exp_loss = [end_exp_loss; explore_loss];
+
+
 [exp_loss_min, best_ind] = min(end_exp_loss);
 next_sample_point = end_points(best_ind, :);
+
+if best_ind <= num_exploits
+        fprintf('exploit\n')
+elseif best_ind <= num_starts
+        fprintf('continue\n')
+else
+        fprintf('explore\n')
+end
 
 end

@@ -96,7 +96,7 @@ final = @(x)(posterior(x).*(1 + delta(x)));
 
 % Overworld
 % ==========================
-subaxis( 1, 2, 1,'SpacingVertical',0.1, 'MarginLeft', .1,'MarginRight',0);
+subaxis( 1, 2, 1,'SpacingVertical',0.1, 'MarginLeft', 0.1,'MarginRight',0);
 
 like_handle = plot( xrange, likelihood(xrange), 'k'); hold on; % pause;
 sp_handle = plot( function_sample_points, y, 'k.', 'Markersize', 10); hold on;
@@ -108,8 +108,8 @@ gpf_handle = plot( xrange, posterior(xrange), 'r'); hold on;
 final_handle = plot( xrange, final(xrange), 'g-'); hold on;
 
 legend( [ sp_handle, like_handle, gpf_handle, final_handle], ...
-        { '$\ell(x_s)$', '$\ell(x)$', '$m(\ell(x))$', 'final approx' }, ...
-        'Fontsize', 8, 'Location', 'EastOutside');
+        { '$\ell(x_s)$', '$\ell(x)$', '$m\bigl(\ell(x)\bigr)$', 'final approx'}, ...
+         'Fontsize', 8, 'Location', 'EastOutside');
 legend boxoff  
 
 set( gca, 'XTick', [] );
@@ -131,7 +131,7 @@ xlim([xrange(1) xrange(end)])
 
 % Underworld
 % ======================== 
-subaxis( 1, 2, 2,'SpacingVertical',0.1, 'MarginLeft', .1,'MarginRight',0);
+subaxis( 1, 2, 2,'SpacingVertical',0.1, 'MarginLeft',-0.05,'MarginRight',0);
 
 % Plot exp(likelihood-GP posterior).
 
@@ -143,7 +143,7 @@ diff_points_handle = plot( diff_sample_points, diff_values', 'ko','Markersize', 
 delta_handle = plot( xrange, delta(xrange), 'b-'); hold on;
 
 legend( [log_sp_handle, log_like_handle, log_gpf_handle, gp_tl_handle, diff_points_handle, delta_handle], ...
-        { '$\log(\ell(x_s))$', '$\log(\ell(x))$', '$\log(m(\ell(x)))$', '$m(\log(\ell(x)))$', '$\log(\ell(x_c))$', '$m(\Delta(x))$' } ...
+        { '$\log \ell(x_s)$', '$\log \ell(x)$', '$\log m\bigl(\ell(x)\bigr)$', '$m\bigl(\log \ell(x)\bigr)$', '$\log \ell(x_c)$', '$m\bigl(\Delta(x)\bigr)$' } ...
         , 'Fontsize', 8, 'Location', 'EastOutside');
 legend boxoff  
 
@@ -154,7 +154,7 @@ set( gca, 'XTick', [] );
 set( gca, 'XTickLabel', '' );
 %set( gca, 'yTickLabel', '' );
 xlabel( '$x$' );
-ylabel( '$log(\ell(x))$' );
+ylabel( '$\log \ell(x)$' );
 set(get(gca,'XLabel'),'Rotation',0, 'Fontsize', 8);
 set(get(gca,'YLabel'),'Rotation',90, 'Fontsize', 8);
 %set(gca, 'TickDir', 'out')

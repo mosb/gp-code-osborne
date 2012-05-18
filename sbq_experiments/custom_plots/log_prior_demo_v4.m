@@ -93,7 +93,7 @@ final = @(x)(posterior(x).*(1 + delta(x)));
 
 % Overworld
 % ==========================
-subaxis( 1, 2, 1,'SpacingVertical',0.1, 'MarginLeft', .1,'MarginRight',0);
+subaxis( 1, 2, 1,'SpacingVertical',0.1, 'MarginLeft', 0.1,'MarginRight',0);
 
 like_handle = plot( xrange, likelihood(xrange), 'k'); hold on; % pause;
 sp_handle = plot( function_sample_points, y, 'k.', 'Markersize', 10); hold on;
@@ -128,7 +128,7 @@ xlim([xrange(1) xrange(end)])
 
 % Underworld
 % ======================== 
-subaxis( 1, 2, 2,'SpacingVertical',0.1, 'MarginLeft', .1,'MarginRight',0);
+subaxis( 1, 2, 2,'SpacingVertical',0.1, 'MarginLeft',-0.05,'MarginRight',0);
 
 % Plot exp(likelihood-GP posterior).
 
@@ -168,7 +168,7 @@ ylim([0.5 4.5])
 %scale_factor = 1;%(pagewidth*fraction)/total_width;
 %set(gca, 'Position', [position(1:2), position(3:4).*scale_factor]);
 
-set_fig_units_cm( 6, 6 );
+set_fig_units_cm( 8, 6 );
 %matlabfrag('~/Dropbox/papers/sbq-paper/figures/delta');  
 
 set_fig_units_cm( col_width-.5, 3 );
