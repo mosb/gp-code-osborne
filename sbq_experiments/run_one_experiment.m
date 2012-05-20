@@ -37,7 +37,7 @@ fprintf('     Description: %s\n', problem.description );
 fprintf('Output directory: %s\n', outdir );
 fprintf(' Output filename: %s\n\n', filename );
 
-try   
+%try   
     % Set the random seed depending on the repitition.
     randn('state', repitition);
     rand('twister', repitition);  
@@ -66,8 +66,8 @@ try
     fprintf('\nTotal time taken in seconds:  %f\n', total_time );
     fprintf('\n\nSaved to %s\n', filename );
 
- catch
-      err = lasterror
-     msg = err.message
- end
-diary off
+%  catch
+%       err = lasterror
+%      msg = err.message
+%  end
+% diary off

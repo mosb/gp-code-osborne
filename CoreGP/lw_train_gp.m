@@ -137,8 +137,8 @@ if opt.noiseless
     
     % include just a teensy little bit of noise (jitter) anyway to improve
     % conditioning of covariance matrix
-    gp.hyperparams(noise_ind).priorMean = ...
-       gp.hyperparams(output_scale_ind).priorMean - 14; 
+    noiseless_const = -14;
+    gp.hyperparams(noise_ind).priorMean = noiseless_const; 
    
     % we optimise each input scale independently by also allowing the noise
     % to vary when performing each optimisation; such that the noise can
@@ -146,7 +146,7 @@ if opt.noiseless
     % The log noise sd we use for this purpose is equal to 
     %     big_noise_const + ...
     %         hypersamples(hypersample_ind).hyperparameters(big_noise_ind)
-    big_noise_const = +9;
+    big_noise_const = 6;
     big_noise_ind = noise_ind;
 else
     big_noise_const = 0;
@@ -226,8 +226,6 @@ num_active_dims = length(active_dims);
 other_active_inds = ...
     setdiff(full_active_inds, input_ind_vector); 
 
-full_active_and_noise_inds = union(full_active_inds, noise_ind);
-
 % Work out how much time we can allow per hypersample
 % ========================================================================
 
@@ -306,8 +304,10 @@ for num_pass = 1:opt.num_passes
     % Use parallel toolbox over number of hyperparameter samples (rather
     % than over input scales), which we typically expect to exceed the
     % number of active input dimensions
-    for hypersample_ind = 1:num_hypersamples
+    parfor hypersample_ind = 1:num_hypersamples
+        warning('off', 'MATLAB:nearlySingularMatrix');
         warning('off','revise_gp:small_num_data');
+        
         
         if opt.verbose
             fprintf('Hyperparameter sample %g\n',hypersample_ind)
@@ -328,6 +328,7 @@ for num_pass = 1:opt.num_passes
         current_log_input_scales = nan(num_active_dims, 1);
 
         % optimise input scales in parallel
+        %par
         for d_ind = 1:num_active_dims 
             d = active_dims(d_ind);
             active_hp_inds = [input_inds{d}, noise_ind];
@@ -338,7 +339,9 @@ for num_pass = 1:opt.num_passes
                     current_hypersample, gp, ...
                     active_hp_inds, ...
                     X_data, y_data, opt);
-            catch
+            catch err
+                warning('error experienced in training input scales, reverting to initial input scale');
+                disp(err);
                 inputscale_hypersample = current_hypersample;
             end
             
@@ -369,6 +372,14 @@ for num_pass = 1:opt.num_passes
                 X_data, y_data, opt);
             
        hypersamples(hypersample_ind) = other_hypersample;
+       
+       if opt.noiseless
+           % we're not training noise, but at least try to keep it relevant
+           % to trained output scale.
+            hypersamples(hypersample_ind).hyperparameters(noise_ind) = ...
+            noiseless_const + ...
+            hypersamples(hypersample_ind).hyperparameters(output_scale_ind);
+       end
                 
         if opt.verbose
             fprintf(', \t for ');
@@ -414,6 +425,8 @@ if opt.print
     fprintf('Completed retraining of GP in %g seconds\n', cputime-start_time)
     fprintf('\n');
 end
+
+end
        
 
 function hypersample = move_hypersample(...
@@ -436,6 +449,8 @@ if opt.verbose
     fprintf('LogL: %g -> %g',logL_init, -neg_logL_final);
 end
 
+end
+
 function [neg_logL, neg_glogL] = ...
     gp_neg_logL_fn(a_hs, X_data, y_data, gp, active_hp_inds)
 
@@ -445,4 +460,6 @@ gp = revise_gp(X_data, y_data, gp, 'overwrite', [], 'all', active_hp_inds);
 
 neg_logL = -gp.hypersamples(1).logL;
 neg_glogL = -vertcat(gp.hypersamples(1).glogL{active_hp_inds});
+
+end
     
