@@ -1,4 +1,4 @@
-function problems = define_integration_problems()
+function problems = define_integration_problems(varargin)
 % Define all integration problems, including priors and exact log-evidences.
 %
 % Returns a cell array of problems, each one containing:
@@ -364,45 +364,46 @@ kepler_1planet.log_likelihood_fn = ...
     @(x) call_python_numeric('call_rvs.py', x);
 kepler_1planet.true_log_evidence = NaN;
 
+% Define dla problem
+% =================================
+% % should probably test over like seven or so for calibration.
+% plate = 4747;
+% mjd = 55652;
+% fiber = 0044;
+% create_spectrum_likelihood_handle_dla;
+% 
+% dla.name = 'dla';
+% dla.description = 'dla problem drawn from sdss data';
+% dla.dimension = 10;
+% dla.prior.mean = [mle_means(1:2),...
+%     maximum_dla_location - dla_offset_prior_mean, ...
+% 	dla_width_prior_mean, ...
+%     dla_width_prior_mean, ... 
+%     mle_means(2) / 5, ...
+% 	mle_means(3:5)];
+% dla.prior.covariance = diag([...
+%     mle_stds(1:2),...
+%     dla_offset_prior_std,...
+%     dla_width_prior_std,...
+%     dla_width_prior_std,...
+%     mle_stds(2) / 25,...
+%     mle_stds(3:5)]);
+% dla.log_likelihood_fn = ...
+%     @dla_log_likelihood;
+% dla.true_log_evidence = NaN;
+
 
 % Specify problems.
 problems = {};
 
-if 0
+% if 0
+% problems{1} = dla;
+% end
 problems{end+1} = simple_test_1d;
 problems{end+1} = two_spikes_1d;
 problems{end+1} = two_hills_1d;
-%else
-%problems{end+1} = simple_test_1d;
-problems{end+1} = spike_1d;
-problems{end+1} = spike_2d;
-problems{end+1} = spike_10d;
-%problems{end+1} = bumpy_1d_exp;
-%problems{end+1} = two_spikes_1d;
-%problems{end+1} = two_hills_1d;
-%problems{end+1} = funnel_2d;
-
-%problems{end+1} = easy_4d;
-problems{end+1} = two_spikes_4d;
+problems{end+1} = easy_4d;
 problems{end+1} = two_hills_4d;
-
-%problems{end+1} = friedman_3d;
-%problems{end+1} = friedman_7d;
-
-%problems{end+1} = real_prawn_6d_mean_field;
-%problems{end+1} = real_prawn_6d_markov;
-%problems{end+1} = real_prawn_6d_non_markov;
-
-problems{end+1} = kepler_1planet;
-
-%problems{end+1} = bumpy_1d;
-%problems{end+1} = easy_10d;
-problems{end+1} = easy_20d;
-%problems{end+1} = simple_test_trans_1d;
-%problems{end+1} = simple_test_scale_1d;
-%problems{end+1} = easy_1d;
-end
-
 problems{end+1} = easy_10d;
 problems{end+1} = easy_20d;
 

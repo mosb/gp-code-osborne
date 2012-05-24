@@ -53,7 +53,7 @@ D = numel(prior.mean);
 
 % Set unspecified fields to default values.
 default_opt = struct('num_samples', 300, ...
-                     'gamma', 1/100, ...
+                     'gamma', 1/1000, ...
                      'num_retrains', 10, ...
                      'num_box_scales', 5, ...
                      'train_gp_time', 120, ...
@@ -61,7 +61,7 @@ default_opt = struct('num_samples', 300, ...
                      'train_gp_print', false, ...
                      'exp_loss_evals', 1000 * D, ...
                      'start_pt', prior.mean, ...
-                     'print', true, ...
+                     'print', 1, ...
                      'plots', false, ...
                      'marginalise_scales', true);%'lengthscale');
 opt = set_defaults( opt, default_opt );
@@ -70,6 +70,12 @@ opt = set_defaults( opt, default_opt );
 gp_train_opt.optim_time = opt.train_gp_time;
 gp_train_opt.noiseless = true;
 gp_train_opt.prior_mean = 0;
+gp_train_opt.hp_prior_mean = nan(D+3, 1);
+% we will perform MAP for our input scales, rather than ML, to prevent
+% stupidly lagre and small input scales creeping in. The mean taken for our
+% prior over these hps is taken as identical to the SDs of our
+% hyperparameter priors. 
+gp_train_opt.hp_prior_mean(2:D+1) = sqrt(diag(prior.covariance));
 % print to screen diagnostic information about gp training
 gp_train_opt.print = opt.train_gp_print;
 gp_train_opt.verbose = opt.train_gp_print;
@@ -88,6 +94,8 @@ retrain_inds(end) = inf;
 
 % Start of actual SBQ algorithm
 % =======================================
+
+warning('off','revise_gp:small_num_data');
 
 next_sample_point = opt.start_pt;
 for i = 1:opt.num_samples
@@ -117,8 +125,8 @@ for i = 1:opt.num_samples
                      
         % turn off storing of sqd_diffs as it seems to introduce numerical
         % issues in high dimension
-        l_gp.sqd_diffs_cov = false;
-        tl_gp.sqd_diffs_cov = false;                        
+%         l_gp.sqd_diffs_cov = false;
+%         tl_gp.sqd_diffs_cov = false;                        
                                  
         gp_train_opt.optim_time = opt.train_gp_time;
         
@@ -180,7 +188,7 @@ for i = 1:opt.num_samples
         else
             
             % Search within the prior box.
-            [exp_loss_min, next_sample_point] = ...
+            [exp_loss_min, next_sample_point, flag] = ...
                 min_in_box( objective_fn, prior, ...
                 samples, tl_gp_hypers, opt.exp_loss_evals );
         end
@@ -194,6 +202,8 @@ for i = 1:opt.num_samples
             fprintf('.');
         end
     elseif opt.print == 2
+        fprintf(['\n%g. ', flag],i);
+    elseif opt.print == 3
         fprintf('evidence: %g +- %g\n', exp(log_mean_evidences(i)), ...
                                         sqrt(exp(log_var_evidences(i))));
     end

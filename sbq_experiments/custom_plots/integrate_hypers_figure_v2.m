@@ -21,7 +21,7 @@ lw = 0.5;
 
 % Plot our function.
 N = 200;
-xrange = linspace( 5, 21, N )';
+xrange = linspace( 0, 25, N )';
 
 % Choose function sample points.
 function_sample_points = [ 12 16 ];

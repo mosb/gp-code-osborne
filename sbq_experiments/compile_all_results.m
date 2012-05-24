@@ -6,7 +6,7 @@ function compile_all_results( results_dir, paper_dir )
 
 draw_plots = false;
 
-if nargin < 1; results_dir = '~/large_results/fear_sbq_results_ok_morning_24_feb/'; end
+if nargin < 1; results_dir = '~/large_results/sbq_results/'; end
 %if nargin < 1; results_dir = '~/large_results/fear_sbq_results/'; end
 %if nargin < 1; results_dir = '~/large_results/sbq_results/'; end
 if nargin < 2; paper_dir = '~/Dropbox/papers/sbq-paper/'; end
@@ -25,18 +25,23 @@ fprintf('All content listed in %s\n', autocontent_filename);
 autocontent = fopen(autocontent_filename, 'w');
 fprintf(autocontent, ['\\documentclass{article}\n' ...
     '\\usepackage{preamble}\n' ...
-    '\\usepackage[margin=0.1in]{geometry}' ...
-    '\\begin{document}\n\n' ...
-    '\\input{tables/integrands_auto.tex\n}']);
+    '\\usepackage{graphicx}\n' ...
+    '\\usepackage[margin=0.1in]{geometry}\n' ...
+'\\usepackage{booktabs}\n' ...
+'\\newcommand{\\acro}[1]{\\textsc{#1}}\n' ...
+'\\usepackage{amsmath,amssymb,amsfonts,textcomp}\n' ...
+    '\\begin{document}\n\n']);
 addpath(genpath(pwd))
     %'\\usepackage{morefloats}\n' ...
     %'\\usepackage{pgfplots}\n' ...
 
 % Get the experimental configuration from the definition scripts.
+
+
+sample_sizes = 150;%define_sample_sizes();
+max_samples = sample_sizes(end);
 problems = define_integration_problems();
 methods = define_integration_methods();
-sample_sizes = 1:25;%define_sample_sizes();
-max_samples = sample_sizes(end);
 
 num_problems = length(problems);
 num_methods = length(methods);
@@ -68,8 +73,8 @@ for p_ix = 1:num_problems
                     if imag(results.mean_log_evidences(s_ix)) > 0
                         fprintf('i');
                     end
-                    mean_log_ev_table(m_ix, p_ix, s_ix, r) = real(results.mean_log_evidences(s_ix));
-                    var_log_ev_table(m_ix, p_ix, s_ix, r) = results.var_log_evidences(s_ix);
+                    mean_log_ev_table(m_ix, p_ix, s_ix, r) = real(results.mean_log_evidences(end));
+                    var_log_ev_table(m_ix, p_ix, s_ix, r) = results.var_log_evidences(end);
                     true_log_ev_table(m_ix, p_ix, s_ix, r) = results.problem.true_log_evidence;
                 end
                 samples{m_ix, p_ix} = results.samples;
@@ -185,14 +190,14 @@ fprintf(autocontent, '\\input{%s}\n', [tabledirshort, 'norm_std.tex']);
 
 
 
-combined_nll = sum(-log_liks(:, 1:end-3)');
-combined_se = sqrt(mean(squared_error(:, 1:end-3)'));
-combined_calibration = mean(correct(:, 1:end-3)');
+combined_nll = sum(-log_liks(:, :)');
+combined_se = sqrt(mean(squared_error(:, :)'));
+combined_calibration = mean(correct(:, :)');
 combined_synth = [combined_nll; combined_se; combined_calibration];
 
 
 table_method_names = cellfun(@(x) ['\\acro{\\lowercase{',x,'}}'],method_names, 'UniformOutput', false);
-headers = {'$-\log p(\mathbf{Z})$', '\acro{RMNSE}', '$\mathcal{C}$'};
+headers = {'$-\log p(\mathbf{Z})$', '\acro{rmnse}', '$\mathcal{C}$'};
 final_results_table( [tabledir, 'combined_synth.tex'], combined_synth', table_method_names, headers, ...
      'Combined Synthetic Results');
 fprintf(autocontent, '\\input{%s}\n', [tabledirshort, 'combined_synth.tex']);

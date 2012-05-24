@@ -61,7 +61,8 @@ default_opt = struct('num_c', 100,... % number of candidate points
                      'sds_tl_log_input_scales', false, ... % sds_tl_log_input_scales represents the posterior standard deviations in the input scales for tr. If false, a delta function posterior is assumed. 
                      'gamma', 100, ... % log_transform scaling factor.
                      'plots', false, ...   % plot transformed surfaces.
-                     'marginalise_scales', true ... % approximately marginalise log input scales of gp over log likelihood
+                     'print', 1, ...
+                    'marginalise_scales', true ... % approximately marginalise log input scales of gp over log likelihood
                         );
 opt = set_defaults( opt, default_opt );
 
@@ -159,7 +160,9 @@ delta_tl_sc = mean_tl_sc - log_transform(mean_l_sc, opt.gamma);
 
 
 if isempty(del_gp_hypers_SE);
-    fprintf('Fitting GP to delta-observations...\n');
+    if opt.print > 1
+        fprintf('Fitting GP to delta-observations...\n');
+    end
 
     num_evals = 50;
     % Train GP.
@@ -167,7 +170,7 @@ if isempty(del_gp_hypers_SE);
         fit_hypers_multiple_restart( x_sc, delta_tl_sc, ...
         tl_gp_hypers_SE.log_input_scales - log(10), ...
         tl_gp_hypers_SE.log_output_scale, ...
-        num_evals);               
+        num_evals, opt);               
                          
     del_gp_hypers_SE.log_output_scale = gp_hypers_del.cov(end);
     del_log_input_scales = gp_hypers_del.cov(1:end - 1);

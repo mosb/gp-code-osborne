@@ -68,13 +68,33 @@ else
 
 end
 
-[num_data, num_dims] = size(X_data);
-
 if ~isstruct(opt)
     optim_time = opt;
     opt = struct();
     opt.optim_time = optim_time;
 end
+
+[num_data, num_dims] = size(X_data);
+
+% Initialisation of gp structure
+% ========================================================================
+
+% only train those hyperparameters that are explicitly represented as
+% active
+if isfield(opt, 'active_hp_inds')
+    gp.active_hp_inds = opt.active_hp_inds;
+end
+
+% don't want to use likelihood gradients in constructing Bayesian
+% quadrature estimate
+gp.grad_hyperparams = false;
+
+% call set_gp just to create all appropriate hyperparameter structures in
+% gp.hyperparams; we do not yet initialise their values
+gp = set_gp(opt.cov_fn, opt.mean_fn, gp, X_data, [], ...
+    opt.num_hypersamples);
+hps_struct = set_hps_struct(gp);
+
     
 % Set options
 % ========================================================================
@@ -92,7 +112,9 @@ default_opt = struct(...
                     'num_passes', 6, ...
                     'force_training', true, ...
                     'noiseless', false, ...
-                    'prior_mean', 'default'); % if set to a number, that is taken as the prior mean
+                    'prior_mean', 'default', ...  % if set to a number, that is taken as the prior mean
+                    'hp_prior_mean', nan(hps_struct.num_hps, 1), ...
+                    'hp_prior_sds', 10*ones(hps_struct.num_hps, 1));
 
 opt = set_defaults( opt, default_opt );
 opt.verbose = opt.verbose && opt.print;
@@ -102,25 +124,6 @@ fprintf('Beginning training of GP, budgeting for %g seconds\n', ...
     opt.optim_time);
 end
 start_time = cputime;
-
-% only train those hyperparameters that are explicitly represented as
-% active
-if isfield(opt, 'active_hp_inds')
-    gp.active_hp_inds = opt.active_hp_inds;
-end
-
-% Initialisation of gp structure
-% ========================================================================
-
-% don't want to use likelihood gradients in constructing Bayesian
-% quadrature estimate
-gp.grad_hyperparams = false;
-
-% call set_gp just to create all appropriate hyperparameter structures in
-% gp.hyperparams; we do not yet initialise their values
-gp = set_gp(opt.cov_fn, opt.mean_fn, gp, X_data, [], ...
-    opt.num_hypersamples);
-hps_struct = set_hps_struct(gp);
 
 % Decide what to do about noise sd hyperparameter
 % ========================================================================
@@ -306,6 +309,7 @@ for num_pass = 1:opt.num_passes
     % number of active input dimensions
     parfor hypersample_ind = 1:num_hypersamples
         warning('off', 'MATLAB:nearlySingularMatrix');
+        warning('off', 'MATLAB:singularMatrix');
         warning('off','revise_gp:small_num_data');
         
         
@@ -340,8 +344,10 @@ for num_pass = 1:opt.num_passes
                     active_hp_inds, ...
                     X_data, y_data, opt);
             catch err
-                warning('error experienced in training input scales, reverting to initial input scale');
-                disp(err);
+                if opt.verbose
+                    warning('error experienced in training input scales, reverting to initial input scale');
+                    disp(err);
+                end
                 inputscale_hypersample = current_hypersample;
             end
             
@@ -433,7 +439,10 @@ function hypersample = move_hypersample(...
     hypersample, gp, active_hp_inds, X_data, y_data, opt)
 
 gp.hypersamples = hypersample;
-fn = @(a_hs) gp_neg_logL_fn(a_hs, X_data, y_data, gp, active_hp_inds);
+
+fn = @(a_hs) gp_neg_log_posterior_fn...
+    (a_hs, X_data, y_data, gp, active_hp_inds, opt);
+
 minFunc_opt.MaxFunEvals = opt.maxevals_hs;
 minFunc_opt.Display = 'off';
 a_hs_init = hypersample.hyperparameters(active_hp_inds)';
@@ -451,8 +460,8 @@ end
 
 end
 
-function [neg_logL, neg_glogL] = ...
-    gp_neg_logL_fn(a_hs, X_data, y_data, gp, active_hp_inds)
+function [neg_log_post, neg_g_log_post] = ...
+    gp_neg_log_posterior_fn(a_hs, X_data, y_data, gp, active_hp_inds, opt)
 
 gp.hypersamples(1).hyperparameters(active_hp_inds) = a_hs';
 
@@ -460,6 +469,20 @@ gp = revise_gp(X_data, y_data, gp, 'overwrite', [], 'all', active_hp_inds);
 
 neg_logL = -gp.hypersamples(1).logL;
 neg_glogL = -vertcat(gp.hypersamples(1).glogL{active_hp_inds});
+
+a_prior_mean = opt.hp_prior_mean(active_hp_inds);
+a_prior_sds = opt.hp_prior_sds(active_hp_inds);
+% nd stands for non-diffuse: for these hyperparameters, we do MAP rather 
+% than ML. 
+a_nd_priors = ~isnan(a_prior_mean);
+
+neg_log_prior = 0.5 * ((a_hs - a_prior_mean)./a_prior_sds).^2;
+neg_log_prior = sum(neg_log_prior(a_nd_priors));
+neg_g_log_prior = (a_hs - a_prior_mean) .* a_prior_sds.^-2;
+neg_g_log_prior(~a_nd_priors) = 0;
+
+neg_log_post = neg_logL + neg_log_prior;
+neg_g_log_post = neg_glogL + neg_g_log_prior;
 
 end
     

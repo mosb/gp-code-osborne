@@ -1,5 +1,5 @@
 function [best_hypers, best_nll] = fit_hypers_multiple_restart( ...
-    X, y, l, init_log_output_scale, number_evals )
+    X, y, l, init_log_output_scale, number_evals, opt )
 % a wrapper for gpml code to train a GP with multiple starting points for
 % minimize.m
 %
@@ -46,7 +46,9 @@ for i = 1:size(init_log_lengthscales,1);
     nll(i) = fX(end);
 end
 [best_nll, best_ix] = min(nll);
+if opt.print > 1
 fprintf('NLL of different lengthscale mins: '); disp(nll);
+end
 best_hypers = gp_hypers{best_ix};
 if any(isnan(best_hypers.cov))
     best_hypers = init_hypers;

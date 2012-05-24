@@ -1,4 +1,4 @@
-function [exp_loss_min, next_sample_point] = ...
+function [exp_loss_min, next_sample_point, flag] = ...
     min_in_box( objective_fn, prior, samples, tl_gp_hypers, evals )
 %
 % Searches within a prior box.
@@ -63,11 +63,11 @@ end_exp_loss = [end_exp_loss; explore_loss];
 next_sample_point = end_points(best_ind, :);
 
 if best_ind <= num_exploits
-        fprintf('exploit\n')
+        flag = 'exploit';
 elseif best_ind <= num_starts
-        fprintf('continue\n')
+        flag = 'continue';
 else
-        fprintf('explore\n')
+        flag = 'explore';
 end
 
 end

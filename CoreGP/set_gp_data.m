@@ -31,12 +31,10 @@ switch flag
             NOldData = size(old_sqd_diffs_data,1);
             gp.sqd_diffs_data = nan(NData,NData,NDims);
             gp.sqd_diffs_data(1:NOldData,1:NOldData,:) = old_sqd_diffs_data;
-            for dim = 1:NDims
-                gp.sqd_diffs_data(:,active,dim) = ...
-                    squared_distance(gp.X_data(:,dim),X_new(:,dim));
-                gp.sqd_diffs_data(active,:,dim) = ...
-                    squared_distance(X_new(:,dim), gp.X_data(:,dim));
-            end
+ 
+            new_sqd_diffs = sqd_diffs(gp.X_data, X_new);
+            gp.sqd_diffs_data(:, active, :) = new_sqd_diffs;
+            gp.sqd_diffs_data(active, :, :) = tr(new_sqd_diffs);
         end
         
     case 'downdate'
@@ -53,12 +51,19 @@ switch flag
         
         if gp.sqd_diffs_cov
             gp.sqd_diffs_data = nan(NData,NData,NDims);
-            for dim = 1:NDims
-                gp.sqd_diffs_data(:,:,dim) = ...
-                    squared_distance(X_data(:,dim),X_data(:,dim));
-            end
+            gp.sqd_diffs_data = sqd_diffs(X_data, X_data);
         end
     case 'new_hps'
         flag = 'overwrite';
         % but don't change data
 end
+
+function D = sqd_diffs(X, Y)
+
+[num_r_X, num_dims] = size(X);
+[num_r_Y, num_dims] = size(Y);
+
+X = reshape(X, num_r_X, 1, num_dims);
+trY = reshape(Y, 1, num_r_Y, num_dims);
+
+D = abs(bsxfun(@minus, X, trY)).^2;

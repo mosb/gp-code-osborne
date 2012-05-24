@@ -45,28 +45,28 @@ log_bmc_ais_method.opt = [];
 
 bbq_method.nicename = 'Doubly Bayesian Quadrature';
 bbq_method.uniquename = 'sequential bayesian quadrature mike no marg hypers';
-bbq_method.acronym = 'BBQ M';
+bbq_method.acronym = 'BBQ';
 bbq_method.function = @sbq;
 bbq_method.opt = struct(...
                      'marginalise_scales', false);
                  
 bbq_hypers_method.nicename = 'Doubly Bayesian Quadrature with marginal hypers';
 bbq_hypers_method.uniquename = 'sequential bayesian quadrature mike v1';
-bbq_hypers_method.acronym = 'BBQ* M';
+bbq_hypers_method.acronym = 'BBQ*';
 bbq_hypers_method.function = @sbq;
 bbq_hypers_method.opt = struct(...
                      'marginalise_scales', true);
                  
 bq_ais_method.nicename = 'Bayesian Quadrature';
 bq_ais_method.uniquename = 'bayesian quadrature no marg hypers using AIS';
-bq_ais_method.acronym = 'BQ G';
+bq_ais_method.acronym = 'BQ';
 bq_ais_method.function = @online_bq_gpml_ais;
 bq_ais_method.opt = struct(...
                      'marginalise_scales', false);
                  
 bq_hypers_ais_method.nicename = 'Bayesian Quadrature';
 bq_hypers_ais_method.uniquename = 'bayesian quadrature marg hypers using AIS';
-bq_hypers_ais_method.acronym = 'BQ* G';
+bq_hypers_ais_method.acronym = 'BQ*';
 bq_hypers_ais_method.function = @online_bq_gpml_ais;
 bq_hypers_ais_method.opt = struct(...
                      'marginalise_scales', true);
@@ -89,8 +89,7 @@ bq_gpml_ais_method.opt.set_ls_var_method = 'none';
 
 % Specify integration methods.
 methods = {};
-
-if 1
+if 0
 methods{end+1} = smc_method;
 methods{end+1} = bmc_method;
 methods{end+1} = bbq_hypers_method;
@@ -99,11 +98,9 @@ else
 methods{end+1} = smc_method;
 methods{end+1} = ais_method;
 methods{end+1} = bmc_method;
-%methods{end+1} = bq_ais_method;
-%methods{end+1} = bq_hypers_ais_method;
-methods{end+1} = sbq_gpml_method;
-methods{end+1} = bq_gpml_ais_method;
-%methods{end+1} = bbq_method;
+methods{end+1} = bq_ais_method;
+methods{end+1} = bq_hypers_ais_method;
+methods{end+1} = bbq_method;
 methods{end+1} = bbq_hypers_method;
-methods{end+1} = log_bmc_ais_method;
 end
+

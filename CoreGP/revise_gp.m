@@ -88,20 +88,20 @@ if grad_hyperparams
     DK = gp.covfn({'grad hyperparams',grad_hp_inds});
 end
 
-if isfield(gp, 'sqd_diffs_cov')
+if isfield(gp, 'abs_diffs_cov')
     % the covariance is capable of being computed given only sqd diffs
-    sqd_diffs_cov = gp.sqd_diffs_cov;
+    abs_diffs_cov = gp.abs_diffs_cov;
 else
     try
-        K(gp.hypersamples(1).hyperparameters, sqd_diffs_data);
+        K(gp.hypersamples(1).hyperparameters, abs_diffs_data);
         if grad_hyperparams
-            DK(gp.hypersamples(1).hyperparameters, sqd_diffs_data);
+            DK(gp.hypersamples(1).hyperparameters, abs_diffs_data);
         end
-        sqd_diffs_cov = true;
+        abs_diffs_cov = true;
     catch
-        sqd_diffs_cov = false;
+        abs_diffs_cov = false;
     end
-    gp.sqd_diffs_cov = sqd_diffs_cov;
+    gp.abs_diffs_cov = abs_diffs_cov;
 end
 
 [gp, flag] = ...
@@ -109,12 +109,12 @@ end
 y_data = gp.y_data;
 X_data = gp.X_data;
 [NData,NDims] = size(X_data);
-if sqd_diffs_cov
-    sqd_diffs_data = gp.sqd_diffs_data;
+if abs_diffs_cov
+    abs_diffs_data = gp.abs_diffs_data;
 end
 
 if isempty(y_data) || isempty(X_data) || ...
-        (sqd_diffs_cov && isempty(sqd_diffs_data)) 
+        (abs_diffs_cov && isempty(abs_diffs_data)) 
     return
 end
 
@@ -159,8 +159,8 @@ for sample_ind = 1:length(samples)
 	if (overwriting || ...
         (updating && ~isfield(temp_hypersamples(sample),'cholK')) || ...
         (fill_in && fill_in_test(sample,'cholK')))
-        if sqd_diffs_cov
-            Kmat = K(hs, sqd_diffs_data);
+        if abs_diffs_cov
+            Kmat = K(hs, abs_diffs_data);
         else
             Kmat = K(hs, X_data, X_data);
         end
@@ -180,8 +180,8 @@ for sample_ind = 1:length(samples)
 		cholK = downdatechol(temp_hypersamples(sample).cholK, active);
 	elseif (updating && isfield(temp_hypersamples(sample), 'cholK')) 
 		
-        if sqd_diffs_cov
-            Kvec = K(hs, sqd_diffs_data(active,:,:));
+        if abs_diffs_cov
+            Kvec = K(hs, abs_diffs_data(active,:,:));
         else
             Kvec = K(hs, X_data(active,:), X_data);
         end
@@ -306,8 +306,8 @@ for sample_ind = 1:length(samples)
         if (overwriting || updating || ...
             (fill_in && fill_in_test(sample,'glogL')))
         
-                if sqd_diffs_cov
-                    DKcell = DK(hs, sqd_diffs_data);
+                if abs_diffs_cov
+                    DKcell = DK(hs, abs_diffs_data);
                 else
                     DKcell = DK(hs, X_data, X_data);
                 end
