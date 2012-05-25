@@ -272,6 +272,31 @@ two_hills_4d.true_log_evidence = ...
               log_volume_between_two_gaussians(two_hills_4d.prior.mean, ...
                                      two_hills_4d.prior.covariance, ...
                                      likelihood.mean2, likelihood.covariance2)]);                                  
+                          
+                                 
+                                 
+                                 
+                                 
+two_hills_10d.name = 'two hills 10d';
+two_hills_10d.description = 'Two smooth Gaussian hills';
+two_hills_10d.dimension = 10;
+two_hills_10d.prior.mean = zeros(1, two_hills_10d.dimension);
+two_hills_10d.prior.covariance = diag(ones(two_hills_10d.dimension, 1) .* 10^2);
+likelihood.mean1 = -2 .* ones(1, two_hills_10d.dimension);
+likelihood.mean2 = 3 .* ones(1, two_hills_10d.dimension);
+likelihood.covariance1 = 3 .* diag(ones(two_hills_10d.dimension,1));
+likelihood.covariance2 = 2 .* diag(ones(two_hills_10d.dimension,1));
+two_hills_10d.log_likelihood_fn = ...
+    @(x) logsumexp([logmvnpdf( x, likelihood.mean1, likelihood.covariance1 ), ...
+                    logmvnpdf( x, likelihood.mean2, likelihood.covariance2 )]')';
+two_hills_10d.true_log_evidence = ...
+    logsumexp([log_volume_between_two_gaussians(two_hills_10d.prior.mean, ...
+                                     two_hills_10d.prior.covariance, ...
+                                     likelihood.mean1, likelihood.covariance1), ...
+              log_volume_between_two_gaussians(two_hills_10d.prior.mean, ...
+                                     two_hills_10d.prior.covariance, ...
+                                     likelihood.mean2, likelihood.covariance2)]);                                  
+            
                                  
 funnel_2d.name = 'funnel 2d';
 funnel_2d.description = 'Radford Neal''s funnel function';
@@ -404,6 +429,8 @@ problems{end+1} = two_spikes_1d;
 problems{end+1} = two_hills_1d;
 problems{end+1} = easy_4d;
 problems{end+1} = two_hills_4d;
+problems{end+1} = friedman_7d;
+problems{end+1} = two_hills_10d;
 problems{end+1} = easy_10d;
 problems{end+1} = easy_20d;
 
