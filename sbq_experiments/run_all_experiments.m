@@ -1,7 +1,7 @@
 function run_all_experiments( outdir )
 
 if nargin < 1
-    outdir = '~/large_results/sbq_results_gamma_one_hundredth_tk2/';
+    outdir = '~/large_results/sbq_results_gamma_one/';
 end
 mkdir( outdir );
 
