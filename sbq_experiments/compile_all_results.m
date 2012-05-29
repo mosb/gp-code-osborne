@@ -6,7 +6,7 @@ function compile_all_results( results_dir, paper_dir )
 
 draw_plots = false;
 
-if nargin < 1; results_dir = '~/large_results/sbq_results/'; end
+if nargin < 1; results_dir = '~/large_results/sbq_results_gamma_one_hundredth_tk2/'; end
 %if nargin < 1; results_dir = '~/large_results/fear_sbq_results/'; end
 %if nargin < 1; results_dir = '~/large_results/sbq_results/'; end
 if nargin < 2; paper_dir = '~/Dropbox/papers/sbq-paper/'; end
@@ -151,9 +151,13 @@ for p_ix = 1:num_problems
             var_log_ev_table( m_ix, p_ix, end, r ) - 2*true_log_evidence;
         
         squared_error(m_ix, p_ix) = (exp(log_mean_prediction) - 1)^2;
-
+        
+        try
         log_liks(m_ix, p_ix) = logmvnpdf(1, exp(log_mean_prediction), ...
                                          exp(log_var_prediction));
+        catch
+            log_liks(m_ix, p_ix) = nan;
+        end
 
         normalized_mean(m_ix, p_ix) = exp(log_mean_prediction);
         normalized_std(m_ix, p_ix) = sqrt(exp(log_var_prediction));

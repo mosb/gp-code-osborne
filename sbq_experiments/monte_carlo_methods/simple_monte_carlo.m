@@ -29,7 +29,10 @@ end
 
 % Draw samples.
 samples = mvnrnd( prior.mean, prior.covariance, opt.num_samples );
-logliks = loglik_fn( samples );
+logliks = nan(opt.num_samples, 1);
+for i = 1:opt.num_samples
+    logliks(i) = loglik_fn( samples(i, :) );
+end
 
 % Remove any bad likelihoods
 good_ix = ~isinf(logliks);

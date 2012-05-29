@@ -35,18 +35,23 @@ continued_starts = ...
     find_candidates(samples.locations(end, :), num_continues, scales, 1);
 
 starts = [exploit_starts;continued_starts];
-starts = bound(starts, lower_bound, upper_bound);
+starts = bound(starts, lower_bound+eps, upper_bound-eps);
 num_starts = num_exploits + num_continues;
 
 end_points = nan(num_starts,num_dims);
 end_exp_loss = nan(num_starts,1);
 parfor i = 1:num_starts
     cur_start_pt = starts(i, :);
-    [end_points(i,:), end_exp_loss(i)] = ...
+    try
+        [end_points(i,:), end_exp_loss(i)] = ...
         fmincon(objective_fn,cur_start_pt, ...
         [],[],[],[],...
         lower_bound,upper_bound,[],...
         optim_opts);
+    catch
+        end_points(i,:) = cur_start_pt;
+        end_exp_loss(i) = inf;
+    end
 end
 
 explores = mvnrnd(prior.mean, prior.covariance, num_explores);
