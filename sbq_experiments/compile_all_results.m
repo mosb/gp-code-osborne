@@ -38,7 +38,7 @@ addpath(genpath(pwd))
 % Get the experimental configuration from the definition scripts.
 
 
-sample_sizes = 150;%define_sample_sizes();
+sample_sizes = define_sample_sizes();
 max_samples = sample_sizes(end);
 problems = define_integration_problems();
 methods = define_integration_methods();
@@ -135,9 +135,9 @@ latex_table( [tabledir, 'times_taken.tex'], squeeze(timing_table(:,:,end,1))', .
     problem_names, method_names, 'time taken (s)' );
 fprintf(autocontent, '\\input{%s}\n', [tabledirshort, 'times_taken.tex']);
 
-se = bsxfun(@minus, mean_log_ev_table(:,:,end, 1)', true_log_ev').^2;
-latex_table( [tabledir, 'se.tex'], log(real(se)), problem_names, method_names, ...
-    sprintf('log squared error at %i samples', sample_sizes(end)) );
+log_error = abs(bsxfun(@minus, mean_log_ev_table(:,:,end, 1)', true_log_ev'));
+latex_table( [tabledir, 'se.tex'], log_error, problem_names, method_names, ...
+    sprintf('log error at %i samples', sample_sizes(end)) );
 fprintf(autocontent, '\\input{%s}\n', [tabledirshort, 'se.tex']);
 
 for p_ix = 1:num_problems
@@ -171,7 +171,7 @@ latex_table( [tabledir, 'truth_prob.tex'], -log_liks', problem_names, ...
 fprintf(autocontent, '\\input{%s}\n', [tabledirshort, 'truth_prob.tex']);
 
 fprintf('\n\n');
-print_table( 'log squared error', problem_names, method_names, log(real(se)) );
+print_table( 'log error', problem_names, method_names, log_error );
 fprintf('\n\n');
 print_table( 'neg log density', problem_names, method_names, -log_liks' );
 fprintf('\n\n');
@@ -195,15 +195,16 @@ fprintf(autocontent, '\\input{%s}\n', [tabledirshort, 'norm_std.tex']);
 
 
 combined_nll = sum(-log_liks(:, :)');
-combined_se = sqrt(mean(squared_error(:, :)'));
+% log_error's rows are problems
+combined_ale = mean(log_error(:, :));
 combined_calibration = mean(correct(:, :)');
-combined_synth = [combined_nll; combined_se; combined_calibration];
+combined_synth = [combined_nll; combined_ale; combined_calibration];
 
 
 table_method_names = cellfun(@(x) ['\\acro{\\lowercase{',x,'}}'],method_names, 'UniformOutput', false);
-headers = {'$-\log p(\mathbf{Z})$', '\acro{rmnse}', '$\mathcal{C}$'};
+headers = {'$-\log p(\mathbf{Z})$', '\acro{ale}', '$\mathcal{C}$'};
 final_results_table( [tabledir, 'combined_synth.tex'], combined_synth', table_method_names, headers, ...
-     'Combined Synthetic Results');
+     'Combined Synth Results');
 fprintf(autocontent, '\\input{%s}\n', [tabledirshort, 'combined_synth.tex']);
 
 

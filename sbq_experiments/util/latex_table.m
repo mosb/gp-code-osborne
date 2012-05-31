@@ -29,7 +29,7 @@ maxClip = 10 ^ maxLeftDigits;
 [methods metrics] = size(results);
 assert(length(methodNames) == methods);
 assert(length(metricNames) == metrics);
-maxClipCol = zeros(metrics, 1);
+maxClipCol = zeros(methods, 1);
 
 % argmin might have trouble if methods is singleton. TODO fix
 [best, best_ix] = min(results');
@@ -87,8 +87,8 @@ for ii = 1:methods
       %fprintf(file, [' & $\\mathbf{' printFormat '} \\pm %2.1f$'], ...
       fprintf(file, [' & $\\mathbf{' printFormat '}$'], ...
         results(ii, jj));
-    elseif results(ii, jj) > maxClipCol(jj)
-      fprintf(file, ' & $>$ %d', maxClipCol(jj));
+    elseif results(ii, jj) > maxClipCol(ii)
+      fprintf(file, ' & $>$ %d', maxClipCol(ii));
     else
       %fprintf(file, [' & $' printFormat ' \\pm %2.1f$' ], ...
       fprintf(file, [' & $' printFormat '$' ], ...
