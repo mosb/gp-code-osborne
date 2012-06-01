@@ -89,10 +89,10 @@ bq_gpml_ais_method.opt.set_ls_var_method = 'none';
 
 % Specify integration methods.
 methods = {};
-if 0
+if 1
 methods{end+1} = smc_method;
-methods{end+1} = bmc_method;
-methods{end+1} = bbq_hypers_method;
+% methods{end+1} = bmc_method;
+% methods{end+1} = bbq_hypers_method;
 %methods{end+1} = sbq_gpml_method;
 else
 methods{end+1} = smc_method;

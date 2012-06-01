@@ -30,7 +30,7 @@ end
 % Draw samples.
 samples = mvnrnd( prior.mean, prior.covariance, opt.num_samples );
 logliks = nan(opt.num_samples, 1);
-for i = 1:opt.num_samples
+parfor i = 1:opt.num_samples
     logliks(i) = loglik_fn( samples(i, :) );
 end
 

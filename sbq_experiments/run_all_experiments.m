@@ -1,7 +1,7 @@
 function run_all_experiments( outdir )
 
 if nargin < 1
-    outdir = '~/large_results/sbq_results_gamma_one_hundredth_true_dla_likelihood/';
+    outdir = '~/large_results/sbq_results_reduced_dla_probs/';
 end
 mkdir( outdir );
 

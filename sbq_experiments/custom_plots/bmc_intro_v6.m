@@ -11,7 +11,7 @@ function bmc_intro_v6
 
 close all;
 
-fontsize = 10;
+fontsize = 12;
 
 % Plot our function.
 N = 200;
@@ -87,7 +87,7 @@ color_brew_inds = setdiff(1:num_draws+1, color_ix);
 draw_h = nan(3,1);  
 for i = 1:num_draws
     y_st = mvnrnd(m_st, C_st);
-    draw_h(i) = plot(x_st, y_st, '-', 'Color', colorbrew(color_brew_inds(i)), 'Linewidth', 1);
+    draw_h(i) = plot(x_st, y_st, '-', 'Color', colorbrew(color_brew_inds(i)), 'Linewidth', 0.5);
     Z_draw(i) = bmc_integrate(x_st', y_st', prior, covfunc, init_hypers, false);
 end
 
@@ -108,7 +108,7 @@ yplot_scale = 0.95*zplot_width / mvnpdf(0, 0, Z_variance);
 
 post_h = plot( -mvnpdf(yvals', expected_Z + 1.5, Z_variance)...
               .*yplot_scale + zplot_left, yvals, '--', ...
-              'Color', fillcolor, 'Linewidth', .5);
+              'Color', fillcolor, 'Linewidth', 1.5);
 
         
 for i = 1:num_draws
@@ -158,8 +158,8 @@ set( gca, 'yTickLabel', '' );
 %a=axes('xcolor',get(f,'color'),'xtick',[])
 xlabel( '$x$' );
 ylabel( '$\ell(x)$\qquad' );
-set(get(gca,'XLabel'),'Rotation',0,'Interpreter','latex', 'Fontsize', fontsize);
-set(get(gca,'YLabel'),'Rotation',0,'Interpreter','latex', 'Fontsize', fontsize);
+set(get(gca,'XLabel'),'Rotation',0,'Interpreter','latex');
+set(get(gca,'YLabel'),'Rotation',0,'Interpreter','latex');
 set(gca, 'TickDir', 'out')
 set(gca, 'Box', 'off');
 set(gcf, 'color', 'white');
@@ -180,16 +180,16 @@ set(gca, 'YGrid', 'off');
 
 hLgnd = legend( [h_points, h_postmean, h_fill1, g(1), post_h, draw_h' ], ...
     {'samples', '\gpb mean', '\gpb mean $\pm$ \acro{sd}', 'expected $Z$', '$p(Z | \text{samples})$', 'draw from \gp', 'draw from \gp', 'draw from \gp'},...
-    'Location', 'EastOutside', 'Fontsize', fontsize);
+    'Location', 'EastOutside');
 legend boxoff
 
 
-set_fig_units_cm( 20, 5 );
+set_fig_units_cm( 24, 5 );
 %set(hLgnd, 'Units','pixels'); pos = get(hLgnd,'Position'); legendpos =
 %[pos(1), pos(2) - 10, pos(3), pos(4)]; set(hLgnd,'Position', legendpos);
 
 %legendpos(1) = legendpos(1) + legendpos(3) * 2; hLgnd2 = legend( ], ...
-%    {}, ... 'Location', 'EastOutside', 'Fontsize', fontsize,
+%    {}, ... 'Location', 'EastOutside',
 %    'Interpreter','latex');
 %legend boxoff set(hLgnd2, 'Units','pixels'); set(hLgnd2,
 %'OuterPosition',legendpos); set(hLgnd2, 'Units','normalized');

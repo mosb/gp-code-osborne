@@ -75,7 +75,7 @@ gp_train_opt.hp_prior_mean = nan(D+3, 1);
 % stupidly lagre and small input scales creeping in. The mean taken for our
 % prior over these hps is taken as identical to the SDs of our
 % hyperparameter priors. 
-gp_train_opt.hp_prior_mean(2:D+1) = sqrt(diag(prior.covariance));
+gp_train_opt.hp_prior_mean(2:D+1) = log(sqrt(diag(prior.covariance)));
 % print to screen diagnostic information about gp training
 gp_train_opt.print = opt.train_gp_print;
 gp_train_opt.verbose = opt.train_gp_print;
