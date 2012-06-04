@@ -1,4 +1,4 @@
-function compile_all_results( results_dir, paper_dir )
+function compile_real_results( results_dir, paper_dir )
 % Main script to produce all figures.
 %
 % outdir: The directory to look in for all the results.
@@ -6,7 +6,7 @@ function compile_all_results( results_dir, paper_dir )
 
 draw_plots = false;
 
-if nargin < 1; results_dir = '~/large_results/sbq_results_gamma_reduced_dla_priors/'; end
+if nargin < 1; results_dir = '~/large_results/sbq_results_reduced_dla_probs/'; end
 %if nargin < 1; results_dir = '~/large_results/fear_sbq_results/'; end
 %if nargin < 1; results_dir = '~/large_results/sbq_results/'; end
 if nargin < 2; paper_dir = '~/Dropbox/papers/sbq-paper/'; end
@@ -203,9 +203,9 @@ combined_synth = [combined_nll; combined_ale; combined_calibration];
 
 table_method_names = cellfun(@(x) ['\\acro{\\lowercase{',x,'}}'],method_names, 'UniformOutput', false);
 headers = {'$-\log p(\mathbf{Z})$', '\acro{ale}', '$\mathcal{C}$'};
-final_results_table( [tabledir, 'combined_synth.tex'], combined_synth', table_method_names, headers, ...
-     'Combined Synth Results');
-fprintf(autocontent, '\\input{%s}\n', [tabledirshort, 'combined_synth.tex']);
+final_results_table( [tabledir, 'combined_dla.tex'], combined_synth', table_method_names, headers, ...
+     'Combined Real Results');
+fprintf(autocontent, '\\input{%s}\n', [tabledirshort, 'combined_dla.tex']);
 
 
 combined_nll = sum(-log_liks(:, end-2:end)');
@@ -213,10 +213,10 @@ combined_se = sqrt(mean(squared_error(:, end-2:end)'));
 combined_calibration = mean(correct(:, end-2:end)');
 combined_prawn = [combined_nll; combined_se; combined_calibration];
 
-final_results_table( [tabledir, 'combined_prawn.tex'], combined_prawn', table_method_names, headers, ...
-     'Combined Prawn Results');
-fprintf(autocontent, '\\input{%s}\n', [tabledirshort, 'combined_prawn.tex']);
-
+% final_results_table( [tabledir, 'combined_prawn.tex'], combined_prawn', table_method_names, headers, ...
+%      'Combined Prawn Results');
+% fprintf(autocontent, '\\input{%s}\n', [tabledirshort, 'combined_prawn.tex']);
+% 
 
 % Draw some plots
 % ================================

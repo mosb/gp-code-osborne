@@ -389,7 +389,7 @@ kepler_1planet.log_likelihood_fn = ...
     @(x) call_python_numeric('call_rvs.py', x);
 kepler_1planet.true_log_evidence = NaN;
 
-% Define dla problem
+% Define dla problems
 % =================================
 % should probably test over like seven or so for calibration.
 plate = 4747;
@@ -416,7 +416,17 @@ dla4747.prior.covariance = diag([...
     mle_stds(3:5)]).^2;
 dla4747.log_likelihood_fn = ...
     @(sample) dla_log_likelihood(sample);
-dla4747.true_log_evidence = -4.169373536111831e+02;
+dla4747.true_log_evidence =  -444.5629;
+
+cont4747.name = 'cont 4747';
+cont4747.description = 'continuum problem drawn from sdss data, plate = 4747, mjd = 55652, fiber = 0044';
+cont4747.dimension = 5;
+cont4747.prior.mean = mle_means;
+cont4747.prior.covariance = diag(mle_stds).^2;
+cont4747.log_likelihood_fn = ...
+    @(sample) continuum_likelihood(sample);
+cont4747.true_log_evidence = -4.178390032334795e+02;
+%-4.169373536111831e+02;
 
 plate = 4389;
 mjd = 55539;
@@ -442,7 +452,16 @@ dla4389.prior.covariance = diag([...
     mle_stds(3:5)]).^2;
 dla4389.log_likelihood_fn = ...
     @(sample) dla_log_likelihood(sample);
-dla4389.true_log_evidence = -3.795316773498983e+02;
+dla4389.true_log_evidence = -376.160;
+
+cont4389.name = 'cont 4389';
+cont4389.description = 'continuum problem drawn from sdss data, plate = 4389, mjd = 55539, fiber = 0202';
+cont4389.dimension = 5;
+cont4389.prior.mean = mle_means;
+cont4389.prior.covariance = diag(mle_stds).^2;
+cont4389.log_likelihood_fn = ...
+    @(sample) continuum_likelihood(sample);
+cont4389.true_log_evidence = -3.811312028252460e+02;
 
 
 
@@ -470,7 +489,18 @@ dla3664.prior.covariance = diag([...
     mle_stds(3:5)]).^2;
 dla3664.log_likelihood_fn = ...
     @(sample) dla_log_likelihood(sample);
-dla3664.true_log_evidence = -1.396622761933674e+02;
+dla3664.true_log_evidence = -1.653890e+02;
+
+cont3664.name = 'cont 3664';
+cont3664.description = 'continuum problem drawn from sdss data, plate = 3664, mjd = 55245, fiber = 0012';
+cont3664.dimension = 5;
+cont3664.prior.mean = mle_means;
+cont3664.prior.covariance = diag(mle_stds).^2;
+cont3664.log_likelihood_fn = ...
+    @(sample) continuum_likelihood(sample);
+cont3664.true_log_evidence = -1.445944669623500e+02;
+
+
 
 plate = 4290;
 mjd = 55527;
@@ -496,15 +526,31 @@ dla4290.prior.covariance = diag([...
     mle_stds(3:5)]).^2;
 dla4290.log_likelihood_fn = ...
     @(sample) dla_log_likelihood(sample);
-dla4290.true_log_evidence = -83.621343874201500;
+dla4290.true_log_evidence = -1.192330e+02;
+
+cont4290.name = 'cont 4290';
+cont4290.description = 'continuum problem drawn from sdss data, plate = 4290, mjd = 55527, fiber = 0028';
+cont4290.dimension = 5;
+cont4290.prior.mean = mle_means;
+cont4290.prior.covariance = diag(mle_stds).^2;
+cont4290.log_likelihood_fn = ...
+    @(sample) continuum_likelihood(sample);
+cont4290.true_log_evidence = -83.453902290499897;
+
+
 
 % Specify problems.
 problems = {};
 % 
-problems{end+1} = dla3664;
-problems{end+1} = dla4747;
-problems{end+1} = dla4389;
-problems{end+1} = dla4290;
+problems{end+1} = cont4389;%
+problems{end+1} = cont4747;%
+problems{end+1} = cont3664;%1
+problems{end+1} = cont4290;%
+
+% problems{end+1} = dla4389;%
+% problems{end+1} = dla4747;%
+% problems{end+1} = dla3664;%
+% problems{end+1} = dla4290;%
 
 
 % %problems{end+1} = simple_test_1d;
