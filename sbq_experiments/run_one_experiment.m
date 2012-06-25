@@ -49,14 +49,14 @@ fprintf(' Output filename: %s\n\n', filename );
     timestamp = now; tic;    % Start timing.
         
     % Run the experiment.
-    [mean_log_evidences, var_log_evidences, samples] = ...
+    [mean_log_evidences, var_log_evidences, samples, diagnostics] = ...
         method.function(problem.log_likelihood_fn, problem.prior, opt);
     
     total_time = toc;        % Stop timing
 
     % Save all the results.        
     save( filename, 'timestamp', 'total_time', ...
-          'mean_log_evidences', 'var_log_evidences', 'samples', ...
+          'mean_log_evidences', 'var_log_evidences', 'samples', 'diagnostics', ...
           'problem', 'method', 'outdir', 'opt', 'repitition' );
       
     fprintf('\nCompleted experiment.\n\n');

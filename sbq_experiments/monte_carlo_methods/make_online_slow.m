@@ -1,4 +1,4 @@
-function [mean_log_evidences, var_log_evidences, samples] = ...
+function [mean_log_evidences, var_log_evidences, samples, diagnostics] = ...
     make_online_slow(sampler, loglik_fn, prior, opt)
 % Makes a fixed-length sampler into an online sampler, the slow way.
 % Simply re-fixes the random seed and calls the sampler again and again with
@@ -43,7 +43,7 @@ for num_s = opt.num_samples
     stream.State = savedState;    % Set the random seed.
     
     cur_opt.num_samples = num_s;
-    [mean_log_evidences(num_s), var_log_evidences(num_s), samples] = ...
+    [mean_log_evidences(num_s), var_log_evidences(num_s), samples, diagnostics] = ...
         sampler(loglik_fn, prior, cur_opt);
 end
 end

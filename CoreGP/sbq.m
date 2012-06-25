@@ -1,17 +1,16 @@
 function [log_mean_evidences, log_var_evidences, samples, ...
-    l_gp_hypers, tl_gp_hypers, del_gp_hypers, ev_params] = ...
+    diagnostics] = ...
     sbq(log_likelihood_fn, prior, opt)
 % Take samples so as to best estimate the evidence,
 % an integral over exp(log_likelihood_fn) against the prior.
 % 
 % OUTPUTS
-% - mean_log_evidences: our mean estimates for the log of the evidence;
-%       the ith element corresponds to our mean after i samples
-% - var_log_evidences: the variances for the log of the evidence;
-%       the ith element corresponds to our variance after i samples
-% - samples: n*d matrix of hyperparameter samples - tl_gp_hypers: the
-%       (quadrature) hyperparameters of the gp fitted to the log-likelihood
-%       surface
+% - mean_log_evidences: our mean estimates for the log of the evidence; if
+%       opt.debug, the ith element corresponds to our mean after i samples
+% - var_log_evidences: the variances for the log of the evidence; if
+%       opt.debug, the ith element corresponds to our variance after i
+%       samples
+%
 % 
 % INPUTS
 % - start_pt: 1*n vector expressing starting point for algorithm
@@ -63,6 +62,7 @@ default_opt = struct('num_samples', 300, ...
                      'start_pt', prior.mean, ...
                      'print', 1, ...
                      'plots', false, ...
+                     'debug', false, ...
                      'marginalise_scales', true);%'lengthscale');
 opt = set_defaults( opt, default_opt );
 
@@ -133,6 +133,10 @@ for i = 1:opt.num_samples
         del_gp_hypers = [];
         
     elseif retrain_now
+        
+        if opt.print >= 1
+            fprintf('\n Retraining GPs');
+        end
         % Retrain gp.
         l_gp = lw_train_gp('sqdexp', 'constant', l_gp, ...
                                      samples.locations, samples.scaled_l, ...
@@ -207,5 +211,31 @@ for i = 1:opt.num_samples
         fprintf('evidence: %g +- %g\n', exp(log_mean_evidences(i)), ...
                                         sqrt(exp(log_var_evidences(i))));
     end
+    
+    if opt.debug
+        diagnostics(i).exp_loss_min = exp_loss_min;
+        diagnostics(i).flag = flag;
+        diagnostics(i).l_gp_hypers = l_gp_hypers;
+        diagnostics(i).tl_gp_hypers = tl_gp_hypers;
+        diagnostics(i).del_gp_hypers = del_gp_hypers;
+        diagnostics(i).candidate_locations = ev_params.candidate_locations;
+        diagnostics(i).mean_l_sc = ev_params.mean_l_sc;
+        diagnostics(i).mean_tl_sc = ev_params.mean_tl_sc;
+        diagnostics(i).delta_tl_sc = ev_params.delta_tl_sc;
+        diagnostics(i).mean_ev_correction = ev_params.mean_ev_correction;
+        diagnostics(i).minty_del = ev_params.minty_del;
+        diagnostics(i).log_mean_second_moment = ev_params.log_mean_second_moment;
+        diagnostics(i).var_ev = ev_params.var_ev;
+        diagnostics(i).var_ev_correction = ev_params.var_ev_correction;
+    end
 end
+
+if ~opt.debug
+    diagnostics = [];
+    log_mean_evidences = log_mean_evidences(end);
+    log_var_evidences = log_var_evidences(end);
 end
+
+end
+
+

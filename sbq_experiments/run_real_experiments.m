@@ -1,17 +1,18 @@
-function run_all_experiments( gamma, outdir )
+function run_real_experiments( gamma, outdir )
 
 if nargin < 2
-    outdir = ['~/large_results/sbq_results_gamma_',num2str(gamma)];
+    outdir = ['~/large_results/sbq_results_gamma_',num2str(gamma),'/'];
 end
 mkdir( outdir );
 
 fprintf('Running all experiments...\n');
 
 addpath(genpath(pwd));
-real_probs = false;
+
+real_probs = true;
 problems = define_integration_problems(real_probs);
 methods = define_integration_methods(gamma);
-sample_sizes = define_sample_sizes();
+sample_sizes = 500;%define_sample_sizes();
 
 % Run every combination of experiment.
 num_problems = length(problems)

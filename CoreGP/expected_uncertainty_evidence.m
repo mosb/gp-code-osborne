@@ -277,15 +277,24 @@ n_l_sa = del_inv_K_Ups_inv_K_l_sa + ups_inv_K_l_sa;
 n_l_a = n_l_sa(num_sa);
 n_l_s = n_l_sa(1:num_s) * l_s + opt.gamma * minty_del;
 
-% expected squared mean evidence: here we have to correct for our scaling
-% of l_s earlier.
-xpc_sqd_mean = exp(2*samples.max_log_l) * (n_l_s^2 ...
+unscaled_xpc_sqd_mean = n_l_s^2 ...
     + 2 * n_l_s * n_l_a * (opt.gamma * exp(tm_a + 0.5*tv_a) - opt.gamma) ...
     + n_l_a^2 * opt.gamma^2 * ...
-        (exp(2*tm_a + 2*tv_a) - 2 * exp(tm_a + 0.5*tv_a) + 1));
+        (exp(2*tm_a + 2*tv_a) - 2 * exp(tm_a + 0.5*tv_a) + 1);
     
-% compare against 
-% exp(2*samples.max_log_l) * mean([l_s;opt.gamma*exp(tm_a)- opt.gamma].^2)
+xpc_unc = - unscaled_xpc_sqd_mean;
 
-xpc_unc =  exp(ev_params.log_mean_second_moment) - xpc_sqd_mean;
+% the code below is only required if it is desirable to compute the actual
+% expected variance, as opposed to a scaled and translated version of it.
+% Note that it may introduce numerical issues if exp(2*samples.max_log_l) 
+% is numerically zero.
+
+% % expected squared mean evidence: here we have to correct for our scaling
+% % of l_s earlier.
+% xpc_sqd_mean = exp(2*samples.max_log_l) * unscaled_xpc_sqd_mean;
+%     
+% % compare against 
+% % exp(2*samples.max_log_l) * mean([l_s;opt.gamma*exp(tm_a)- opt.gamma].^2)
+% 
+% xpc_unc =  exp(ev_params.log_mean_second_moment) - xpc_sqd_mean;
     

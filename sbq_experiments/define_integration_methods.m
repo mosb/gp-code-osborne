@@ -1,4 +1,4 @@
-function methods = define_integration_methods()
+function methods = define_integration_methods(gamma)
 % Define all the methods with which to solve an integral.
 %
 % These methods should all have the signature:
@@ -18,6 +18,12 @@ function methods = define_integration_methods()
 %
 %
 %
+
+if nargin < 1
+    gamma = 1/100;
+end
+
+debug = true;
 
 smc_method.nicename = 'Simple Monte Carlo';
 smc_method.uniquename = 'simple monte carlo v1';
@@ -48,28 +54,36 @@ bbq_method.uniquename = 'sequential bayesian quadrature mike no marg hypers';
 bbq_method.acronym = 'BBQ';
 bbq_method.function = @sbq;
 bbq_method.opt = struct(...
-                     'marginalise_scales', false);
+                     'marginalise_scales', false, ...
+                     'gamma', gamma, ...
+                     'debug', debug);
                  
 bbq_hypers_method.nicename = 'Doubly Bayesian Quadrature with marginal hypers';
 bbq_hypers_method.uniquename = 'sequential bayesian quadrature mike v1';
 bbq_hypers_method.acronym = 'BBQ*';
 bbq_hypers_method.function = @sbq;
 bbq_hypers_method.opt = struct(...
-                     'marginalise_scales', true);
+                     'marginalise_scales', true, ...
+                     'gamma', gamma, ...
+                     'debug', debug);
                  
 bq_ais_method.nicename = 'Bayesian Quadrature';
 bq_ais_method.uniquename = 'bayesian quadrature no marg hypers using AIS';
 bq_ais_method.acronym = 'BQ';
 bq_ais_method.function = @online_bq_gpml_ais;
 bq_ais_method.opt = struct(...
-                     'marginalise_scales', false);
+                     'marginalise_scales', false, ...
+                     'gamma', gamma, ...
+                     'debug', debug);
                  
 bq_hypers_ais_method.nicename = 'Bayesian Quadrature';
 bq_hypers_ais_method.uniquename = 'bayesian quadrature marg hypers using AIS';
 bq_hypers_ais_method.acronym = 'BQ*';
 bq_hypers_ais_method.function = @online_bq_gpml_ais;
 bq_hypers_ais_method.opt = struct(...
-                     'marginalise_scales', true);
+                     'marginalise_scales', true, ...
+                     'gamma', gamma, ...
+                     'debug', debug);
 
 
 sbq_gpml_method.nicename = 'Doubly Bayesian Quadrature GPML';
@@ -95,11 +109,11 @@ methods{end+1} = smc_method;
 % methods{end+1} = bbq_hypers_method;
 %methods{end+1} = sbq_gpml_method;
 else
-methods{end+1} = smc_method;
-methods{end+1} = ais_method;
-methods{end+1} = bmc_method;
+% methods{end+1} = smc_method;
+% methods{end+1} = ais_method;
+% methods{end+1} = bmc_method;
 methods{end+1} = bq_ais_method;
-methods{end+1} = bq_hypers_ais_method;
+%methods{end+1} = bq_hypers_ais_method;
 methods{end+1} = bbq_method;
 methods{end+1} = bbq_hypers_method;
 end

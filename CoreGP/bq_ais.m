@@ -1,4 +1,4 @@
-function [log_mean_evidences, log_var_evidences, samples, tl_gp_hypers] = ...
+function [log_mean_evidences, log_var_evidences, samples, diagnostics] = ...
     bq_ais(log_likelihood_fn, prior, opt)
 % Estimates the evidence, an integral over exp(log_l_fn) against the prior
 % in prior_struct. Samples are taken using an AIS chain.
@@ -136,4 +136,4 @@ tl_gp_hypers = best_hyperparams(tl_gp);
 log_evidence(samples, prior, l_gp_hypers, tl_gp_hypers, [], opt);
 
 
-
+diagnostics = [];

@@ -177,7 +177,7 @@ if isempty(del_gp_hypers_SE);
     % a hack: when there are only one or two non-zero likelihoods,
     % the lengthscales for l are not well-determined by data. Then the
     % lengthscales for del can end up being so big that the integral over
-    % delta becomes bigger than over l, causing erroneously big correction
+    % delta becomes bigger than over l, causing erroneously big mean_ev_correction
     % factors. This might be more properly solved by map inference for
     % input scales. 
     del_log_input_scales = min(del_log_input_scales, ...
@@ -250,10 +250,16 @@ ups_inv_K_del = solve_chol(R_del, ups_del)';
 minty_del = ups_inv_K_del * delta_tl_sc;
 
 % the correction factor due to l being non-negative
-correction = minty_del_l + opt.gamma * minty_del;
+mean_ev_correction = minty_del_l + opt.gamma * minty_del;
 
 % the mean evidence
-mean_ev = minty_l + correction;
+mean_ev = minty_l + mean_ev_correction;
+% sanity check
+if mean_ev < 0
+    warning('mean of evidence negative');
+    fprintf('mean of evidence: %g\n', mean_ev.*exp(samples.max_log_l));
+    mean_ev = minty_l;
+end
 
 % mean_ev has been determined using the rescaled log-likelihoods (that have
 % had the maximum log likelihood subtracted off), we return correct values
@@ -355,20 +361,32 @@ if opt.marginalise_scales
             + opt.gamma * prod3(tr(Dtheta_ups_tl), inv_K_tl_tl) ...
                                 );
         
+                            
+                            
     % Now perform the correction to our variance
-    var_ev = var_ev + sum(reshape(int_ml_Dtheta_mtl.^2, D, 1 , 1) .* V_theta);
+    var_ev_correction = sum(reshape(int_ml_Dtheta_mtl.^2, D, 1 , 1) .* V_theta);
+else
+    var_ev_correction = 0;
 end
+var_ev = var_ev + var_ev_correction;
 
 % sanity check
 if var_ev < 0
     warning('variance of evidence negative');
     fprintf('variance of evidence: %g\n', var_ev.*exp(samples.max_log_l)^2);
-    var_ev = eps;
+    
+    % var_ev has been determined using the rescaled log-likelihoods (that have
+    % had the maximum log likelihood subtracted off), we return correct values
+    % by scaling back again)
+    log_var_evidence = 2*samples.max_log_l + log(eps);
+
+else
+    % var_ev has been determined using the rescaled log-likelihoods (that have
+    % had the maximum log likelihood subtracted off), we return correct values
+    % by scaling back again)
+    log_var_evidence = 2*samples.max_log_l + log(var_ev);
 end
-% var_ev has been determined using the rescaled log-likelihoods (that have
-% had the maximum log likelihood subtracted off), we return correct values
-% by scaling back again)
-log_var_evidence = 2*samples.max_log_l + log(var_ev);
+
 
 % Compute the second moment of the evidence
 % ======================================================
@@ -408,8 +426,11 @@ ev_params = struct(...
   'mean_tl_sc', mean_tl_sc, ...
   'delta_tl_sc' , delta_tl_sc, ...
   'minty_l', minty_l, ...
+  'mean_ev_correction', mean_ev_correction, ... % just for debugging
   'minty_del' , minty_del, ...
-  'log_mean_second_moment', log_mean_second_moment ...
+  'log_mean_second_moment', log_mean_second_moment, ...
+  'var_ev', var_ev, ... % just for debugging
+  'var_ev_correction', var_ev_correction ... % just for debugging
    );
 if opt.marginalise_scales
     ev_params.Dtheta_K_tl_s = Dtheta_K_tl;

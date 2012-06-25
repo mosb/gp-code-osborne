@@ -11,6 +11,11 @@ function problems = define_integration_problems(varargin)
 % log_likelihood_fn
 % true_log_evidence (can be nan for unknown)
 
+if length(varargin) == 1
+    real_probs = varargin{1};
+else
+    real_probs = false;
+end
 
 simple_test_1d.name = 'simple';
 simple_test_1d.description = 'A smooth function with two bumps';
@@ -389,6 +394,9 @@ kepler_1planet.log_likelihood_fn = ...
     @(x) call_python_numeric('call_rvs.py', x);
 kepler_1planet.true_log_evidence = NaN;
 
+
+if real_probs
+
 % Define dla problems
 % =================================
 % should probably test over like seven or so for calibration.
@@ -552,16 +560,20 @@ problems{end+1} = cont4290;%
 % problems{end+1} = dla3664;%
 % problems{end+1} = dla4290;%
 
+else
+problems = {};
 
-% %problems{end+1} = simple_test_1d;
-% problems{end+1} = two_spikes_1d;
-% problems{end+1} = two_hills_1d;
-% problems{end+1} = easy_4d;
-% problems{end+1} = two_hills_4d;
-% %problems{end+1} = friedman_7d;
-% %problems{end+1} = two_hills_10d;
-% problems{end+1} = easy_10d;
-% problems{end+1} = easy_20d;
+problems{end+1} = simple_test_1d;
+problems{end+1} = two_spikes_1d;
+problems{end+1} = two_hills_1d;
+problems{end+1} = easy_4d;
+problems{end+1} = two_hills_4d;
+problems{end+1} = friedman_7d;
+problems{end+1} = two_hills_10d;
+problems{end+1} = easy_10d;
+problems{end+1} = easy_20d;
+
+end
 
 end
 

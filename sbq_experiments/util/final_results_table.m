@@ -32,6 +32,7 @@ assert(length(metricNames) == metrics);
 maxClipCol = zeros(metrics, 1);
 
 % argmin might have trouble if methods is singleton. TODO fix
+results = [results; nan(1, metrics)];
 [best, best_ix] = min(results);
 % nearbest keeps track of if we are significantly different from the best
 % model.
