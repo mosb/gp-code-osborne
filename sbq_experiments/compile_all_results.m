@@ -6,7 +6,7 @@ function compile_all_results( results_dir, paper_dir )
 
 draw_plots = true;
 
-if nargin < 1; results_dir = '~/large_results/sbq_results_gamma_one_hundredth_tk2/'; end
+if nargin < 1; results_dir = '~/large_results/sbq_results_gamma_one_hundredth_true_dla_likelihood/'; end
 %if nargin < 1; results_dir = '~/large_results/fear_sbq_results/'; end
 %if nargin < 1; results_dir = '~/large_results/sbq_results/'; end
 if nargin < 2; paper_dir = '~/Dropbox/papers/sbq-paper/'; end

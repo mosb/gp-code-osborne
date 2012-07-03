@@ -1,7 +1,16 @@
 function run_all_experiments( gamma, outdir )
 
+<<<<<<< .mine
+if nargin < 1
+<<<<<<< .mine
+    outdir = '~/large_results/sbq_results_gamma_ten/';
+=======
+    outdir = '~/large_results/sbq_results_gamma_one_hundredth_tk2/';
+=======
 if nargin < 2
     outdir = ['~/large_results/sbq_results_gamma_',num2str(gamma)];
+>>>>>>> .r245
+>>>>>>> .r240
 end
 mkdir( outdir );
 

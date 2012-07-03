@@ -203,6 +203,8 @@ if opt.derivative_observations
 else
     gp = set_gp(opt.cov_fn, opt.mean_fn, gp, X_data, y_data, ...
         opt.num_hypersamples);
+    
+
 end
 
 % Allocate the indices of hyperparameters we're going to train
@@ -239,6 +241,18 @@ if isempty(full_active_inds)
 end
 if opt.optim_time <= 0
     warning('train_gp:insuff_time', 'no time allowed for training, no training performed')
+    
+    % if we have little data, fill in prior means for hyperparameters where 
+    % supplied
+    if length(y_data) < 5;
+        have_prior_mean = ~isnan(opt.hp_prior_mean);
+        
+        for i = 1:numel(gp.hypersamples)
+            gp.hypersamples(i).hyperparameters(have_prior_mean) = ...
+                opt.hp_prior_mean(have_prior_mean);
+        end
+    end
+    
     gp = revise_gp(X_data, y_data, gp, 'overwrite', []);
     return
 end
