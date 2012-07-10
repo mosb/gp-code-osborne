@@ -1,4 +1,4 @@
-function [ m_Z, sd_Z ] = bqgi( mu, Sigma, l, u, opt )
+function [ m_Z, sd_Z ] = mvncdf_bq( l, u, mu, Sigma, opt )
 % Bayesian quadrature for Gaussian integration. Our domain has dimension N.
 %
 % INPUTS
@@ -35,7 +35,7 @@ opt = set_defaults( opt, default_opt );
 % Possible observations
 
 % slice observations
-slices = normcdf(u, mu, diag(Sigma)) - normcdf(l, mu, diag(Sigma));
+slices = truncNormMoments(l, u, mu, diag(Sigma));
 
 % observation of convolution with Gaussian mvnpdf(x, m, V)
 conv = @(m, V) mvnpdf(m, mu, V + Sigma);
