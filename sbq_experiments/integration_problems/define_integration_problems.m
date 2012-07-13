@@ -424,11 +424,7 @@ dla4747.prior.covariance = diag([...
     mle_stds(3:5)]).^2;
 dla4747.log_likelihood_fn = ...
     @(sample) dla_log_likelihood(sample);
-<<<<<<< .mine
 dla4747.true_log_evidence = -4.169373536111831e+02;
-=======
-dla4747.true_log_evidence =  -444.5629;
->>>>>>> .r245
 
 cont4747.name = 'cont 4747';
 cont4747.description = 'continuum problem drawn from sdss data, plate = 4747, mjd = 55652, fiber = 0044';
@@ -464,11 +460,7 @@ dla4389.prior.covariance = diag([...
     mle_stds(3:5)]).^2;
 dla4389.log_likelihood_fn = ...
     @(sample) dla_log_likelihood(sample);
-<<<<<<< .mine
 dla4389.true_log_evidence = -3.795316773498983e+02;
-=======
-dla4389.true_log_evidence = -376.160;
->>>>>>> .r245
 
 cont4389.name = 'cont 4389';
 cont4389.description = 'continuum problem drawn from sdss data, plate = 4389, mjd = 55539, fiber = 0202';
@@ -500,21 +492,18 @@ dla3664.prior.covariance = diag([...
 %     mle_stds(1:2),...
 %     dla_offset_prior_std,...
 %     dla_width_prior_std,...
-<<<<<<< .mine
 %     dla_width_prior_std,...
 %     mle_stds(2) / 25,...
 %     mle_stds(3:5)]);
 % dla4389.log_likelihood_fn = ...
 %     @(sample) dla_log_likelihood(sample);
 % dla4389.true_log_evidence = -139.6623;
-=======
     dla_width_prior_std,...
     mle_stds(2) / 5,...
     mle_stds(3:5)]).^2;
 dla3664.log_likelihood_fn = ...
     @(sample) dla_log_likelihood(sample);
 dla3664.true_log_evidence = -1.653890e+02;
->>>>>>> .r245
 
 cont3664.name = 'cont 3664';
 cont3664.description = 'continuum problem drawn from sdss data, plate = 3664, mjd = 55245, fiber = 0012';
@@ -551,11 +540,7 @@ dla4290.prior.covariance = diag([...
     mle_stds(3:5)]).^2;
 dla4290.log_likelihood_fn = ...
     @(sample) dla_log_likelihood(sample);
-<<<<<<< .mine
 dla4290.true_log_evidence = -83.621343874201500;
-=======
-dla4290.true_log_evidence = -1.192330e+02;
->>>>>>> .r245
 
 cont4290.name = 'cont 4290';
 cont4290.description = 'continuum problem drawn from sdss data, plate = 4290, mjd = 55527, fiber = 0028';

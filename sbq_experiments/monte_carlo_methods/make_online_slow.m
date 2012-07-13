@@ -39,11 +39,12 @@ var_log_evidences = NaN(opt.num_samples, 1);
 
 cur_opt = opt;  % The options that will be used by the sampler.
 
-for num_s = opt.num_samples
+for num_s = 1:opt.num_samples
     stream.State = savedState;    % Set the random seed.
     
     cur_opt.num_samples = num_s;
-    [mean_log_evidences(num_s), var_log_evidences(num_s), samples, diagnostics] = ...
+    [mean_log_evidences(num_s), var_log_evidences(num_s), samples, cur_diagnostics] = ...
         sampler(loglik_fn, prior, cur_opt);
+    diagnostics(num_s).field = cur_diagnostics;
 end
 end

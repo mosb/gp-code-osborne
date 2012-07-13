@@ -7,6 +7,11 @@ function [ m_Z, sd_Z ] = mvncdf_bq( l, u, mu, Sigma, opt )
 % l: vector of lower bounds (N * 1), if missing, assumed to be all -inf
 % u: vector of upper bounds (N * 1), if missing, assumed to be all inf
 % opt: options (see below)
+% in particular, if opt.data is supplied, the locations for the Gaussian
+% convolution observations are supplied.
+% opt.data(i).m represents the mean of a Gaussian, 
+% opt.data(i).m V the diagonal of its diagonal covariance.
+% i takes as many sequential values as you want to give.
 %
 % OUTPUTS
 % m_Z: mean of Gaussian integral
@@ -28,20 +33,15 @@ if nargin < 5
 end
 
 % Set unspecified fields to default values.
-default_opt = struct('total_time', 300);
+default_opt = struct('total_time', 300, ...
+                    'data', []);
 opt = set_defaults( opt, default_opt );
 
+
+% Define terms required to evaluate the covariances between any pair of
+% convolution observations, and the covariances between the target
+% hyper-rectangle and any convolution observation.
 % =========================================================================
-% Possible observations
-
-% slice observations
-log_slices = truncNormMoments(l, u, mu, diag(Sigma));
-
-% observation of convolution with Gaussian mvnpdf(x, m, V)
-conv = @(m, V) mvnpdf(m, mu, V + Sigma);
-
-% =========================================================================
-% Define covariance functions
 
 % covariance function of latent function is mvnpdf(x, x', diag(D));
 D = diag(Sigma);
@@ -49,115 +49,169 @@ D = diag(Sigma);
 % prior is mvnpdf(x, mu, diag(L)); this defines the envelope outside which
 % we expect our Gaussian integrand to be zero
 max_eig = eigs(Sigma, 1);
-  
 L = ones(N, 1) * max_eig;
 
-% no need to compute this, it is common to all terms so we can just
-% incorporate it into the sqd output scale
-% log_K_const = -0.5 * sum(log(2*pi*(2*L + D)));
+% We're about to compute the product of the bivariate Gaussian cdfs,
+% sum_log_mvncdf_lu_N,  that constitutes the self-variance of the target
+% hyper-rectangle.
 
+% The two off-diagonal elements of the 2*2 covariance matrix over x1(d) and
+% x2(d) (where x1 and x2 are arbitrary points in the domain of integration)
+% are equal to M_offdiag(d)
+M_offdiag = L.^2./(2*L + D);
+% The two on-diagonal elements of the 2*2 covariance matrix over x1(d) and
+% x2(d) (where x1 and x2 are arbitrary points in the domain of integration)
+% are equal to M_ondiag(d)
+M_ondiag = L - M_offdiag;
 
-% we put these quantities into 2 x N shapes, as required by mvncdf call
-% below
-mu_N = repmat(mu', 2, 1);
-l_N = repmat(l', 2, 1);
-u_N = repmat(u', 2, 1);
+sum_log_mvncdf_lu_N = 0;
+for d = 1:num_dims;
+    
+    % both variables x1(d) and x2(d) have mu(d) as their mean, l(d) as
+    % their lower limit and u(d) as their upper limit
+    l_d = [l(d); l(d)];
+    u_d = [u(d); u(d)];
+    mean_d = [mu(d); mu(d)];
+    cov_d = [M_ondiag(d), M_offdiag(d);
+            M_offdiag(d), M_ondiag(d)];
 
-% we put this covariance into 2 x 2 x N shape, as required by mvncdf call
-% below
-up = @(x) reshape(x,1,1,N);
-K_offdiag_N = up(L.^2./(2*L + D));
-K_ondiag_N = up(L) - K_offdiag_N;
-K_cov_N = [K_ondiag_N, K_offdiag_N; K_offdiag_N, K_ondiag_N];
-
-
-% all the required 1D Gaussian_integrals between l and u
-log_normcdf_lu_N = truncNormMoments(l, u, mu, K_ondiag_N(:));
-sum_log_normcdf_lu_N = sum(log_normcdf_lu_N);
-
-% all the required 2D Gaussian integrals between l and u
-mvncdf_lu_N = mvncdfN(l_N, u_N, mu_N, K_cov_N);
-sum_log_mvncdf_lu_N = sum(log(mvncdf_lu_N)); 
-
-
-
-% t: target hyper-rectangle
-% g: new gaussian convolution
-% h: old gaussian convolutions
-
-% this is the log of the squared output scale, chosen so that K_tt is
-% exactly one. Note that we also drop the K_const = N(0,0,2*L + D) factor
-% from all covariances; this term gets lumped in with the output scale.
+    sum_log_mvncdf_lu_N = sum_log_mvncdf_lu_N + ...
+        log(mvncdf(l_d, u_d, mean_d, cov_d));
+end
+% log_variance is the log of the squared output scale, chosen so that K_tt
+% is exactly one. Note that we also drop the K_const = N(0,0,2*L + D)
+% factor from all covariances; this term gets lumped in with the output
+% scale.
 log_variance = - sum_log_mvncdf_lu_N;
 
-% variance of target hyper-rectangle
-K_tt = 1;
-% % delete the below if the above works
-% % u_sub_l = (u - l);
-% % K_tt_vec = -2 * normpdf(0, 0, D) + 2 * normpdf(l, u, D) + ...
-% %     u_sub_l./sqrt(D) .* erf(u_sub_l./(sqrt(2*D)));
-% % K_tt = prod(K_tt_vec);
+% K is always a covariance matrix. Below, we use the subscripts:
+% t: target hyper-rectangle
+% g: new gaussian convolution
+% d: all gaussian convolutions
+
+% variance of target hyper-rectangle; we've scaled so that this is one.
+K_t = 1;
+
+% Take or read in data
+% =========================================================================
 
 
-K_ts = nan(1, N);
-for i = 1:N
-    K_ts(i) = exp(log_variance + ...
-                    log(mvncdf_lu_N(i)) + ...
-                    sum_log_normcdf_lu_N - log_normcdf_lu_N(i));
-end
 
-K_ss = nan(N, N);
-for i = 1:N
-    K_ss(i) = exp(log_variance + ...
-                    log(mvncdf_lu_N(i)) + ...
-                    sum_log_normcdf_lu_N - log_normcdf_lu_N(i));
-end
+% Initialise R_d, the cholesky factor of the covariance matrix over data
+R_d = nan(0, 0);
+% Initialise D_d = inv(R_d') * (convolution observations);
+D_d = nan(0, 1);
+% Initialise S_dt = inv(R_d') * K_td';
+S_dt = nan(0, 1);
 
+% active_data_selection = true implies that we intelligently select
+% observations. If false, we simply read in data from inputs. 
+active_data_selection = isempty(opt.data);
 
-while cputime - start_time < opt.total_time
-    % take new observation
+% initialise the structure that will store our Gaussian convolution
+% observations in it. m represents the mean of such a Gaussian, V the
+% diagonal of its diagonal covariance, and conv the actual convolution
+% observation. 
+data = struct('m', [], 'V', [], 'conv', []); 
     
-    
-    best_c;
-end
+if active_data_selection
     
 
-
-% the computation got K_ss could be vectorized if it proves excessively
-% costly
-K_ss = nan(N, N);
-for i = 1:N
-    for j = 1:N
-        if i == j
-            K_ss(i, j) = K_const * mvncdf_lu_N(i);
-        else
-            K_ss(i, j) = K_const * normcdf_lu_N(i) * normcdf_lu_N(j);
-        end
+    % details yet to be filled in
+    
+else
+    full_data = opt.data;
+    
+    for d = 1:numel(data)
+    % add new observation
+        
+        m_g = full_data(d).m;
+        V_g = full_data(d).V;
+        
+        [R_d, D_d, S_dt, data] = ...
+            add_new_datum(m_g, V_g, mu, Sigma, ...
+            M_ondiag, M_offdiag, l, u, log_variance, ...
+            R_d, D_d, S_dt, data);
     end
 end
-
-
-% while cputime - start_time < opt.total_time
-%    % take new observation
-% 
-% 
-%    best_c = 1;
-% 
-% end
+    
+[m_Z, sd_Z] = predict(K_t, R_d, D_d, S_dt);
 
 end
 
-function [K_sg, K_gg, K_gh, K_gs] = ...
-    convolution_covariances(m_g, V_g, m_h, V_h, mu, ...
-    K_const, K_ondiag_N, K_offdiag_N)
+function [R_d, D_d, S_dt, data] = ...
+    add_new_datum(m_g, V_g, mu, Sigma, ...
+    M_ondiag, M_offdiag, l, u, log_variance, ...
+    R_d, D_d, S_dt, data)
+% d includes g
 % covariance between convolutions g and h
 % m_g: mean of new Gaussian convolution (n * 1) 
 % V_g: diagonal of (diagonal) covariance of 
 %           new Gaussian convolution (n * 1)
-% m_h: mean of old Gaussian convolutions (n * num_h) 
-% V_h: diagonal of (diagonal) covariance of 
+% m_d: mean of old Gaussian convolutions (n * num_h) 
+% V_d: diagonal of (diagonal) covariance of 
 %           old Gaussian convolutions (n * num_h)
 
+num_data = numel(data);
 
+% add new convolution observation to data structure
+data(num_data+1).m = m_g;
+data(num_data+1).V = V_g;
+data(num_data+1).conv = mvnpdf(m_g, mu, V_g + Sigma);
+
+num_data = numel(data);
+num_dims = length(mu);
+
+% compute new elements of covariance matrix over data, K_d
+log_K_gd = log_variance * ones(num_data, 1);
+for i = 1:num_data
+
+    m_di = data(i).m;
+    V_di = data(i).V;
+    
+    % K_gd(i) is a product of bivariate Gaussians, one for each dimension
+    for d = 1:num_dims;
+        
+        val_d = [m_di(d); m_di(d)];
+        mean_d = [mu(d); mu(d)];
+        cov_d = [M_ondiag(d) + V_di(d), M_offdiag(d);
+                M_offdiag(d), M_ondiag(d) + V_di(d)];
+        
+        log_K_gd(i) = log_K_gd(i) + ...
+            logmvnpdf(val_d, mean_d, cov_d);
+    end
+end
+K_gd = exp(log_K_gd);
+
+% update cholesky factor R_d of covariance matrix over data, K_d
+old_R_d = R_d; % need to store this to update D_d and S_dt, below
+K_d = [nan(num_data-1), K_gd(1:end-1)'; 
+        K_gd(1:end-1), improve_covariance_conditioning(K_gd(end))];
+R_d = updatechol(K_d, old_R_d, num_data);
+
+% update product D_d = inv(R_d') * [data(:).conv]';
+D_d = updatedatahalf(R_d, vertcat(data(:).conv), D_d, old_R_d, num_data);
+
+% compute new elements of covariance vector between target and data
+mean = mu + M_offdiag .* (M_ondiag + V_g).^-1 .* (m_g - mu);
+var = M_ondiag - M_offdiag .* (M_ondiag + V_g).^-1 .* M_offdiag;
+
+log_K_tg = log_variance + ...
+            sum(lognormpdf(m_g, mu, M_ondiag + V_g)) + ...
+            truncNormMoments(l, u, mean, var);
+K_tg = exp(log_K_tg);
+K_td = [nan(num_data-1), K_tg];
+
+% update product S_dt = inv(R_d') * K_td';
+S_dt = updatedatahalf(R_d, K_td, S_dt, old_R_d, num_data);
 
 end
+
+function [m, sd] = predict(K_t, R_d, D_d, S_dt)
+
+% gp posterior mean
+m = S_dt' * D_d;
+%gp posterior variance
+var = K_t - S_dt' * S_dt;
+
+sd = sqrt(var)

@@ -18,6 +18,10 @@ function [expected_Z, variance, hypers] = ...
 % David Duvenaud
 % November 2011
 
+if size(y,2) > size(y,1)
+    y = y';
+end
+
 D = numel(prior.mean);
 N = length(y);
 

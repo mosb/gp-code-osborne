@@ -1,4 +1,4 @@
-function [log_mean_evidence, log_var_evidence, sample_locs, sample_vals] = ...
+function [log_mean_evidence, log_var_evidence, sample_locs, diagnostics, sample_vals] = ...
     bmc(loglik_fn, prior, opt)
 % Naive Bayesian Monte Carlo.  Chooses samples based on AIS.
 %
@@ -44,12 +44,13 @@ sample_vals = stats.all_samples.logliks;
 opt.num_samples = length(sample_vals);
 
 % Now call BMC using the exp of those samples.
-[mean_evidence, var_evidence] = ...
+[mean_evidence, var_evidence, hypers] = ...
     bmc_integrate(sample_locs, exp(sample_vals - max(sample_vals)), prior);
 
 log_mean_evidence = log(mean_evidence) + max(sample_vals);
 log_var_evidence = log(var_evidence) + 2*max(sample_vals);
 
+diagnostics.hypers = hypers;
 
 if var_evidence < 0
     warning('variance of evidence negative');
