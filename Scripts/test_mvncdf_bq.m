@@ -12,4 +12,7 @@ Sigma = Sigma'*Sigma;
 l = rand(D,1);
 u = rand(D,1)+l;
 
+
+real_ans = mvncdf(l, u, mu, Sigma)
 [ m_Z, sd_Z ] = mvncdf_bq( l, u, mu, Sigma, opt )
+
