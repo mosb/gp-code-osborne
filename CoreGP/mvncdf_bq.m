@@ -95,8 +95,6 @@ K_t = 1;
 % Take or read in data
 % =========================================================================
 
-
-
 % Initialise R_d, the cholesky factor of the covariance matrix over data
 R_d = nan(0, 0);
 % Initialise D_d = inv(R_d') * (convolution observations);
@@ -134,6 +132,9 @@ else
             R_d, D_d, S_dt, data);
     end
 end
+
+% Compute final prediction
+% =========================================================================
     
 [m_Z, sd_Z] = predict(K_t, D_d, S_dt);
 
@@ -151,6 +152,8 @@ function [R_d, D_d, S_dt, data] = ...
 num_data = numel(data);
 
 % add new convolution observation to data structure
+% =========================================================================
+  
 data(num_data+1).m = m_g;
 data(num_data+1).V = V_g;
 data(num_data+1).conv = mvnpdf(m_g, mu, diag(V_g) + Sigma);
@@ -159,6 +162,8 @@ num_data = numel(data);
 N = length(mu);
 
 % compute new elements of covariance matrix over data, K_d
+% =========================================================================
+  
 log_K_gd = log_variance * ones(num_data, 1);
 for i = 1:num_data
 
@@ -180,15 +185,21 @@ end
 K_gd = exp(log_K_gd);
 
 % update cholesky factor R_d of covariance matrix over data, K_d
+% =========================================================================
+  
 old_R_d = R_d; % need to store this to update D_d and S_dt, below
 K_d = [nan(num_data-1), K_gd(1:end-1)'; 
         K_gd(1:end-1), improve_covariance_conditioning(K_gd(end))];
 R_d = updatechol(K_d, old_R_d, num_data);
 
 % update product D_d = inv(R_d') * [data(:).conv]';
+% =========================================================================
+  
 D_d = updatedatahalf(R_d, vertcat(data(:).conv), D_d, old_R_d, num_data);
 
 % compute new elements of covariance vector between target and data
+% =========================================================================
+  
 mean = mu + M_offdiag .* (M_ondiag + V_g).^-1 .* (m_g - mu);
 var = M_ondiag - M_offdiag .* (M_ondiag + V_g).^-1 .* M_offdiag;
 
@@ -199,6 +210,8 @@ K_tg = exp(log_K_tg);
 K_td = [nan(num_data-1), K_tg];
 
 % update product S_dt = inv(R_d') * K_td';
+% =========================================================================
+  
 S_dt = updatedatahalf(R_d, K_td, S_dt, old_R_d, num_data);
 
 end
