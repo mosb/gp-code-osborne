@@ -65,7 +65,7 @@ M_offdiag = L.^2./(2*L + D);
 M_ondiag = L - M_offdiag;
 
 sum_log_mvncdf_lu_N = 0;
-for d = 1:num_dims;
+for d = 1:N;
     
     % both variables x1(d) and x2(d) have mu(d) as their mean, l(d) as
     % their lower limit and u(d) as their upper limit
@@ -112,7 +112,7 @@ active_data_selection = isempty(opt.data);
 % observations in it. m represents the mean of such a Gaussian, V the
 % diagonal of its diagonal covariance, and conv the actual convolution
 % observation. 
-data = struct('m', [], 'V', [], 'conv', []); 
+data = []; 
     
 if active_data_selection
     
@@ -135,7 +135,7 @@ else
     end
 end
     
-[m_Z, sd_Z] = predict(K_t, R_d, D_d, S_dt);
+[m_Z, sd_Z] = predict(K_t, D_d, S_dt);
 
 end
 
@@ -157,10 +157,10 @@ num_data = numel(data);
 % add new convolution observation to data structure
 data(num_data+1).m = m_g;
 data(num_data+1).V = V_g;
-data(num_data+1).conv = mvnpdf(m_g, mu, V_g + Sigma);
+data(num_data+1).conv = mvnpdf(m_g, mu, diag(V_g) + Sigma);
 
 num_data = numel(data);
-num_dims = length(mu);
+N = length(mu);
 
 % compute new elements of covariance matrix over data, K_d
 log_K_gd = log_variance * ones(num_data, 1);
@@ -170,7 +170,7 @@ for i = 1:num_data
     V_di = data(i).V;
     
     % K_gd(i) is a product of bivariate Gaussians, one for each dimension
-    for d = 1:num_dims;
+    for d = 1:N;
         
         val_d = [m_di(d); m_di(d)];
         mean_d = [mu(d); mu(d)];
@@ -207,11 +207,13 @@ S_dt = updatedatahalf(R_d, K_td, S_dt, old_R_d, num_data);
 
 end
 
-function [m, sd] = predict(K_t, R_d, D_d, S_dt)
+function [m, sd] = predict(K_t, D_d, S_dt)
 
 % gp posterior mean
 m = S_dt' * D_d;
 %gp posterior variance
 var = K_t - S_dt' * S_dt;
 
-sd = sqrt(var)
+sd = sqrt(var);
+
+end
