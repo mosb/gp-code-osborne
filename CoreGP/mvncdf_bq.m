@@ -122,7 +122,7 @@ if active_data_selection
 else
     full_data = opt.data;
     
-    for d = 1:numel(data)
+    for d = 1:numel(full_data)
     % add new observation
         
         m_g = full_data(d).m;
@@ -143,14 +143,10 @@ function [R_d, D_d, S_dt, data] = ...
     add_new_datum(m_g, V_g, mu, Sigma, ...
     M_ondiag, M_offdiag, l, u, log_variance, ...
     R_d, D_d, S_dt, data)
-% d includes g
-% covariance between convolutions g and h
+% Update to include new convolution, NB: d includes g
 % m_g: mean of new Gaussian convolution (n * 1) 
 % V_g: diagonal of (diagonal) covariance of 
 %           new Gaussian convolution (n * 1)
-% m_d: mean of old Gaussian convolutions (n * num_h) 
-% V_d: diagonal of (diagonal) covariance of 
-%           old Gaussian convolutions (n * num_h)
 
 num_data = numel(data);
 
