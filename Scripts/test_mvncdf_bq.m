@@ -1,3 +1,5 @@
+clear;
+
 D = 1;
 num_convs = 100;
 

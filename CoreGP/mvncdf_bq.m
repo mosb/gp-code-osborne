@@ -122,6 +122,12 @@ else
     
     for d = 1:numel(full_data)
     % add new observation
+    
+        if rem(d, 10) == 0
+            fprintf('\n%g',d);
+        else
+            fprintf('.');
+        end
         
         m_g = full_data(d).m;
         V_g = full_data(d).V;
@@ -164,7 +170,7 @@ N = length(mu);
 % compute new elements of covariance matrix over data, K_d
 % =========================================================================
   
-log_K_gd = log_variance * ones(num_data, 1);
+log_K_gd = log_variance * ones(1, num_data);
 for i = 1:num_data
 
     m_di = data(i).m;
@@ -173,9 +179,10 @@ for i = 1:num_data
     % K_gd(i) is a product of bivariate Gaussians, one for each dimension
     for d = 1:N;
         
-        val_d = [m_di(d); m_di(d)];
+        val_d = [m_g(d); m_di(d)];
         mean_d = [mu(d); mu(d)];
-        cov_d = [M_ondiag(d) + V_di(d), M_offdiag(d);
+        
+        cov_d = [M_ondiag(d) + V_g(d), M_offdiag(d);
                 M_offdiag(d), M_ondiag(d) + V_di(d)];
         
         log_K_gd(i) = log_K_gd(i) + ...
@@ -201,18 +208,18 @@ D_d = updatedatahalf(R_d, vertcat(data(:).conv), D_d, old_R_d, num_data);
 % =========================================================================
   
 mean = mu + M_offdiag .* (M_ondiag + V_g).^-1 .* (m_g - mu);
-var = M_ondiag - M_offdiag .* (M_ondiag + V_g).^-1 .* M_offdiag;
+sd = sqrt(M_ondiag - M_offdiag .* (M_ondiag + V_g).^-1 .* M_offdiag);
 
 log_K_tg = log_variance + ...
-            sum(lognormpdf(m_g, mu, M_ondiag + V_g)) + ...
-            truncNormMoments(l, u, mean, var);
+            sum(lognormpdf(m_g, mu, sqrt(M_ondiag + V_g)) + ...
+            truncNormMoments(l, u, mean, sd));
 K_tg = exp(log_K_tg);
-K_td = [nan(num_data-1), K_tg];
+K_td = [nan(1, num_data-1), K_tg];
 
 % update product S_dt = inv(R_d') * K_td';
 % =========================================================================
   
-S_dt = updatedatahalf(R_d, K_td, S_dt, old_R_d, num_data);
+S_dt = updatedatahalf(R_d, K_td', S_dt, old_R_d, num_data);
 
 end
 
