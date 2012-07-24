@@ -128,7 +128,7 @@ set(gca, 'TickDir', 'out')
 set(gca, 'Box', 'off', 'FontSize', 10); 
 set(fh, 'color', 'white'); 
 set(gca, 'YGrid', 'off');
-
+set(gca, 'color', 'white'); 
 
 
 set(realh, ... 

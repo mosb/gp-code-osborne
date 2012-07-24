@@ -227,7 +227,7 @@ function [m, sd] = predict(K_t, D_d, S_dt)
 
 % gp posterior mean
 m = S_dt' * D_d;
-%gp posterior variance
+% gp posterior variance
 var = K_t - S_dt' * S_dt;
 
 sd = sqrt(var);
