@@ -1,4 +1,4 @@
-function [ m_Z, sd_Z ] = mvncdf_bq( l, u, mu, Sigma, opt )
+function [ m_Z, sd_Z, log_sd_Z ] = mvncdf_bq( l, u, mu, Sigma, opt )
 % Bayesian quadrature for Gaussian integration. Our domain has dimension N.
 %
 % INPUTS
@@ -143,6 +143,18 @@ end
 % =========================================================================
     
 [m_Z, sd_Z] = predict(K_t, D_d, S_dt);
+
+% Above, we chose an absurdly large sqd output scale (exp(log_variance)) so
+% as to make things more numerically stable. Now we have to scale to
+% correct for our scaling above; the mean is unaffected, given our
+% observations are noiseless, and the variance is affected only by a simple
+% multiplicative factor.
+
+% this is the volume of the bounding Gaussian enclosed within the bounds
+realistic_log_sd = sum(truncNormMoments(l, u, mu, L));
+
+log_sd_Z = realistic_log_sd + log(sd_Z);
+sd_Z = exp(log_sd_Z);
 
 end
 
