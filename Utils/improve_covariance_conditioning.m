@@ -80,6 +80,8 @@ mod_in(active_inds) = abs(usable_inv_scales.*usable_in.*usable_inv_scales_t);
 % b = [];
 
 if identify_problems
+    % don't actually modify the matrix, just report which rows and columns
+    % are problematic
     out = false(N,1);
 else
     sqd_jitters = zeros(N,1);

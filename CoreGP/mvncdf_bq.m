@@ -162,9 +162,12 @@ num_data = numel(data);
   
 data(num_data+1).m = m_g;
 data(num_data+1).V = V_g;
+% mvnpdf requires a cholesky factorisation, which scales as O(N^3)
 data(num_data+1).conv = mvnpdf(m_g, mu, diag(V_g) + Sigma);
 
+% update the number of data
 num_data = numel(data);
+
 N = length(mu);
 
 % compute new elements of covariance matrix over data, K_d

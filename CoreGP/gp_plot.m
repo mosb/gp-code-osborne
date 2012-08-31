@@ -17,7 +17,7 @@
 %   legends, one for observations and the other for mean/sd, the
 %   location of the mean/sd legend.
 
-function gp_plot (x, m, sd, obs_x, obs_y, real_x, real_y, params)
+function [meanh, SDh] = gp_plot (x, m, sd, obs_x, obs_y, real_x, real_y, params)
 
 if nargin<8
     params = struct();
