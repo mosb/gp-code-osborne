@@ -35,7 +35,8 @@ for dim  = 1:num_dims
     [YMean,YSD] = ...
         predict_gp(XStar, gp, [], quad_gp);
 
-    figure
+    figure(dim)
+    clf
     params.x_label = ['x',num2str(dim)];
     params.width = 20;
     params.height = 10;
@@ -49,5 +50,5 @@ end
 
 input_importance(gp, X_data);
 
-figure
+figure(dim+1)
 plot3(X_data(:,1),X_data(:,2), y_data,'.');
