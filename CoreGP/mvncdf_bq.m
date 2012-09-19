@@ -1,4 +1,4 @@
-function [ m_Z, sd_Z, log_sd_Z ] = mvncdf_bq( l, u, mu, Sigma, opt )
+function [ m_Z, sd_Z, data, log_sd_Z ] = mvncdf_bq( l, u, mu, Sigma, opt )
 % Bayesian quadrature for Gaussian integration. Our domain has dimension N.
 %
 % INPUTS
@@ -48,8 +48,12 @@ D = diag(Sigma);
 
 % prior is mvnpdf(x, mu, diag(L)); this defines the envelope outside which
 % we expect our Gaussian integrand to be zero
-max_eig = eigs(Sigma, 1);
-L = ones(N, 1) * max_eig;
+cvx_begin sdp
+variable L(N,N) diagonal
+minimize(trace(L))
+L >= K
+cvx_end
+L = diag(L);
 
 % We're about to compute the product of the bivariate Gaussian cdfs,
 % sum_log_mvncdf_lu_N,  that constitutes the self-variance of the target

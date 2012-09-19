@@ -45,7 +45,11 @@ if opt.derivative_observations
         opt.num_hypersamples);
     
     hps_struct = set_hps_struct(gp);
-    gp.covfn = @(flag) derivativise(@gp.covfn,flag);
+    % need to define this handle or else infinite recursion results
+    if ~isfield(gp, 'non_deriv_cov_fn')
+        gp.non_deriv_cov_fn = gp.covfn;
+    end
+    gp.covfn = @(flag) derivativise(gp.non_deriv_cov_fn,flag);
     gp.meanfn = @(flag) wderiv_mean_fn(hps_struct,flag);
     
     gp.X_data = X_data;

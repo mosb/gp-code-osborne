@@ -6,6 +6,8 @@ function gp = set_gp(covfn_name, meanfn_name, gp, X_data, y_data, num_hypersampl
 % can be 'constant', 'planar' or 'quadratic'. The mean function's
 % hyperparameters are all set by performing a least-squares fit.
 
+% define optional input arguments
+% =========================================================================
 if nargin<6
     num_hypersamples = 1000;
 end
@@ -14,6 +16,7 @@ num_hypersamples = max(1, ceil(num_hypersamples));
 if isempty(gp) 
     gp = struct();
 end
+
 no_hyperparams = ~isfield(gp,'hyperparams');
 if no_hyperparams
     num_existing_samples = 1;
@@ -29,7 +32,8 @@ if no_hyperparams
     grid_num_hypersamples = num_hypersamples;
     
 else
-
+    % insert default values should any fields be missing from
+    % gp.hyperparams
     default_vals = struct('priorSD', 1, ...
                         'NSamples', 1, ...
                         'type', 'inactive');
@@ -92,11 +96,11 @@ create_covfn = ~isempty(covfn_name) && (~isfield(gp,'covfn_name')...
                 || ~all(strcmpi(covfn_name,gp.covfn_name)))...
                         || ~isfield(gp,'covfn')...
                         || isempty(gp.covfn);
-create_meanfn = ~isempty(meanfn_name) && (~isfield(gp,'meanfn_name')...
-                || ~all(strcmpi(meanfn_name,gp.meanfn_name)))...
-                        ||(~isfield(gp,'meanfn')...
-                        || isempty(gp.meanfn)) && (~isfield(gp,'meanPos')...
-                        || isempty(gp.meanPos));
+create_meanfn = ~isempty(meanfn_name); 
+% && ... % don't already have a mean function
+%         ( ~isfield(gp,'meanfn_name') || ~all(strcmpi(meanfn_name,gp.meanfn_name)) )...
+%         ||( ~isfield(gp,'meanfn') || isempty(gp.meanfn) ) ...
+%             &&( ~isfield(gp,'meanPos') || isempty(gp.meanPos) );
 update_best_hypersample = isfield(gp, 'hypersamples');
 
 
@@ -249,6 +253,21 @@ if ~isfield(gp, 'sqd_diffs_cov')
     gp.sqd_diffs_cov = false;
 end
 
+
+active=[];
+for hyperparam = 1:numel(gp.hyperparams)
+    if gp.hyperparams(hyperparam).priorSD <=0
+        gp.hyperparams(hyperparam).type = 'inactive';
+    end
+    if ~strcmpi(gp.hyperparams(hyperparam).type,'inactive')
+        active=[active,hyperparam];
+    else
+        gp.hyperparams(hyperparam).NSamples=1;
+    end
+end
+gp.active_hp_inds=active;
+
+
 if have_y_data && have_X_data
 if update_best_hypersample
     % set the worst half of hypersamples to exploratory points centred
@@ -304,20 +323,7 @@ else %if (create_logNoiseSD || create_logInputScales || create_logOutputScale)
 end
 end
 
-if no_hyperparams
-    active=[];
-    for hyperparam = 1:numel(gp.hyperparams)
-        if gp.hyperparams(hyperparam).priorSD <=0
-            gp.hyperparams(hyperparam).type = 'inactive';
-        end
-        if ~strcmpi(gp.hyperparams(hyperparam).type,'inactive')
-            active=[active,hyperparam];
-        else
-            gp.hyperparams(hyperparam).NSamples=1;
-        end
-    end
-    gp.active_hp_inds=active;
-end
+
 
 
 function num = incr_num_hps(gp)

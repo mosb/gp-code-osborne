@@ -19,11 +19,11 @@ u = inf(N, 1);
 % =================================================
 opt.data = [];
 
-[ m_Z, sd_Z ] = mvncdf_bq( l, u, mu, Sigma, opt )
+[ m_Z, sd_Z, data ] = mvncdf_bq( l, u, mu, Sigma, opt )
 
 % single datum test
 % =================================================
 opt.data(1).m = 0.5*ones(N, 1);
 opt.data(1).V = 0.05*ones(N, 1);
 
-[ m_Z, sd_Z ] = mvncdf_bq( l, u, mu, Sigma, opt )
+[ m_Z, sd_Z, data ] = mvncdf_bq( l, u, mu, Sigma, opt )

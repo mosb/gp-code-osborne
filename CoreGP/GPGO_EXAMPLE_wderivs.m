@@ -10,7 +10,7 @@ f = @banana;
 
 opt.plots  = false;
 opt.derivative_observations = true;
-opt.function_evaluations = 67;
+opt.function_evaluations = 25;
 [minimum, minimum_location, X_data, y_data, gp, quad_gp] = ...
     gpgo(f, x0, lower_bound, upper_bound, opt);
 

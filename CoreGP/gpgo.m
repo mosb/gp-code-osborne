@@ -142,7 +142,9 @@ errors = struct();
 if opt.derivative_observations
     
     hps_struct = set_hps_struct(gp);
-    gp.covfn = @(flag) derivativise(@gp.covfn,flag);
+    % need to define this handle or else infinite recursion results
+    gp.non_deriv_cov_fn = gp.covfn;
+    gp.covfn = @(flag) derivativise(gp.non_deriv_cov_fn,flag);
     gp.meanfn = @(flag) wderiv_mean_fn(hps_struct,flag);
 end
 
