@@ -118,8 +118,26 @@ data = [];
     
 if active_data_selection
     
-
-    % details yet to be filled in
+    start_time = cputime;
+    while cputime - start_time < opt.total_time
+        % add new observation
+    
+        if rem(d, 10) == 0
+            fprintf('\n%g',d);
+        else
+            fprintf('.');
+        end
+        
+       % details yet to be filled in
+ 
+        m_g = ;
+        V_g = ;
+        
+        [R_d, D_d, S_dt, data] = ...
+            add_new_datum(m_g, V_g, mu, Sigma, ...
+            M_ondiag, M_offdiag, l, u, log_variance, ...
+            R_d, D_d, S_dt, data);
+    end
     
 else
     full_data = opt.data;
@@ -250,5 +268,15 @@ m = S_dt' * D_d;
 var = K_t - S_dt' * S_dt;
 
 sd = sqrt(var);
+
+end
+
+function [m, V] = min_expected_variance
+
+
+
+end
+
+function exp_var = expected_variance(m, V)
 
 end
