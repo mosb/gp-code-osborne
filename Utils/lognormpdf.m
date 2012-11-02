@@ -1,6 +1,6 @@
 function y = lognormpdf(x,mu,sigma)
-%NORMPDF Normal probability density function (pdf).
-%   Y = NORMPDF(X,MU,SIGMA) returns the pdf of the normal distribution with
+%logNORMPDF log Normal probability density function (pdf).
+%   Y = logNORMPDF(X,MU,SIGMA) returns the log pdf of the normal distribution with
 %   mean MU and standard deviation SIGMA, evaluated at the values in X.
 %   The size of Y is the common size of the input arguments.  A scalar
 %   input functions as a constant matrix of the same size as the other

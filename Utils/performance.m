@@ -1,4 +1,4 @@
-function [RMSE,normed_RMSE]=performance(XStars,YMean,YSD,XReals,YReals,burn_in)
+function [RMSE, normed_RMSE, logL] = performance(XStars,YMean,YSD,XReals,YReals,burn_in)
 
 if nargin<6
     burn_in=0;
@@ -33,4 +33,10 @@ mean_sqd_reals = mean(reals(~isnan(reals)).^2);
 RMSE=sqrt(mean_sqd_diffs);
 %score = score/(max(YReals)-min(YReals));
 
+if nargout >1
 normed_RMSE=10*log10(mean_sqd_diffs/(mean_sqd_reals-mean_reals^2));
+
+if nargout>2
+logL = prod(lognormpdf(YReals, YMean, YSD));
+end
+end

@@ -32,6 +32,13 @@ if nargin < 5
    opt = struct();
 end
 
+% stop inf * 0 situations arising below.
+u = min(u, 1/eps);
+l = min(l, 1/eps);
+u = max(u, -1/eps);
+l = max(l, -1/eps);
+
+
 % Set unspecified fields to default values.
 default_opt = struct('total_time', 300, ...
                     'data', []);
@@ -51,7 +58,7 @@ D = diag(Sigma);
 cvx_begin sdp
 variable L(N,N) diagonal
 minimize(trace(L))
-L >= K
+L >= Sigma
 cvx_end
 L = diag(L);
 
@@ -130,8 +137,8 @@ if active_data_selection
         
        % details yet to be filled in
  
-        m_g = ;
-        V_g = ;
+        m_g = nan;
+        V_g = nan;
         
         [R_d, D_d, S_dt, data] = ...
             add_new_datum(m_g, V_g, mu, Sigma, ...
@@ -180,7 +187,8 @@ sd_Z = exp(log_sd_Z);
 
 end
 
-function [R_d, D_d, S_dt, data] = ...
+function [R_d, D_d, S_dt, data, ...
+    T_dt, dK_td_dm_g, dK_d_dm_g, dK_td_dV_g, dK_d_dV_g] = ...
     add_new_datum(m_g, V_g, mu, Sigma, ...
     M_ondiag, M_offdiag, l, u, log_variance, ...
     R_d, D_d, S_dt, data)
@@ -188,19 +196,19 @@ function [R_d, D_d, S_dt, data] = ...
 % m_g: mean of new Gaussian convolution (n * 1) 
 % V_g: diagonal of (diagonal) covariance of 
 %           new Gaussian convolution (n * 1)
+% optionally also output quantities sufficient to calculate gradient of
+% variance wrt m_g and V_g
 
-num_data = numel(data);
+% update the number of data
+num_data = numel(data) + 1;
 
 % add new convolution observation to data structure
 % =========================================================================
   
-data(num_data+1).m = m_g;
-data(num_data+1).V = V_g;
+data(num_data).m = m_g;
+data(num_data).V = V_g;
 % mvnpdf requires a cholesky factorisation, which scales as O(N^3)
-data(num_data+1).conv = mvnpdf(m_g, mu, diag(V_g) + Sigma);
-
-% update the number of data
-num_data = numel(data);
+data(num_data).conv = mvnpdf(m_g, mu, diag(V_g) + Sigma);
 
 N = length(mu);
 
@@ -244,30 +252,146 @@ D_d = updatedatahalf(R_d, vertcat(data(:).conv), D_d, old_R_d, num_data);
 % compute new elements of covariance vector between target and data
 % =========================================================================
   
-mean = mu + M_offdiag .* (M_ondiag + V_g).^-1 .* (m_g - mu);
-sd = sqrt(M_ondiag - M_offdiag .* (M_ondiag + V_g).^-1 .* M_offdiag);
+% p stands for 'posterior'
+pm_g = mu + M_offdiag .* (M_ondiag + V_g).^-1 .* (m_g - mu);
+pV_g = M_ondiag - M_offdiag .* (M_ondiag + V_g).^-1 .* M_offdiag;
+pSD_g = sqrt(pV_g);
 
+data(num_data).pm = pm_g;
+data(num_data).pV = pV_g;
+
+sumlog_K_tg_normpdfs = sum(lognormpdf(m_g, mu, sqrt(M_ondiag + V_g)));
+log_K_tg_normcdfs = truncNormMoments(l, u, pm_g, pSD_g); % this computes log moments
 log_K_tg = log_variance + ...
-            sum(lognormpdf(m_g, mu, sqrt(M_ondiag + V_g)) + ...
-            truncNormMoments(l, u, mean, sd));
+             sumlog_K_tg_normpdfs + ...
+            sum(log_K_tg_normcdfs);
 K_tg = exp(log_K_tg);
-K_td = [nan(1, num_data-1), K_tg];
+
+% zeros in K_td are not used in the process of generating S_dt and help
+% with the computation of gradients below
+K_td = [zeros(1, num_data-1), K_tg];
 
 % update product S_dt = inv(R_d') * K_td';
 % =========================================================================
   
 S_dt = updatedatahalf(R_d, K_td', S_dt, old_R_d, num_data);
 
+%if nargout > 4
+    % output quantities sufficient to calculate gradient of variance wrt 
+    % m_g and V_g
+
+    % determine T_dt = inv(K_d') * K_td';
+    % =========================================================================
+
+    T_dt = R_d \ S_dt;
+    
+    stack = @(mat) reshape(full(mat), 1, size(mat, 2), N);
+    
+    % quad is the quadratic form -0.5 * (mu - m_g)^2/(M_ondiag + V_g)
+    
+    % first, compute dK_td_dm_g (the gradient of dK_td wrt m_g)
+    dquad_m_g_stack = stack((mu - m_g) ./ (M_ondiag + V_g));
+    dpm_g_dm_g = ...
+        - M_offdiag .* (M_ondiag + V_g).^-2 .* (m_g - mu);
+    dpV_g_dm_g = ...
+          M_offdiag .* (M_ondiag + V_g).^-2 .* M_offdiag; 
+    
+    dK_td_dm_g = bsxfun(@times, dquad_m_g_stack, K_td) ...
+         + 0.5 * bsxfun(@times, K_td, ...
+        exp(- stack(log_K_tg_normcdfs) .* stack( ...
+        normpdf(u, pm_g, pSD_g) ...
+            .* (2 * pV_g .* dpm_g_dm_g + (u - pm_g) .* dpV_g_dm_g) ...
+        - normpdf(l, pm_g, pSD_g) ...
+            .* (2 * pV_g .* dpm_g_dm_g + (l - pm_g) .* dpV_g_dm_g))));
+   
+    % second, compute dK_d_dm_g (the gradient of dK_d wrt m_g)
+
+    dK_gd_dm_g = bsxfun(@times, K_gd, stack( ...
+        (bsxfun(@minus, horzcat(data(:).pm), m_g)) ...
+        ./ (bsxfun(@plus, horzcat(data(:).pV), V_g)) ));
+    
+    % the last datum is g (last element of d is g)
+    
+    det_M_plus_V_g = (M_ondiag + V_g).^2 + M_offdiag.^2;
+    dK_g_dm_g = K_gd(:, end) .* stack( ...
+        2 * (mu - m_g) .* (M_ondiag + V_g - M_offdiag) ./ det_M_plus_V_g );
+    % reminder: M_offdiag = L.^2./(2*L + D);
+    %           M_ondiag = L - M_offdiag;
+    
+    dK_gd_dm_g(:, end, :) = dK_g_dm_g;
+    
+    dK_d_dm_g = [zeros(num_data-1, num_data-1, N), ...
+                    tr(dK_gd_dm_g(:, 1:end-1, :)); % d includes g
+                dK_gd_dm_g];
+    
+    % third, compute dK_td_dV_g (the gradient of dK_td wrt V_g)
+
+    dquad_V_g_stack = stack(0.5 * ((mu - m_g).^2 ./ (M_ondiag + V_g) - 1) ...
+                       ./ (M_ondiag + V_g));
+    dpm_g_dV_g = ...
+        - M_offdiag .* (M_ondiag + V_g).^-2 .* (m_g - mu);
+    dpV_g_dV_g = ...
+          M_offdiag .* (M_ondiag + V_g).^-2 .* M_offdiag; 
+      
+    dK_td_dV_g = bsxfun(@times, dquad_V_g_stack, K_td) ...
+        + 0.5 * bsxfun(@times, K_td, ...
+        exp(- stack(log_K_tg_normcdfs) .* stack( ...
+        normpdf(u, pm_g, pSD_g) ...
+            .* (2 * pV_g .* dpm_g_dV_g + (u - pm_g) .* dpV_g_dV_g) ...
+        - normpdf(u, pm_g, pSD_g) ...
+            .* (2 * pV_g .* dpm_g_dV_g + (l - pm_g) .* dpV_g_dV_g))));
+
+
+    % fourth, compute dK_d_dV_g (the gradient of dK_d wrt V_g)
+
+    dK_gd_dV_g = 0.5 * bsxfun(@times, K_gd, stack( ...
+        ( bsxfun(@minus, horzcat(data(:).pm), m_g).^2 ...
+            - horzcat(data(:).pV) ...
+        ) ./  horzcat(data(:).pV).^2 ));
+    
+    % the last datum is g (last element of d is g)
+    
+    dK_g_dV_g = -K_gd(:, end) .* stack( ...
+        (M_ondiag + V_g) ./ det_M_plus_V_g ...
+        + 2 * (mu - m_g).^2 ./ (M_ondiag + M_offdiag + V_g).^2);
+    % reminder: M_offdiag = L.^2./(2*L + D);
+    %           M_ondiag = L - M_offdiag;
+    
+    dK_gd_dV_g(:, end, :) = dK_g_dV_g;
+    
+    dK_d_dV_g = [zeros(num_data-1, num_data-1, N), ...
+                    tr(dK_gd_dV_g(:, 1:end-1, :)); % d includes g
+                dK_gd_dV_g];
+%end
+
 end
 
-function [m, sd] = predict(K_t, D_d, S_dt)
+function [m, sd, dvar_dm_g, dvar_dV_g] = predict(K_t, D_d, S_dt, T_dt, ...
+    dK_td_dm_g, dK_d_dm_g, dK_td_dV_g, dK_d_dV_g)
+% returns the mean m and standard deviation sd in the target Gaussian
+% integral. If supplied with appropriate additional gradients, also returns
+% the gradients of the variance with respect to mean of new observation,
+% dvar_dm, and its vector of variances, dvar_dV.
 
-% gp posterior mean
-m = S_dt' * D_d;
-% gp posterior variance
-var = K_t - S_dt' * S_dt;
+if nargout < 3
+    % gp posterior mean
+    m = S_dt' * D_d;
+    % gp posterior variance
+    var = K_t - S_dt' * S_dt;
 
-sd = sqrt(var);
+    sd = sqrt(var);
+
+else
+    % function called purely to provide gradient of variance
+    m = nan;
+    sd = nan;
+    
+    dvar_dm_g = -2 * prod3(dK_td_dm_g, T_dt) ...
+                + prod3(T_dt', prod3(dK_d_dm_g, T_dt));
+    
+    dvar_dV_g = -2 * prod3(dK_td_dV_g, T_dt) ...
+                + prod3(T_dt', prod3(dK_d_dV_g, T_dt));
+end
 
 end
 
@@ -277,6 +401,8 @@ function [m, V] = min_expected_variance
 
 end
 
-function exp_var = expected_variance(m, V)
+function [EV, D_EV] = expected_variance(m, V)
+
+
 
 end
