@@ -135,10 +135,9 @@ if active_data_selection
             fprintf('.');
         end
         
-       % details yet to be filled in
- 
-        m_g = nan;
-        V_g = nan;
+        [m_g, V_g] = min_variance(mu, Sigma, ...
+            M_ondiag, M_offdiag, l, u, log_variance, ...
+            R_d, D_d, S_dt, data);
         
         [R_d, D_d, S_dt, data] = ...
             add_new_datum(m_g, V_g, mu, Sigma, ...
@@ -171,7 +170,8 @@ end
 % Compute final prediction
 % =========================================================================
     
-[m_Z, sd_Z] = predict(K_t, D_d, S_dt);
+[m_Z, var_Z] = predict(K_t, D_d, S_dt);
+sd_Z = sqrt(var_Z);
 
 % Above, we chose an absurdly large sqd output scale (exp(log_variance)) so
 % as to make things more numerically stable. Now we have to scale to
@@ -199,6 +199,10 @@ function [R_d, D_d, S_dt, data, ...
 % optionally also output quantities sufficient to calculate gradient of
 % variance wrt m_g and V_g
 
+var_and_grad_only = nargout > 4;
+% output quantities sufficient to calculate gradient of variance wrt 
+% m_g and V_g
+
 % update the number of data
 num_data = numel(data) + 1;
 
@@ -207,8 +211,12 @@ num_data = numel(data) + 1;
   
 data(num_data).m = m_g;
 data(num_data).V = V_g;
-% mvnpdf requires a cholesky factorisation, which scales as O(N^3)
-data(num_data).conv = mvnpdf(m_g, mu, diag(V_g) + Sigma);
+if ~var_and_grad_only
+    % mvnpdf requires a cholesky factorisation, which scales as O(N^3)
+    data(num_data).conv = mvnpdf(m_g, mu, diag(V_g) + Sigma);
+else
+    data(num_data).conv = nan;
+end
 
 N = length(mu);
 
@@ -276,15 +284,14 @@ K_td = [zeros(1, num_data-1), K_tg];
   
 S_dt = updatedatahalf(R_d, K_td', S_dt, old_R_d, num_data);
 
-%if nargout > 4
-    % output quantities sufficient to calculate gradient of variance wrt 
-    % m_g and V_g
+if var_and_grad_only
 
     % determine T_dt = inv(K_d') * K_td';
     % =========================================================================
 
     T_dt = R_d \ S_dt;
     
+    % stack turns the rows of a matrix into stacked plates
     stack = @(mat) reshape(full(mat), 1, size(mat, 2), N);
     
     % quad is the quadratic form -0.5 * (mu - m_g)^2/(M_ondiag + V_g)
@@ -362,29 +369,26 @@ S_dt = updatedatahalf(R_d, K_td', S_dt, old_R_d, num_data);
     dK_d_dV_g = [zeros(num_data-1, num_data-1, N), ...
                     tr(dK_gd_dV_g(:, 1:end-1, :)); % d includes g
                 dK_gd_dV_g];
-%end
+end
 
 end
 
-function [m, sd, dvar_dm_g, dvar_dV_g] = predict(K_t, D_d, S_dt, T_dt, ...
+function [m, var, dvar_dm_g, dvar_dV_g] = predict(K_t, D_d, S_dt, T_dt, ...
     dK_td_dm_g, dK_d_dm_g, dK_td_dV_g, dK_d_dV_g)
 % returns the mean m and standard deviation sd in the target Gaussian
 % integral. If supplied with appropriate additional gradients, also returns
 % the gradients of the variance with respect to mean of new observation,
 % dvar_dm, and its vector of variances, dvar_dV.
 
+% gp posterior variance
+var = K_t - S_dt' * S_dt;
+
 if nargout < 3
     % gp posterior mean
     m = S_dt' * D_d;
-    % gp posterior variance
-    var = K_t - S_dt' * S_dt;
-
-    sd = sqrt(var);
-
 else
     % function called purely to provide gradient of variance
     m = nan;
-    sd = nan;
     
     dvar_dm_g = -2 * prod3(dK_td_dm_g, T_dt) ...
                 + prod3(T_dt', prod3(dK_d_dm_g, T_dt));
@@ -395,14 +399,25 @@ end
 
 end
 
-function [m, V] = min_expected_variance
+function [m, V] = min_variance(mu, Sigma, ...
+    K_t, M_ondiag, M_offdiag, l, u, log_variance, ...
+    R_d, D_d, S_dt, data)
+% note that we can compute the variance after any new observation without
+% requiring an expectation to be computed over the potential convolutions
+% returned by the observation: the variance of a GP is independent of the
+% function values.
 
+% trial
+V_g = rand;
+m_g = rand;
 
+[~, ~, S_dt, ~, ...
+    T_dt, dK_td_dm_g, dK_d_dm_g, dK_td_dV_g, dK_d_dV_g] = ...
+    add_new_datum(m_g, V_g, mu, Sigma, ...
+    M_ondiag, M_offdiag, l, u, log_variance, ...
+    R_d, D_d, S_dt, data);
 
-end
-
-function [EV, D_EV] = expected_variance(m, V)
-
-
+[~, var, dvar_dm_g, dvar_dV_g] = predict(K_t, nan, S_dt, T_dt, ...
+    dK_td_dm_g, dK_d_dm_g, dK_td_dV_g, dK_d_dV_g);
 
 end
