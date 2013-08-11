@@ -61,6 +61,7 @@ fprintf(file, '}}\n');
 fprintf(file, '\\label{tbl:%s}\n', experimentName);
 fprintf(file, '\\begin{center}\n');
 fprintf(file, '\\begin{tabular}{l %s}\n', repmat(' r', 1, metrics));
+fprintf(file, ' \\\\ \\toprule\n');   % Using booktabs
 
 % first line
 fprintf(file, 'Integrand');

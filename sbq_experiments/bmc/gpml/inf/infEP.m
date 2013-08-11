@@ -14,7 +14,7 @@ function [post nlZ dnlZ] = infEP(hyp, mean, cov, lik, x, y)
 persistent last_ttau last_tnu              % keep tilde parameters between calls
 n = size(x,1);
 tol = 1e-6 * n;  % thanks yunus      % tolerance to stop EP iterations
-max_sweep = 100;   % Changed by David Duvenaud from 10 to 100.
+max_sweep = 1000;   % Changed by David Duvenaud from 10 to 100.
 min_sweep = 2;     
 
 if ~ischar(lik), lik = func2str(lik); end    % make likelihood variable a string
