@@ -3,7 +3,7 @@
 close all
 clear
 
-N = 20;
+N = 1;
 % observation inputs
 X_data = linspace(1,100, 50)';
 X_data = repmat(X_data,1,N);
@@ -18,8 +18,8 @@ X_star = repmat(X_star,1,N);
 
 opt.optim_time = 60;
 opt.parallel = false;
-opt.num_hypersamples = 1;
-opt.noiseless = true;
+opt.num_hypersamples = 5;
+opt.noiseless = false;
 opt.verbose = true;
 opt.plots = false;
 

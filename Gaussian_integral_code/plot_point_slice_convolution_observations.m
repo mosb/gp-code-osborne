@@ -80,15 +80,15 @@ conv_h = error_ellipse(V, [0.3;0], 'style',...
 % ====
 set(gca,'LooseInset',get(gca,'TightInset'))
 h_legend = legend([undesired_h, desired_h, pts_h, conv_h], ...
-    'density, $g(\vf)$', ...
+    '$\N{\vx}{\v{\mu}}{\Sigma}$', ...
     'integrand', ...
     sprintf('point\nobservations'), ...
     sprintf('convolution\nobservation'),...
     'Location','EastOutside');
 legend boxoff
 
-xlabel $f_1$
-ylabel('$f_2$','Rotation', 0)
+xlabel $x_1$
+ylabel('$x_2$','Rotation', 0)
 set(gca, 'TickDir', 'out')
 set(gca, 'Box', 'off', 'FontSize', 10); 
 set(gcf, 'color', 'white'); 
@@ -104,7 +104,7 @@ set(get(gca,'XLabel'),'Position',[max(x_range)+0.3 min(y_range)+0.2])
 
 fh = gcf;
 
-width = 9; height = 4;
+width = 10.7; height = 4;
 
 
 pos = get(fh, 'position'); 

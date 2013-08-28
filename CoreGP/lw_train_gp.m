@@ -321,7 +321,7 @@ for num_pass = 1:opt.num_passes
     % Use parallel toolbox over number of hyperparameter samples (rather
     % than over input scales), which we typically expect to exceed the
     % number of active input dimensions
-    parfor hypersample_ind = 1:num_hypersamples
+    for hypersample_ind = 1:num_hypersamples
         warning('off', 'MATLAB:nearlySingularMatrix');
         warning('off', 'MATLAB:singularMatrix');
         warning('off','revise_gp:small_num_data');

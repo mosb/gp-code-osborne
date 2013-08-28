@@ -1,6 +1,8 @@
 
 addpath(genpath('~/Code/convex_programming'))
 
+colours = (cbrewer('qual','Set1',9));
+
 N = 2;
 
 % generate random covariance
@@ -23,7 +25,7 @@ f = linspace(-1,1,1000);
 real_h = plot(f, lognormpdf(f, 0, sqrt(Sigma(1))), 'Color',colours(1,:));
 bound_h = plot(f, lognormpdf(f, 0, sqrt(L(1))), 'Color',colours(2,:));
 
-xlabel $f_1$
+xlabel $x_1$
 ylabel 'log density'
 set(gca, 'TickDir', 'out')
 set(gca, 'Box', 'off', 'FontSize', 10); 
@@ -63,7 +65,6 @@ matlabfrag('~/Docs/bayes-quadrature-for-gaussian-integrals-paper/figures/boundin
 
 figure(3);clf;hold on;
 
-colours = (cbrewer('qual','Set1',9));
 
 real_h = error_ellipse(Sigma, 'lines', false, 'style',...
     {'Color',colours(1,:),'LineWidth', 1});
@@ -78,8 +79,8 @@ error_ellipse(L, 'lines', true, 'style',...
 
 
 
-xlabel $f_1$
-ylabel('$f_2$','Rotation', 0)
+xlabel $x_1$
+ylabel('$x_2$','Rotation', 0)
 set(gca, 'TickDir', 'out')
 set(gca, 'Box', 'off', 'FontSize', 10); 
 set(gcf, 'color', 'white'); 
