@@ -33,6 +33,7 @@ default_properties = struct(...
   'scale', 1, ... % Scale factor, e.g. 1e-3 to plot m as km
   'style', '', ...  % Plot style
   'clip', inf, ... % Clipping radius
+  'clip_bounds', [-inf inf; -inf inf], ... % clipping x (first row) and y (second row) bounds
   'lines', false); % whether to plot lines inside ellipse
 
 if length(varargin) >= 1 & isnumeric(varargin{1})
@@ -134,7 +135,37 @@ elseif r==2 & c==2
   end
 
   [x,y,z, line1, line2] = getpoints(C,prop.clip);
-  h1=plot(scale*(x0+k*x),scale*(y0+k*y),style{:});
+  x = scale*(x0+k*x);
+  y = scale*(y0+k*y);
+      
+  out_of_bounds_lx = x < prop.clip_bounds(1,1);
+  out_of_bounds_ux = x > prop.clip_bounds(1,2);
+  out_of_bounds_x = or(out_of_bounds_lx, out_of_bounds_ux);
+  
+  out_of_bounds_ly = y < prop.clip_bounds(2,1);  
+  out_of_bounds_uy = y > prop.clip_bounds(2,2);
+  out_of_bounds_y = or(out_of_bounds_ly, out_of_bounds_uy);
+  
+  out_of_bounds = or(out_of_bounds_x, out_of_bounds_y);
+  
+
+  
+  plot(x(out_of_bounds_ly), ...
+      prop.clip_bounds(2,1) * (x(out_of_bounds_ly)*0 + 1), style{:});
+  plot(x(out_of_bounds_uy), ...
+      prop.clip_bounds(2,2) * (x(out_of_bounds_uy)*0 + 1), style{:});
+  plot(prop.clip_bounds(1,1) * (y(out_of_bounds_lx)*0 + 1), ...
+      y(out_of_bounds_lx), style{:});
+  plot(prop.clip_bounds(1,2) * (y(out_of_bounds_ux)*0 + 1), ...
+      y(out_of_bounds_ux), style{:});
+  
+    x(out_of_bounds) = nan;
+    y(out_of_bounds) = nan;
+    z(out_of_bounds) = nan;
+  
+  h1=plot(x,y,style{:});
+  
+  
   if prop.lines
       hold on
       
@@ -159,9 +190,9 @@ set(gca,'nextplot',hold_state);
 % getpoints - Generate x and y points that define an ellipse, given a 2x2
 %   covariance matrix, C. z, if requested, is all zeros with same shape as
 %   x and y.
-function [x,y,z, line1, line2] = getpoints(C,clipping_radius)
+function [x,y,z, line1, line2] = getpoints(C, clipping_radius)
 
-n=100; % Number of points around ellipse
+n=10000; % Number of points around ellipse
 p=0:pi/n:2*pi; % angles around a circle
 
 [eigvec,eigval] = eig(C); % Compute eigen-stuff
@@ -177,12 +208,13 @@ line1 = line1 * sqrt(eigval) * eigvec';
 line2 = line2 * sqrt(eigval) * eigvec';
 
 % Clip data to a bounding radius
-if nargin >= 2
+if nargin >= 2 && ~isempty(clipping_radius)
   r = sqrt(sum(xy.^2,2)); % Euclidian distance (distance from center)
   x(r > clipping_radius) = nan;
   y(r > clipping_radius) = nan;
   z(r > clipping_radius) = nan;
 end
+
 
 %---------------------------------------------------------------
 function x=qchisq(P,n)

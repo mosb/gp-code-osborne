@@ -11,10 +11,11 @@ N = 100;
 x_range = linspace(-2, 2, N);
 y_range = x_range;
 
-l_x = -0.5;
+l_x = -1;
 u_x = 1;
 l_y = -1.5;
 u_y = 1.5;
+r = sqrt((u_x - l_x)^2 + (u_y - l_y)^2)/2;
 
 cx_range = linspace(l_x, u_x, N);
 cy_range = linspace(l_y, u_y , N);
@@ -70,20 +71,26 @@ pts_h = plot(S(:, 1), S(:, 2), 'k.','MarkerSize', 9);
 % S = rand(2);
 % V = S' * S;
 
-V = diag([0.5 2]);
+V = diag([0.4 2]);
 
-colours = flipud(cbrewer('qual','Set1',9));
+colours = cbrewer('qual','Set1',9);
 
-conv_h = error_ellipse(V, [0.3;0], 'style',...
-    {'Color',colours(5,:),'LineWidth', 2});
+conv_h = error_ellipse(V, [(l_x+u_x)/2;0], 'style',...
+    {'Color',colours(8,:),'LineWidth', 1}, 'clip_bounds', [-inf, inf; l_y, u_y]);
+
+V = diag([1 2.5]);
+
+conv2_h = error_ellipse(V, [(l_x+u_x)/2;0], 'style',...
+    {'Color',colours(1,:),'LineWidth', 1}, 'clip_bounds', [l_x, u_x; -inf, inf]);
 
 % ====
 set(gca,'LooseInset',get(gca,'TightInset'))
-h_legend = legend([undesired_h, desired_h, pts_h, conv_h], ...
+h_legend = legend([undesired_h, desired_h, pts_h, conv_h, conv2_h], ...
     '$\N{\vx}{\v{\mu}}{\Sigma}$', ...
     'integrand', ...
     sprintf('point\nobservations'), ...
-    sprintf('convolution\nobservation'),...
+    sprintf('slice\nobservation'),...
+    sprintf('slice\nobservation'),...
     'Location','EastOutside');
 legend boxoff
 
