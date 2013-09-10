@@ -23,27 +23,40 @@ mx = max(lik);
 beta = 0.99;
 alpha = 0.01;
 
-ft = @(loglik,c) c(1) * exp(c(2) * loglik) + c(3) * loglik + c(4);
-fdt = @(loglik,c) c(1) * c(2) * exp(c(2) * loglik) + c(3);
+% Maximum likelihood approach to finding transform
+
+ft = @(loglik,c) mn * exp(c(1) * loglik) + c(2) * loglik;
+fdt = @(loglik,c) c(1) * mn * exp(c(1) * loglik) + c(2);
 
 obj = @(c) ...
     (ft(0,c) - mn).^2 + ...
-    (fdt(0,c) - alpha).^2 + ...
-    (ft(1,c) - mx).^2 + ...
-    (fdt(1,c) - beta).^2;
+    (c(3) * fdt(0,c) - alpha .* (mx - mn)).^2 + ...
+    (ft(c(3),c) - mx).^2 + ...
+    (c(3) * fdt(c(3),c) - beta .* (mx - mn)).^2;
 
 options = optimset('MaxFunEvals',4000);
-c = fminunc(obj, ones(1,4),options);
+c = fminunc(obj, ones(1,3),options);
 
 t = @(loglik) ft(loglik,c);
 clf
-logliks = linspace(0,1,1000);plot(logliks,t(logliks));
+logliks = linspace(0,1,1000);
+plot(logliks,t(logliks));
 
 dt = @(loglik) fdt(loglik,c);
-invt = @(lik) (lik - c(4))/c(3) ...
-    - 1/c(2) * lambertw(c(1)*c(2)/c(3) * exp(c(2)/c(3) * (lik - c(4))))...
+invt = @(lik) lik/c(2) ...
+    - 1/c(1) * lambertw(mn * c(1)/c(2) * exp(c(1)/c(2) * lik));
     
+% a = mn;
+% b = 2 * (mx - mn) - beta/2;
+% c = -(mx - mn) + beta/2;
+% 
+% 
+% t = @(loglik) a + b * loglik.^2 + c * loglik.^4;
+% dt = @(loglik) 2 * b * loglik + 4 * c * loglik.^3;
 
+clf
+logliks = linspace(0,c(3),1000);
+plot(logliks,t(logliks));
 
 % define gp over inv-transformed (e.g. log-) likelihoods
 % ====================================
