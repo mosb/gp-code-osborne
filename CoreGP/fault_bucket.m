@@ -437,3 +437,6 @@ predictive_means = predictive_means + meany;
 mean_fault_sd = mean_sds(1);
 mean_norm_sd = mean_sds(2);
 
+function K = K_wrapper(covariance, hyper, xa, xb)
+
+[dummy, K] = feval(covariance, hyper, xa, xb);

@@ -19,7 +19,8 @@ lik = rand(6,1)/const;
 n = length(lik);
 x = linspace(0,10,n)';
 
-xst = linspace(min(x)-10, max(x)+10, 1000)';
+n_st = 1000;
+xst = linspace(min(x)-10, max(x)+10, n_st)';
 
 % define map f(tlik) = lik
 % ====================================
@@ -50,8 +51,13 @@ ddf = @(tlik) ddf_h(tlik, theta);
 invf = @(lik) invf_h(lik, theta);
 
 figure(3)
-tliks = linspace(0, theta(3), 1000);
-plot(tliks,f(tliks));
+clf
+n_tliks = 1000;
+tliks = linspace(0, theta(3), n_tliks);
+plot(tliks,f(tliks),'b');
+hold on
+%plot(tliks,df(tliks),'r');
+
 xlabel 'transformed likelihood'
 ylabel 'likelihood'
 
@@ -88,14 +94,26 @@ ylabel(sprintf('transformed\n likelihood'))
 
 
 % exact linearisation: unusable in practice
-% a = df(m_tlik);
+a_exact = df(m_tlik);
+c_exact = f(m_tlik) - a_exact .* m_tlik;
 
 % approximate linearisation
 best_tlik = mu;
 a = df(best_tlik) + (m_tlik - best_tlik) .* ddf(best_tlik);
-
-% this works for either exact or approximate linearisation
 c = f(m_tlik) - a .* m_tlik;
+
+figure(3)
+for i = round(linspace(0.2*n_st, 0.8*n_st, 5))
+    
+    x_vals = linspace(m_tlik(i) - sd_tlik(i), m_tlik(i) + sd_tlik(i), 100);
+    y_vals = a(i) * x_vals + c(i);
+    y_vals_exact = a_exact(i) * x_vals + c_exact(i);
+    
+    plot(x_vals, y_vals_exact, 'k')
+    plot(x_vals, y_vals, 'r')
+
+    
+end
 
 % gp over likelihood
 % ====================================
