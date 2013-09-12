@@ -29,6 +29,9 @@ if nargin<8
     end
 end
 
+dark_colours = cbrewer('qual','Set1', 5);
+light_colours = cbrewer('qual','Pastel1', 5);
+
 default_params = struct('bounds', false, ...
                        'dot_size', 7, ...
                        'x_label', 'x', ...
@@ -40,7 +43,8 @@ default_params = struct('bounds', false, ...
                        'name', '', ...
                        'background', false, ...
                        'mean_line', true, ...
-                       'colour', colorbrew(1));
+                       'colour', dark_colours(5,:), ...
+                       'fill_colour', light_colours(5,:));
  
 names = fieldnames(default_params);
 for i = 1:length(names);
@@ -74,8 +78,7 @@ real_y = real_y(I);
 hold on;
 SDh = fill([x; x(end:-1:1)], ...
   [m + 2 * sd; m(end:-1:1) - 2 * sd(end:-1:1)], ...
-  params.colour, 'EdgeColor', params.colour, ...
-    'FaceAlpha',0.1,'EdgeAlpha',0.3);
+  params.fill_colour, 'EdgeColor', params.fill_colour);
 meanh = plot(x, m);
 realh = plot(real_x,real_y,'-');
 observationsh = plot(obs_x, obs_y, '.');
@@ -161,7 +164,9 @@ set(observationsh, ...
   'Color', [0.2 0.2 0.2] ...
   );
 
+if ischar(params.x_label)
 xlabel(params.x_label)
+end
 
 if length(params.y_label)>3
     Rotation = 90;
@@ -171,6 +176,7 @@ end
 ylabel(params.y_label,'Rotation',Rotation)
 title(params.name)
 
+if ischar(params.legend_location)
 if ~isempty(real_y)
     l =legend( ...
     [observationsh, meanh, SDh, realh], ...
@@ -196,4 +202,5 @@ else
 end
 
 legend boxoff
+end
 set(0, 'defaulttextinterpreter', 'none')
