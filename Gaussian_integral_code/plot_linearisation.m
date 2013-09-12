@@ -33,7 +33,7 @@ xst = linspace(min(x) + sub_xst, max(x) + add_xst, n_st)';
 % define map f(tlik) = lik
 % ====================================
 
-mn = 0;%min(lik);
+mn = min(lik);
 mx = max(lik);
 
 % Maximum likelihood approach to finding map
@@ -209,6 +209,8 @@ ylim([0, mx]);
 
 %close all
 
+end
+
 function [f, df] = objective(logth, f_h, df_h, mn, mx, alpha, beta)
 
 % maximum likelihood (or least squares) objective for our three constraints:
@@ -239,4 +241,6 @@ df(3) = 2 * exp(logth(3)) * ...
     + exp(logth(2) + logth(3)) ...
         * (9 * exp(logth(1) + logth(3)) + 2 * (mn - mx)*(1 + 2 * beta))...
     );
+
+end
 
