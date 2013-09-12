@@ -5,7 +5,7 @@ plotdir = '~/Docs/bayes-quadrature-for-gaussian-integrals-paper/figures/';
 % beta controls how wide the error bars are for large likelihoods
 beta = 10;
 % alpha sets how wide the error bars are for small likelihoods
-alpha = 1/100;
+alpha = 1/10000;
 
 colours = cbrewer('qual','Paired', 12);
 colours = colours(2:2:end, :);
@@ -33,7 +33,7 @@ xst = linspace(min(x) + sub_xst, max(x) + add_xst, n_st)';
 % define map f(tlik) = lik
 % ====================================
 
-mn = min(lik);
+mn = 0;%min(lik);
 mx = max(lik);
 
 % Maximum likelihood approach to finding map
@@ -171,7 +171,7 @@ for i = round((-sub_xst + [-1, 5, 7.9])/(range(xst)) * n_st)
     
     % plot exact distributions in likelihood
     
-    y_vals = linspace(0.051, max(f(tliks)), 10000);
+    y_vals = linspace(0, max(f(tliks)), 10000);
     ty_vals = invf(y_vals);
     x_vals = normpdf(ty_vals, m_tlik(i), sd_tlik(i)) ...
         ./ abs(theta(1) + 2 * theta(2) * ty_vals)...
@@ -201,13 +201,13 @@ figure(3)
 xlim([0, theta(3)/2]);
 ylim([0, mx]);
 
-set(0, 'defaulttextinterpreter', 'none')
-matlabfrag([plotdir,'lik_v_tlik'])
+% set(0, 'defaulttextinterpreter', 'none')
+% matlabfrag([plotdir,'lik_v_tlik'])
+% 
+% figure(1)
+% matlabfrag([plotdir,'gps_lik_tlik'])
 
-figure(1)
-matlabfrag([plotdir,'gps_lik_tlik'])
-
-close all
+%close all
 
 function [f, df] = objective(logth, f_h, df_h, mn, mx, alpha, beta)
 
