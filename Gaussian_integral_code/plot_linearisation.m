@@ -2,15 +2,23 @@ function draw_from_linearisation
 
 plotdir = '~/Docs/bayes-quadrature-for-gaussian-integrals-paper/figures/';
 
-% beta controls how wide the error bars are for large likelihoods
-beta = 10;
-% alpha sets how wide the error bars are for small likelihoods
-alpha = 1/10000;
+% b controls how wide the error bars are for large likelihoods
+b = 1;
+% a large likelihood is defined as having a transformed likelihood of 
+% d * theta(1)
+d = 1;
+
+% a sets how wide the error bars are for small likelihoods
+a = .1;
+% a small likelihood is defined as having a transformed likelihood of 
+% c * theta(1)
+c = -1;
+
 
 colours = cbrewer('qual','Paired', 12);
 colours = colours(2:2:end, :);
 
-% NB: results seem fairly insensitive to selection of alpha (sigh). beta
+% NB: results seem fairly insensitive to selection of a (sigh). b
 % has desired effect.
 
 % define observed likelihood, lik, & locations of predictants
@@ -38,28 +46,37 @@ mx = max(lik);
 
 % Maximum likelihood approach to finding map
 
-f_h = @(tlik, theta) mn + theta(1) * tlik + theta(2) * tlik.^2;
-df_h = @(tlik, theta) theta(1) + 2 * theta(2) * tlik;
-ddf_h = @(tlik, theta) 2 * theta(2);
-invf_h = @(lik, theta) 0.5 * 1/theta(2) * (...
-            -theta(1) + sqrt(theta(1)^2 - 4 * theta(2) * (mn - lik) ));
+theta2 = @(phi1) ...
+    (-b*(1+4*c^2-2*d-4*c*d)*(mn-mx)+a*(-1-4*d^2+c*(2+4*d))*(mn-mx)...
+      +2*(-c+2*c^2+d*(-1+2*d))*mx) ...
+      / ...
+      (2*exp(phi1)*(1+4*c^2-2*d+4*d^2-2*c*(1+2*d)));
+theta3 = @(phi1) ...
+    (b*(1+2*c-4*d)*(mn-mx)-a*(-1+4*c-2*d)*(mn-mx)-2*(-1+c+d)*mx)...
+    /...
+    (2 * exp(2*phi1) * (1+4*c^2-2*d+4*d^2-2*c*(1+2*d)));
+
+f_h = @(tlik, phi1) theta2(phi1) * tlik + theta3(phi1) * tlik.^2;
+df_h = @(tlik, phi1) theta2(phi1) + 2 * theta3(phi1) * tlik;
+%ddf_h = @(tlik, theta) 2 * theta(3);
+invf_h = @(lik, phi1) 0.5 * 1/theta3(phi1) * (...
+            -theta2(phi1) + sqrt(theta2(phi1)^2 + 4 * theta3(phi1) * lik ));
 
 options.MaxFunEvals = 1000;
-[logth,min_obj] = fminunc(@(logth) objective(logth, f_h, df_h, mn, mx, ...
-    alpha, beta), ...
-    zeros(1,3), options);
+[phi1, min_obj] = fminunc(@(phi1) objective(phi1, f_h, df_h, mn, mx, ...
+    a, b, c, d), ...
+    zeros(1,1), options);
 min_obj
-theta = exp(logth);
 
-f = @(tlik) f_h(tlik,theta);
-df = @(tlik) df_h(tlik, theta);
-ddf = @(tlik) ddf_h(tlik, theta);
-invf = @(lik) invf_h(lik, theta);
+f = @(tlik) f_h(tlik, phi1);
+df = @(tlik) df_h(tlik, phi1);
+%ddf = @(tlik) ddf_h(tlik, theta);
+invf = @(lik) invf_h(lik, phi1);
 
 figure(3)
 clf
 n_tliks = 1000;
-tliks = linspace(0, theta(3), n_tliks);
+tliks = linspace(-exp(phi1), exp(phi1), n_tliks);
 plot(tliks,f(tliks),'k');
 hold on
 %plot(tliks,df(tliks),'r');
@@ -110,8 +127,8 @@ axis tight;
 
 
 % exact linearisation
-a = df(m_tlik);
-c = f(m_tlik) - a .* m_tlik;
+lin_slope = df(m_tlik);
+lin_const = f(m_tlik) - lin_slope .* m_tlik;
 
 % unnecessary under the quadratic transform
 % % approximate linearisation
@@ -122,8 +139,8 @@ c = f(m_tlik) - a .* m_tlik;
 % gp over likelihood
 % ====================================
 
-m_lik = diag(a) * m_tlik + c;
-C_lik =  diag(a) * C_tlik * diag(a);
+m_lik = diag(lin_slope) * m_tlik + lin_const;
+C_lik =  diag(lin_slope) * C_tlik * diag(lin_slope);
 sd_lik = sqrt(diag(C_lik));
 
 figure(1)
@@ -148,7 +165,7 @@ for i = round((-sub_xst + [-1, 5, 7.9])/(range(xst)) * n_st)
     
     % plot linearisations
     x_vals = linspace(m_tlik(i) - sd_tlik(i), m_tlik(i) + sd_tlik(i), 100);
-    y_vals = a(i) * x_vals + c(i);
+    y_vals = lin_slope(i) * x_vals + lin_const(i);
     
     plot(x_vals, y_vals, 'Color',colour, 'LineWidth', 2)
     
@@ -157,7 +174,7 @@ for i = round((-sub_xst + [-1, 5, 7.9])/(range(xst)) * n_st)
     x_vals = linspace(m_tlik(i) - 3 * sd_tlik(i), ...
         m_tlik(i) + 3 * sd_tlik(i), 100);
     y_vals = normpdf(x_vals, m_tlik(i), sd_tlik(i)) ...
-        * .02 * (mx - mn) * theta(3);
+        * .02 * (mx - mn) * exp(phi1);
   
     plot(x_vals, y_vals, 'Color', colour);
     
@@ -165,7 +182,7 @@ for i = round((-sub_xst + [-1, 5, 7.9])/(range(xst)) * n_st)
     
     y_vals = linspace(m_lik(i) - 3 * sd_lik(i), m_lik(i) +  3 *sd_lik(i), 100);
     x_vals = normpdf(y_vals, m_lik(i), sd_lik(i)) ...
-        * .01 * (mx - mn) * theta(3);
+        * .01 * (mx - mn) * exp(phi1);
     
     plot(x_vals, y_vals, 'Color', colour);
     
@@ -175,7 +192,7 @@ for i = round((-sub_xst + [-1, 5, 7.9])/(range(xst)) * n_st)
     ty_vals = invf(y_vals);
     x_vals = normpdf(ty_vals, m_tlik(i), sd_tlik(i)) ...
         ./ abs(theta(1) + 2 * theta(2) * ty_vals)...
-          * 0.01 * (mx - mn) * theta(3);
+          * 0.01 * (mx - mn) * exp;
     
     plot(x_vals, y_vals, '--', 'Color', colour);
     
@@ -206,41 +223,44 @@ ylim([0, mx]);
 % 
 % figure(1)
 % matlabfrag([plotdir,'gps_lik_tlik'])
-
-%close all
+% 
+% close all
 
 end
 
-function [f, df] = objective(logth, f_h, df_h, mn, mx, alpha, beta)
+function [f] = objective(phi1, f_h, df_h, mn, mx, a, b, c, d)
 
 % maximum likelihood (or least squares) objective for our three constraints:
-% exp(logth(3)) * df_h(0,exp(logth)) == alpha .* (mx - mn)
+% exp(logth(3)) * df_h(0,exp(logth)) == a .* (mx - mn)
 % f_h(exp(logth(3)), exp(logth)) == mx
-% exp(logth(3)) * df_h(exp(logth(3)), exp(logth)) == beta .* (mx - mn)
+% exp(logth(3)) * df_h(exp(logth(3)), exp(logth)) == b .* (mx - mn)
 
-f = (exp(logth(3)) * df_h(0,exp(logth)) - alpha .* (mx - mn)).^2 + ...
-    (f_h(exp(logth(3)), exp(logth)) - mx).^2 + ...
-    (exp(logth(3)) * df_h(exp(logth(3)), exp(logth)) - beta .* (mx - mn)).^2;
 
-df = nan(3,1);
+f = (f_h(exp(phi1), phi1) - mx).^2 + ...
+    (exp(phi1) * df_h(c * exp(phi1), phi1) - a .* (mx - mn)).^2 + ...
+    (exp(phi1) * df_h(d * exp(phi1), phi1) - b .* (mx - mn)).^2;
+
+%df = nan(3,1);
 
 % these derivatives should ideally be keyed off input dtheta_f_h etc. input
 % functions, but currently they are not
-df(1) = 2 * exp(logth(1) + logth(3)) * ...
-    (3 * exp(logth(3)) * (exp(logth(1)) + exp(logth(2) + logth(3))) ...
-        + (mn - mx) * (1 + alpha + beta));
+% df(1) = 2 * exp(x(1)) * ...
+%     (2 * (1 + 4*c^2 + 4*d^2) * exp(3*x(1) + 2*x(3))...
+%     + exp(x(1) + x(3)) * ((3 + 6*c + 6*d) * exp(x(1) + x(2)) ...
+%         + 4 * (a*c + b*d) * (mn - mx) - 2*mx) ...
+%     + exp(x(2)) * (3*exp(x(1)+x(2)) + (a+b)*mn - (1+a+b)*mx)...
+%     );
     
-df(2) = 2 * exp(logth(1) + 2 * logth(3)) * ...
-    (3 * exp(logth(1) + logth(3)) + 5 * exp(logth(2) + 2 * logth(3))  ...
-        + (mn - mx) * (1 + 2 * beta));
-    
-df(3) = 2 * exp(logth(3)) * ...
-    (10 * exp(2 * logth(2) + 3 * logth(3)) ...
-    + exp(logth(1)) ...
-        * (3 * exp(logth(1) + logth(3)) + (mn - mx) * (1 + alpha + beta)) ...
-    + exp(logth(2) + logth(3)) ...
-        * (9 * exp(logth(1) + logth(3)) + 2 * (mn - mx)*(1 + 2 * beta))...
-    );
+% df(2) = 2 * exp(x(1) + x(2)) * ...
+%     (3 * exp(x(1) + x(2)) + (1 + 2*c + 2*d) * exp(2*x(1) + x(3))  ...
+%         + (a + b) * mn - (1 + a + b) * mx);
+%     
+% df(3) = 2 * exp(2*x(1) + x(3)) * ...
+%     (...
+%         (1 + 2*c + 2*d) * exp(x(1) + x(2)) ...
+%         + (1 + 4*c^2 + 4*d^2) * exp(2*x(1) + x(3)) ...
+%         + 2 * (a*c + b*d) * (mn - mx) - mx ...
+%     );
 
 end
 
