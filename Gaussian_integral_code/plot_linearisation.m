@@ -2,33 +2,22 @@ function draw_from_linearisation
 
 plotdir = '~/Docs/bayes-quadrature-for-gaussian-integrals-paper/figures/';
 
-% b controls how wide the error bars are for large likelihoods
-b = 1;
-% a large likelihood is defined as having a transformed likelihood of 
-% d * theta(1)
-d = 1;
-
-% a sets how wide the error bars are for small likelihoods
-a = .1;
-% a small likelihood is defined as having a transformed likelihood of 
-% c * theta(1)
-c = -1;
 
 
 colours = cbrewer('qual','Paired', 12);
 colours = colours(2:2:end, :);
 
-% NB: results seem fairly insensitive to selection of a (sigh). b
+% NB: results seem fairly insensitive to selection of a*(sigh). b
 % has desired effect.
 
 % define observed likelihood, lik, & locations of predictants
 % ====================================
 
 % multiply fixed likelihood function by this constant
-const = 1;%10^(5*(rand-.5));
+%const = 10^(5*(rand-.5));
 
 %lik = rand(6,1)/const;
-lik = ([0.1;0.25;0.1;0.15;0.18;0.15;0.48;0.05])/const;
+lik = ([0.1;0.25;0.1;0.15;0.18;0.15;0.48;0.05]);%/const;
 n = length(lik);
 x = linspace(0,10,n)';
 
@@ -44,39 +33,35 @@ xst = linspace(min(x) + sub_xst, max(x) + add_xst, n_st)';
 mn = min(lik);
 mx = max(lik);
 
+
+% delta in [0, 1] sets how wide the error bars are for small likelihoods:
+% we expect the smallest possible likelihood is mn * delta
+delta = 0.8;
+
+alpha = 0; % arbitrary, wlog
+gamma = 1; % arbitrary, wlog
+
+
 % Maximum likelihood approach to finding map
 
-theta2 = @(phi1) ...
-    (-b*(1+4*c^2-2*d-4*c*d)*(mn-mx)+a*(-1-4*d^2+c*(2+4*d))*(mn-mx)...
-      +2*(-c+2*c^2+d*(-1+2*d))*mx) ...
-      / ...
-      (2*exp(phi1)*(1+4*c^2-2*d+4*d^2-2*c*(1+2*d)));
-theta3 = @(phi1) ...
-    (b*(1+2*c-4*d)*(mn-mx)-a*(-1+4*c-2*d)*(mn-mx)-2*(-1+c+d)*mx)...
-    /...
-    (2 * exp(2*phi1) * (1+4*c^2-2*d+4*d^2-2*c*(1+2*d)));
+f_h = @(tlik, alpha, gamma) gamma * (tlik - alpha).^2 + delta * mn;
+df_h = @(tlik, alpha, gamma) 2 * gamma * (tlik - alpha);
+invf_h = @(lik, alpha, gamma) sqrt((lik-delta * mn) / gamma) + alpha;
 
-f_h = @(tlik, phi1) theta2(phi1) * tlik + theta3(phi1) * tlik.^2;
-df_h = @(tlik, phi1) theta2(phi1) + 2 * theta3(phi1) * tlik;
-%ddf_h = @(tlik, theta) 2 * theta(3);
-invf_h = @(lik, phi1) 0.5 * 1/theta3(phi1) * (...
-            -theta2(phi1) + sqrt(theta2(phi1)^2 + 4 * theta3(phi1) * lik ));
 
-options.MaxFunEvals = 1000;
-[phi1, min_obj] = fminunc(@(phi1) objective(phi1, f_h, df_h, mn, mx, ...
-    a, b, c, d), ...
-    zeros(1,1), options);
-min_obj
-
-f = @(tlik) f_h(tlik, phi1);
-df = @(tlik) df_h(tlik, phi1);
-%ddf = @(tlik) ddf_h(tlik, theta);
-invf = @(lik) invf_h(lik, phi1);
+f = @(tlik) f_h(tlik, alpha, gamma);
+df = @(tlik) df_h(tlik, alpha, gamma);
+invf = @(lik) invf_h(lik, alpha, gamma);
 
 figure(3)
 clf
 n_tliks = 1000;
-tliks = linspace(-exp(phi1), exp(phi1), n_tliks);
+
+% maximum observed transformed likelihood
+beta = invf_h(mx, alpha, gamma);
+
+
+tliks = linspace(alpha, beta, n_tliks);
 plot(tliks,f(tliks),'k');
 hold on
 %plot(tliks,df(tliks),'r');
@@ -156,6 +141,7 @@ axis tight;
 % plot linearisation
 % ====================================
 
+min_plotted_tlik = m_tlik(1) - 2*sd_tlik(1);
 ind = 0;
 for i = round((-sub_xst + [-1, 5, 7.9])/(range(xst)) * n_st)
     ind = ind + 1;
@@ -164,35 +150,36 @@ for i = round((-sub_xst + [-1, 5, 7.9])/(range(xst)) * n_st)
     figure(3)
     
     % plot linearisations
-    x_vals = linspace(m_tlik(i) - sd_tlik(i), m_tlik(i) + sd_tlik(i), 100);
+    x_vals = linspace(m_tlik(i) -  0.5 *sd_tlik(i), m_tlik(i) + 0.5*sd_tlik(i), 100);
     y_vals = lin_slope(i) * x_vals + lin_const(i);
     
-    plot(x_vals, y_vals, 'Color',colour, 'LineWidth', 2)
+    plot(x_vals, y_vals, 'Color', colour, 'LineWidth', 2)
+    plot(m_tlik(i), m_lik(i), '.','MarkerSize', 20, 'Color', colour);
     
     
     % plot Gaussians in transformed likelihood
     x_vals = linspace(m_tlik(i) - 3 * sd_tlik(i), ...
         m_tlik(i) + 3 * sd_tlik(i), 100);
     y_vals = normpdf(x_vals, m_tlik(i), sd_tlik(i)) ...
-        * .02 * (mx - mn) * exp(phi1);
+        * .04 * (mx - mn) * (beta - alpha);
   
     plot(x_vals, y_vals, 'Color', colour);
     
     % plot approximate Gaussians in likelihood
     
     y_vals = linspace(m_lik(i) - 3 * sd_lik(i), m_lik(i) +  3 *sd_lik(i), 100);
-    x_vals = normpdf(y_vals, m_lik(i), sd_lik(i)) ...
-        * .01 * (mx - mn) * exp(phi1);
+    x_vals = min_plotted_tlik + normpdf(y_vals, m_lik(i), sd_lik(i)) ...
+        * .04 * (mx - mn) * (beta - alpha);
     
     plot(x_vals, y_vals, 'Color', colour);
     
     % plot exact distributions in likelihood
     
-    y_vals = linspace(0, max(f(tliks)), 10000);
+    y_vals = linspace(1.2 * delta * mn, max(f(tliks)), 10000);
     ty_vals = invf(y_vals);
-    x_vals = normpdf(ty_vals, m_tlik(i), sd_tlik(i)) ...
-        ./ abs(theta(1) + 2 * theta(2) * ty_vals)...
-          * 0.01 * (mx - mn) * exp;
+    x_vals = min_plotted_tlik + normpdf(ty_vals, m_tlik(i), sd_tlik(i)) ...
+        ./ abs( df_h(ty_vals, alpha, gamma) )...
+          * 0.04 * (mx - mn) * (beta - alpha);
     
     plot(x_vals, y_vals, '--', 'Color', colour);
     
@@ -215,52 +202,16 @@ for i = round((-sub_xst + [-1, 5, 7.9])/(range(xst)) * n_st)
 end
 
 figure(3)
-xlim([0, theta(3)/2]);
+xlim([min_plotted_tlik, max(m_tlik)]);
 ylim([0, mx]);
 
-% set(0, 'defaulttextinterpreter', 'none')
-% matlabfrag([plotdir,'lik_v_tlik'])
-% 
-% figure(1)
-% matlabfrag([plotdir,'gps_lik_tlik'])
-% 
-% close all
+set(0, 'defaulttextinterpreter', 'none')
+matlabfrag([plotdir,'lik_v_tlik'])
 
-end
+figure(1)
+matlabfrag([plotdir,'gps_lik_tlik'])
 
-function [f] = objective(phi1, f_h, df_h, mn, mx, a, b, c, d)
-
-% maximum likelihood (or least squares) objective for our three constraints:
-% exp(logth(3)) * df_h(0,exp(logth)) == a .* (mx - mn)
-% f_h(exp(logth(3)), exp(logth)) == mx
-% exp(logth(3)) * df_h(exp(logth(3)), exp(logth)) == b .* (mx - mn)
-
-
-f = (f_h(exp(phi1), phi1) - mx).^2 + ...
-    (exp(phi1) * df_h(c * exp(phi1), phi1) - a .* (mx - mn)).^2 + ...
-    (exp(phi1) * df_h(d * exp(phi1), phi1) - b .* (mx - mn)).^2;
-
-%df = nan(3,1);
-
-% these derivatives should ideally be keyed off input dtheta_f_h etc. input
-% functions, but currently they are not
-% df(1) = 2 * exp(x(1)) * ...
-%     (2 * (1 + 4*c^2 + 4*d^2) * exp(3*x(1) + 2*x(3))...
-%     + exp(x(1) + x(3)) * ((3 + 6*c + 6*d) * exp(x(1) + x(2)) ...
-%         + 4 * (a*c + b*d) * (mn - mx) - 2*mx) ...
-%     + exp(x(2)) * (3*exp(x(1)+x(2)) + (a+b)*mn - (1+a+b)*mx)...
-%     );
-    
-% df(2) = 2 * exp(x(1) + x(2)) * ...
-%     (3 * exp(x(1) + x(2)) + (1 + 2*c + 2*d) * exp(2*x(1) + x(3))  ...
-%         + (a + b) * mn - (1 + a + b) * mx);
-%     
-% df(3) = 2 * exp(2*x(1) + x(3)) * ...
-%     (...
-%         (1 + 2*c + 2*d) * exp(x(1) + x(2)) ...
-%         + (1 + 4*c^2 + 4*d^2) * exp(2*x(1) + x(3)) ...
-%         + 2 * (a*c + b*d) * (mn - mx) - mx ...
-%     );
+close all
 
 end
 
