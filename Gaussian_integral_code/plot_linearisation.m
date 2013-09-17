@@ -58,7 +58,7 @@ clf
 n_tliks = 1000;
 
 % maximum observed transformed likelihood
-beta = invf_h(mx, alpha, gamma);
+beta = invf(mx);
 
 
 tliks = linspace(alpha, beta, n_tliks);
