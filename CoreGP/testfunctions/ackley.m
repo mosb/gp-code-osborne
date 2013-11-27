@@ -5,6 +5,7 @@
 % x can be any dimension
 % -32.768 <= x_i <= 32.768
 % global optimum at x1 = x2 = ... = xn = 0, where ackley = 0
+%
 
 function out = ackley(x)
 
