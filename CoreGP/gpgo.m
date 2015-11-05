@@ -4,7 +4,7 @@ function [minimum, minimum_location, X_data, y_data, gp, quad_gp] = ...
 % [minimum, minimum_location, X_data, y_data, gp, quad_gp] = ...
 %   gpgo(fn, X_0, lower_bound, upper_bound, opt)
 % minimise function fn by sequentially greedily selecting the most valuable
-% observation according to a GP fit to fn. 
+% observation according to a GP fit to fn.
 %
 % below are the fields permitted to opt and their default values
 %
@@ -74,8 +74,8 @@ default_opt = struct('function_evaluations', 100 * num_dims, ...
                        'save_str', false, ...
                         'verbose', false, ...
                         'pool_open', false);
-                  
-                   
+
+
 if isfield(opt,'total_time')
     % we probably want to use total_time rather than function_evaluations
     % as our stopping criterion
@@ -90,11 +90,6 @@ for i = 1:length(names);
     end
 end
 
-if ~opt.pool_open
-    matlabpool close force
-    matlabpool open
-end
-
 if opt.derivative_observations
     % assumed that each evaluation of the function yield both the
     % appropriate value of the objective function along with the gradient
@@ -106,7 +101,7 @@ if opt.derivative_observations
     total_data = opt.function_evaluations*(num_dims+1);
     X_data = nan(total_data, num_dims+1);
     y_data = nan(total_data, 1);
-    
+
     gp.sqd_diffs_cov = false;
 else
     X_data = nan(opt.function_evaluations, num_dims);
@@ -140,7 +135,7 @@ weights_mat = bq_params(gp);
 errors = struct();
 
 if opt.derivative_observations
-    
+
     hps_struct = set_hps_struct(gp);
     % need to define this handle or else infinite recursion results
     gp.non_deriv_cov_fn = gp.covfn;
@@ -153,7 +148,7 @@ evaluation = 0;
 while evaluation < opt.function_evaluations && ...
         (cputime - start_time) < opt.total_time
     evaluation = evaluation+1;
-    
+
     if opt.derivative_observations
         try
             [y,g] = fn(x);
@@ -167,20 +162,20 @@ while evaluation < opt.function_evaluations && ...
             disp(error_msg);
             errors(numel(errors)+1).msg = error_msg;
         end
-        
+
         eval_inds = (evaluation-1)*(num_dims+1)+(1:num_dims+1);
         X_data(eval_inds, :) = [repmat(x,num_dims+1,1),(0:num_dims)'];
         y_data(eval_inds) = [y;g];
-        
+
         all_eval_inds = 1:max(eval_inds);
         X_data_so_far = X_data(all_eval_inds, :);
         y_data_so_far = y_data(all_eval_inds);
 
         plain_obs = find(X_data_so_far(:,end) == 0);
-    
+
         [min_so_far, min_ind] = min(y_data_so_far(plain_obs,:));
         min_ind = plain_obs(min_ind);
-        
+
     else
         try
             y = fn(x);
@@ -190,31 +185,31 @@ while evaluation < opt.function_evaluations && ...
             disp(error_msg);
             errors(numel(errors)+1).msg = error_msg;
         end
-        
+
         eval_inds = evaluation;
         X_data(eval_inds, :) = x;
         y_data(eval_inds) = y;
-        
+
         all_eval_inds = 1:max(eval_inds);
         X_data_so_far = X_data(all_eval_inds, :);
         y_data_so_far = y_data(all_eval_inds);
 
         [min_so_far, min_ind] = min(y_data_so_far);
-        
+
     end
-    
+
     if y<opt.target
         % a sufficiently low y has been found.
         break
     end
-    
+
     %if opt.verbose
         fprintf('Minimum:\t%g\n',min_so_far);
     %else
 %         fprintf('.');
 %     end
 
-    
+
     if rem(evaluation,opt.retrain_period) ~= 0
         % for hypersamples that haven't been moved, update
         gp = revise_gp(X_data_so_far, y_data_so_far, ...
@@ -225,31 +220,31 @@ while evaluation < opt.function_evaluations && ...
         gp = revise_gp(X_data_so_far, y_data_so_far, ...
             gp, 'overwrite', [], ...
             lastHyperSamplesMoved);
-        
+
         lastHyperSamplesMoved = [];
     else
         % retrain gp
         [gp, quad_gp] = ...
             train_gpgo(gp, X_data_so_far, y_data_so_far, opt);
-        
+
         weights_mat = bq_params(gp, quad_gp);
-        
+
         num_hypersamples = numel(gp.hypersamples);
         lastHyperSamplesMoved = 1:num_hypersamples;
     end
 %     hs_weights = zeros(1,num_hypersamples);
 %     [maX_logL,maX_logL_ind] = max([gp.hypersamples(:).logL]);
 %     hs_weights(maX_logL_ind) = 1;
-    
+
     hs_weights = weights(gp, weights_mat);
-     
+
     if (evaluation == opt.function_evaluations)
         continue
     elseif (evaluation == 1) % we should just go to a corner
         x = lower_bound;
         continue
     end
-       
+
   	if (opt.lookahead_steps == 1)
 			exp_loss = @(XStar) weighted_neg_val(hs_weights,XStar,...
                        gp,min_so_far);
@@ -257,16 +252,16 @@ while evaluation < opt.function_evaluations && ...
 			exp_loss = @(XStar) multi_step_negvalue(hs_weights,XStar,...
                        gp,min_so_far);
     end
-    
+
     x = opt.exp_loss_minimiser(exp_loss, ...
                 lower_bound, upper_bound, opt.exp_loss_evals, ...
                 X_data_so_far, min_ind, opt);
-	
+
     if opt.plots && num_dims == 1
         clf
-        
+
         [max_weights,max_weighted_ind] = max(hs_weights);
-        
+
         X_star = linspace(lower_bound,upper_bound,100)';
         for i = 1:100
             [m(i), vars(i)] = posterior_gp(X_star(i), gp, max_weighted_ind,...
@@ -276,8 +271,8 @@ while evaluation < opt.function_evaluations && ...
         params.height = 35;
         gp_plot(X_star, m, sqrt(vars), X_data_so_far, y_data_so_far,...
             [],[],params);
-        
-        
+
+
     end
     if opt.save_str
         save(opt.save_str);
@@ -291,7 +286,7 @@ y_data = y_data_so_far;
 
 if opt.derivative_observations
     plain_obs = find(X_data(:,end) == 0);
-    
+
     [minimum, min_ind] = min(y_data(plain_obs,:));
     min_ind = plain_obs(min_ind);
 else
@@ -314,10 +309,6 @@ if nargout>5
     quad_gp.quad_noise_sd = quad_noise_sd;
     quad_gp.quad_input_scales = quad_input_scales;
     quad_gp.quad_output_scale = quad_output_scale;
-end
-
-if ~opt.pool_open
-    matlabpool close
 end
 
 function X_min = exp_loss_direct(exp_loss, ...
@@ -352,7 +343,7 @@ num_data = size(X_data,1);
 num_dims = size(X_data,2);
 
 start_pt_inds = round(linspace(1, num_data, 5));
-start_pt_inds = unique([y_min_ind, start_pt_inds(2:end)]); 
+start_pt_inds = unique([y_min_ind, start_pt_inds(2:end)]);
 num_start_pts = length(start_pt_inds);
 start_pts = X_data(start_pt_inds,:);
 
@@ -418,15 +409,15 @@ for start_pt_ind = 1:num_start_pts
     % number of data larger than number of hypersamples, so we use parfor here
 
     start_pt = start_pts(start_pt_ind,:);
-    
+
     input_scales = 0.5*max(eps,min(bsxfun(@(x,y) abs(x-y), start_pt, ...
         X_data(setdiff(1:end,start_pt_inds(start_pt_ind)),:)),[],1));
-    
+
     [unused_f, g] = exp_loss(start_pt);
-    
+
     zoomed = ...
         simple_zoom_pt(start_pt, g, input_scales, 'minimise');
-    
+
     x(start_pt_ind,:) = cap(zoomed, lower_bound, upper_bound);
     f(start_pt_ind) = exp_loss(x(start_pt_ind,:));
 end
@@ -437,29 +428,29 @@ end
 % another local optimisation.
 
 for start_pt_ind = 1:num_start_pts
-    
+
     start_pt = start_pts(start_pt_ind,:);
-    
+
     input_scales = 0.5*max(eps,min(bsxfun(@(x,y) abs(x-y), start_pt, ...
         X_data(setdiff(1:end,start_pt_inds(start_pt_ind)),:)),[],1));
-    
+
     best_X_line = nan(num_line_pts, num_dims);
     best_loss_line = nan(num_line_pts,1);
-    
+
     best_X_line(1,:) = x(start_pt_ind,:);
     best_loss_line(1) = f(start_pt_ind,:);
-    
+
     direction = x(start_pt_ind,:) - start_pt;
     if norm(direction) == 0
         % move towards a corner. The corner is chosen by rotating through
         % them all using a binary conversion.
-        
+
         bin_vec = de2bi(start_pt_inds(start_pt_ind))+1;
-        
+
         sel_vec = ones(1,num_dims);
         num = min(length(sel_vec),length(bin_vec));
         sel_vec(1:num) = bin_vec(1:num);
-        
+
         direction =...
             bounds(sub2ind([2,num_dims],sel_vec,1:num_dims)) - start_pt;
         if norm(direction) == 0
@@ -476,12 +467,12 @@ for start_pt_ind = 1:num_start_pts
     max_bnd = min(bnds(2,:));
 
     X_line = @(line_pt) start_pt + line_pt*direction;
-    
+
     if opt.plots
-        
+
         switch num_dims
             case 1
-                
+
             case 2
                 coords = [X_line(min_bnd); X_line(max_bnd)];
                 line(coords(:,1), coords(:,2), [max_y,max_y], 'Color','w')
@@ -489,18 +480,18 @@ for start_pt_ind = 1:num_start_pts
     end
 
     line_pts = linspace(min_bnd, max_bnd, num_line_pts-1);
-    
+
     parfor line_pt_ind = 2:num_line_pts
         line_pt = line_pts(line_pt_ind-1);
         X_line_pt = X_line(line_pt);
-        
+
         [original_loss, g] = exp_loss(X_line_pt);
         zoomed = ...
             simple_zoom_pt(X_line_pt, g, input_scales, 'minimise');
         zoomed = cap(zoomed, lower_bound, upper_bound);
-        
+
         zoomed_loss = exp_loss(zoomed);
-        
+
         if original_loss < zoomed_loss
             best_X_line(line_pt_ind,:) = X_line_pt;
             best_loss_line(line_pt_ind) = original_loss;
@@ -508,9 +499,9 @@ for start_pt_ind = 1:num_start_pts
             best_X_line(line_pt_ind,:) = zoomed;
             best_loss_line(line_pt_ind) = zoomed_loss;
         end
-        
+
 %         if opt.plots
-%             switch num_dims 
+%             switch num_dims
 %                 case 1
 %                     plot(zoomed,best_loss_line(line_pt_ind),'ro','MarkerSize',6)
 %                 case 2
@@ -520,7 +511,7 @@ for start_pt_ind = 1:num_start_pts
 %             end
 %         end
     end
-    
+
     [min_best_loss_line, min_ind_line] = min(best_loss_line);
 
     best_X(start_pt_ind,:) = best_X_line(min_ind_line,:);
@@ -550,20 +541,20 @@ NStar=size(XStar,1);
 f=zeros(NStar,1);
 g=0;
 H=0;
-switch nargout 
+switch nargout
     case {0,1}
-        for sample=1:numel(gp.hypersamples)   
+        for sample=1:numel(gp.hypersamples)
                     fi=negval(XStar,gp,sample,varargin{:});
                     f=f+rho(sample)*fi;
         end
     case 2
-        for sample=1:numel(gp.hypersamples)   
+        for sample=1:numel(gp.hypersamples)
                     [fi,gi]=negval(XStar,gp,sample,varargin{:});
                     f=f+rho(sample)*fi;
                     g=g+rho(sample)*gi;
         end
     case 3
-        for sample=1:numel(gp.hypersamples)   
+        for sample=1:numel(gp.hypersamples)
                     [fi,gi,Hi]=negval(XStar,gp,sample,varargin{:});
                     f=f+rho(sample)*fi;
                     g=g+rho(sample)*gi;

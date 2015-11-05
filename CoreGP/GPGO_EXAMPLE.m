@@ -1,4 +1,9 @@
 clear
+
+addpath(genpath( ...
+    '/Users/michaelosborne/Documents/Research/gp-code-osborne/' ...
+))
+
 x0 = zeros(1,2);
 lower_bound = [-5 0];
 upper_bound = [10 15];
@@ -9,13 +14,14 @@ upper_bound = [10 15];
 % start optimizing
 f = @(x) branin(x);
 
-opt.total_time = 60;
+opt.total_time = 10;
 opt.save_str = 'branin_example2';
-[minimum, minimum_location, X_data, y_data, gp, quad_gp] = gpgo(f, x0, lower_bound, upper_bound, opt);
+[minimum, minimum_location, X_data, y_data, gp, quad_gp] = ...
+    gpgo(f, x0, lower_bound, upper_bound, opt);
 
 num_dims = size(X_data,2);
 for dim  = 1:num_dims
-    
+
     XStar = repmat(minimum_location,1000,1);
     XStar(:,dim) = linspace(lower_bound(dim),upper_bound(dim),1000);
 
