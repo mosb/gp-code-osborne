@@ -8,7 +8,7 @@ if nargin<3 || isempty(params)
     params = struct();
 end
 if ~isfield(params,'print')
-    params.print=true;
+    params.print=false;
 end
 
 output=[];
