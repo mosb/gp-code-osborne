@@ -179,7 +179,7 @@ for sample_ind = 1:length(samples)
                 if trial == num_trials
                     % it still didn't work!
 
-                    cholK = diag(sqrt(diag(K)));
+                    cholK = diag(sqrt(diag(Kmat)));
                 end
             end
         end
