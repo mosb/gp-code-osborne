@@ -166,7 +166,9 @@ for sample_ind = 1:length(samples)
         end
 
         allowed_error = 1e-16;
-        for trial = 1:10
+        num_trials = 10;
+
+        for trial = 1:num_trials
             try
                 [Kmat, jitters] = improve_covariance_conditioning(...
                     Kmat + Noise(hs, X_data).^2, abs(y_data_minus_Mu), 1e-16);
@@ -174,6 +176,11 @@ for sample_ind = 1:length(samples)
                 break
             catch
                 allowed_error = allowed_error / 2;
+                if trial == num_trials
+                    % it still didn't work!
+
+                    cholK = diag(sqrt(diag(K)));
+                end
             end
         end
 	elseif (downdating)
