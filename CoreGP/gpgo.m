@@ -299,6 +299,10 @@ if numel(errors)>1
     gp.errors = errors(2:end);
 end
 
+if opt.save_str
+    save(opt.save_str);
+end
+
 if nargout>5
     r_X_data = vertcat(gp.hypersamples.hyperparameters);
     r_y_data = vertcat(gp.hypersamples.logL);

@@ -36,14 +36,14 @@ if opt.derivative_observations
     % set_gp assumes a standard homogenous covariance, we don't want to tell
     % it about derivative observations.
     plain_obs = X_data(:,end) == 0;
-    
+
     set_X_data = X_data(plain_obs,1:end-1);
     set_y_data = y_data(plain_obs,:);
-    
-    
+
+
     gp = set_gp(opt.cov_fn, opt.mean_fn, gp, set_X_data, set_y_data, ...
         opt.num_hypersamples);
-    
+
     hps_struct = set_hps_struct(gp);
     % need to define this handle or else infinite recursion results
     if ~isfield(gp, 'non_deriv_cov_fn')
@@ -51,11 +51,11 @@ if opt.derivative_observations
     end
     gp.covfn = @(flag) derivativise(gp.non_deriv_cov_fn,flag);
     gp.meanfn = @(flag) wderiv_mean_fn(hps_struct,flag);
-    
+
     gp.X_data = X_data;
     gp.y_data = y_data;
-    
-    
+
+
 else
     gp = set_gp(opt.cov_fn, opt.mean_fn, [], X_data, y_data, ...
         opt.num_hypersamples);
@@ -97,28 +97,28 @@ num_input_scale_passes = max(2,ceil(total_num_evals/(num_hypersamples*2)));
 num_split_evals = ...
     max(1,floor(total_num_evals/(num_input_scale_passes*(num_dims+1)+1)));
 opt.maxevals = num_split_evals;
-    
+
 tic;
 
 %par
 for hypersample_ind = 1:num_hypersamples
-    
+
     if opt.verbose
         fprintf('Hyperparameter sample %g\n',hypersample_ind)
     end
-    
+
     warning off
-    
+
     hypersample = hypersamples(hypersample_ind);
     sample_quad_input_scales = quad_input_scales;
-    
+
     for num_pass = 1:num_input_scale_passes
-        
+
         % optimise input scales
-        
+
         hypersample.hyperparameters(noise_sd_ind) = big_log_noise_sd;
 
-        for d = 1:length(input_scale_inds) 
+        for d = 1:length(input_scale_inds)
             active_hp_inds = [input_scale_inds(d), noise_sd_ind];
 
             [inputscale_hypersample] = ...
@@ -126,11 +126,11 @@ for hypersample_ind = 1:num_hypersamples
                 hypersample, gp, sample_quad_input_scales, ...
                 active_hp_inds, ...
                 X_data, y_data, opt);
-            
+
             hypersample.hyperparameters(input_scale_inds(d)) = ...
                 inputscale_hypersample.hyperparameters(input_scale_inds(d));
         end
-        
+
         hypersample.hyperparameters(noise_sd_ind) = actual_log_noise_sd;
 
          % optimise output scale
@@ -144,21 +144,21 @@ for hypersample_ind = 1:num_hypersamples
                 X_data, y_data, opt);
         hypersample.hyperparameters(active_hp_inds) = ...
                 outputscale_hypersample.hyperparameters(active_hp_inds);
-            
+
 
     end
-    
-    
+
+
 
     % now do a joint optimisation to finish off
-    
+
     [hypersamples(hypersample_ind)] = ...
         move_hypersample(...
                 hypersample, gp, sample_quad_input_scales, ...
                 full_active_inds, ...
                 X_data, y_data, opt);
-            
-    if opt.verbose            
+
+    if opt.verbose
         fprintf('Final log-likelihood: \t%g\n',hypersamples(hypersample_ind).logL)
     end
 end
@@ -212,27 +212,27 @@ logL_mat = nan(opt.maxevals+1,1);
 
 while ~flag && i < opt.maxevals
     i = i+1;
-    
+
     gp = revise_gp(X_data, y_data, gp, 'new_hps');
-    
+
     logL = gp.hypersamples.logL;
     if opt.verbose
         fprintf('%g,',logL)
     end
-    a_hs=gp.hypersamples.hyperparameters(active_hp_inds);
-    
+    a_hs = gp.hypersamples.hyperparameters(active_hp_inds);
+
     a_hs_mat(i,:) = a_hs;
     logL_mat(i) = logL;
-    
+
     if i>1 && logL_mat(i) < logL_mat(i-1)
         a_quad_input_scales = 0.1*a_quad_input_scales;
-        
+
         a_hs = a_hs_mat(i-1,:);
     else
         a_grad_logL = [gp.hypersamples.glogL{:}];
         a_grad_logL = a_grad_logL(active_hp_inds);
     end
-    
+
 
     [a_hs, flag] = simple_zoom_pt(a_hs, a_grad_logL, ...
                             a_quad_input_scales, 'maximise');
@@ -252,7 +252,7 @@ gp = revise_gp(X_data, y_data, gp, 'new_hps');
 hypersample = gp.hypersamples;
 
 % not_nan = all(~isnan([a_hs_mat,logL_mat]),2);
-% 
+%
 % [quad_noise_sd, a_quad_input_scales] = ...
 %     hp_heuristics(a_hs_mat(not_nan,:), logL_mat(not_nan), 10);
 % quad_input_scales(active_hp_inds) = a_quad_input_scales;
