@@ -237,7 +237,16 @@ while evaluation < opt.function_evaluations && ...
 %     hs_weights(maX_logL_ind) = 1;
 
     hs_weights = weights(gp, weights_mat);
-    [max_weights, max_weighted_ind] = max(hs_weights);
+    if any(isnan(hs_weights))
+        % something numerical has gone wrong in BQ, try to recover by just
+        % using the hypersmaple with maximum likelihood
+        new_hs_weights = zeros(size(hs_weights));
+        [unused_maximum, max_weighted_ind] = max([gp.hypersamples(:).logL]);
+        new_hs_weights(max_weighted_ind) = 1;
+        hs_weights = new_hs_weights;
+    else
+        [max_weights, max_weighted_ind] = max(hs_weights);
+    end
     gp.max_weighted_hypersample_ind = max_weighted_ind;
 
     if (evaluation == opt.function_evaluations)
